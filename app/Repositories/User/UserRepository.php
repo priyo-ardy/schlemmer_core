@@ -49,4 +49,31 @@ class UserRepository implements UserRepositoryInterface
             'is_locked' => false
         ]);
     }
+
+    public function create(array $data): User
+    {
+        return User::create($data);
+    }
+
+    public function update(int $id, array $data): bool
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->update($data);
+    }
+
+    public function delete(int $id): bool
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->delete();
+    }
 }

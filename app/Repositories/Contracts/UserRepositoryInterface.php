@@ -13,4 +13,7 @@ interface UserRepositoryInterface
     public function resetAttempts(User $user): void;
     public function updateLoginSuccess(User $user, string $ip): void;
     public function updatePassword($user, string $password): void;
+    public function create(array $data): User;
+    public function update(int $id, array $data): bool;
+    public function delete(int $id): bool;
 }

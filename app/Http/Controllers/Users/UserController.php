@@ -12,4 +12,10 @@ class UserController extends Controller
     {
         return Inertia::render('Users/Users');
     }
+
+    public function store() {}
+
+    public function update() {}
+
+    public function delete() {}
 }

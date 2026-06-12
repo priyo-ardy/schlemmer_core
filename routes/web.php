@@ -31,7 +31,10 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 
     // Menu user management
-    Route::get('/users', [UserController::class, 'index'])->name('users');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'delete'])->name('users.update');
 
     Route::post('/logout', function (Request $request) {
         FacadesAuth::logout();
