@@ -9,9 +9,14 @@ const currentPath = computed(() => page.url.split("?")[0]);
 
 // Otomatis buka dropdown kalau jalurnya diawali dengan /users
 const isUserManagementOpen = ref(currentPath.value.startsWith("/users"));
+const isProcessOpen = ref(currentPath.value.startsWith("/process"));
 
 const toggleUserManagement = () => {
     isUserManagementOpen.value = !isUserManagementOpen.value;
+};
+
+const toggleProcessList = () => {
+    isProcessOpen.value = !isProcessOpen.value
 };
 </script>
 
@@ -67,7 +72,37 @@ const toggleUserManagement = () => {
                 >
                     Master Data
                 </span>
+                <div>
+                    <div
+                        v-show="isProcessOpen"
+                        class="mt-1 ml-4 pl-4 border-l space-y-1 transition duration-150"
+                        :class="
+                            currentPath.startsWith('/process')
+                                ? 'border-blue-500'
+                                : 'border-slate-800'
+                        "
+                    >
+                        <Link
+                                href="/process"
+                                class="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
+                                :class="
+                                    currentPath === '/process'
+                                        ? 'text-white font-bold bg-slate-800/60'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
+                                "
+                            >
+                                Process list
+                            </Link>
+                    </div>
+                </div>
+            </div>
 
+            <div class="space-y-1">
+                <span
+                    class="block px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2"
+                >
+                    Application Setting
+                </span>
                 <div>
                     <button
                         @click="toggleUserManagement"

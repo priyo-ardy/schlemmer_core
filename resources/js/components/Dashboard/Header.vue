@@ -11,6 +11,25 @@ const isProfileDropdownOpen = ref(false);
 const handleLogout = () => {
     router.post("/logout");
 };
+
+const hasAvatar = computed(() => {
+    return user.value?.avatar && user.value.avatar.trim() !== "";
+});
+
+const userInitials = computed(() => {
+    if (!user.value?.name) return "AP";
+
+    const names = user.value.name.trim().split(" ");
+
+    if (names.length === 1) {
+        return names[0].substring(0, 2).toUpperCase();
+    }
+
+    return (
+        names[0][0] +
+        names[names.length - 1][0]
+    ).toUpperCase();
+});
 </script>
 
 <template>
@@ -73,13 +92,18 @@ const handleLogout = () => {
                     class="flex items-center gap-3 p-1.5 rounded-xl hover:bg-slate-50 transition duration-150 focus:outline-none"
                 >
                     <div
-                        class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                        class="h-8 w-8 rounded-lg overflow-hidden bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm"
                     >
-                        {{
-                            user?.name
-                                ? user.name.substring(0, 2).toUpperCase()
-                                : "AP"
-                        }}
+                        <img
+                            v-if="hasAvatar"
+                            :src="user.avatar"
+                            :alt="user.name"
+                            class="w-full h-full object-cover"
+                        />
+
+                        <span v-else>
+                            {{ userInitials }}
+                        </span>
                     </div>
                     <div class="text-left hidden md:block">
                         <p

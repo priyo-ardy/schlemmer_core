@@ -18,7 +18,11 @@ const isSidebarCollapsed = ref(false);
                 @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed"
             />
 
-            <main class="flex-1 overflow-y-auto p-6 sm:p-8 bg-slate-50/50">
+            <!-- <main class="flex-1 overflow-y-auto p-6 sm:p-8 bg-slate-50/50">
+                <slot />
+            </main> -->
+
+            <main class="flex-1 overflow-y-auto p-2 sm:p-4 bg-slate-50/50">
                 <slot />
             </main>
 

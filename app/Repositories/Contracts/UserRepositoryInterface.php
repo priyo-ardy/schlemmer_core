@@ -4,6 +4,7 @@ namespace App\Repositories\Contracts;
 
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 interface UserRepositoryInterface
 {
@@ -16,4 +17,6 @@ interface UserRepositoryInterface
     public function create(array $data): User;
     public function update(int $id, array $data): bool;
     public function delete(int $id): bool;
+    public function getAll(): Collection;
+    public function bulkDelete(array $data): bool;
 }

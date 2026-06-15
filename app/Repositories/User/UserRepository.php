@@ -4,6 +4,7 @@ namespace App\Repositories\User;
 
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
 class UserRepository implements UserRepositoryInterface
@@ -75,5 +76,15 @@ class UserRepository implements UserRepositoryInterface
         }
 
         return $user->delete();
+    }
+
+    public function getAll(): Collection
+    {
+        return User::orderBy('name', 'desc')->get();
+    }
+
+    public function bulkDelete(array $ids): bool
+    {
+        return User::whereIn('id', $ids)->delete();
     }
 }

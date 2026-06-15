@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Process\ProcessController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,11 +31,19 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('Dashboard/Dashboard');
     })->name('dashboard');
 
+    // Process Management
+
+    Route::get('/process', [ProcessController::class, 'index'])->name('process.index');
+    Route::get('/process/create', [ProcessController::class, 'create'])->name('process.create');
+    Route::post('/process')->name('process.store');
+    Route::put('/process/{process}')->name('process.update');
+    Route::post('/process/bulk-delete')->name('process.bulk-delete');
+
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{user}', [UserController::class, 'delete'])->name('users.update');
+    Route::post('/users/bulk-delete', [UserController::class, 'bulkDestroy'])->name('users.bulk-delete');
 
     Route::post('/logout', function (Request $request) {
         FacadesAuth::logout();
