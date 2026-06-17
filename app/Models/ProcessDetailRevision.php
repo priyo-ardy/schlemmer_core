@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Models;
+
+use App\HasActivityLogs;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ProcessDetailRevision extends Model
+{
+    use HasFactory, HasActivityLogs;
+
+    protected $table = 'process_revision_details';
+
+    protected $fillable = [
+        'revision_header_id',
+        'detail_uuid',
+        'order',
+        'previous_problem',
+        'requirements',
+        'potential_failure_mode',
+        'potential_effect_of_failure',
+        'potential_cause_of_failure',
+        'controls_prevention',
+        'controls_detection'
+    ];
+
+    public function header(): BelongsTo
+    {
+        return $this->belongsTo(ProcessHeaderRevision::class, 'revision_header_id', 'id');
+    }
+}

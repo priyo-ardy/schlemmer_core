@@ -1,10 +1,38 @@
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
+import { toast } from "vue3-toastify";
+import { usePage } from "@inertiajs/vue3";
 import Sidebar from "@/Components/Dashboard/Sidebar.vue";
 import Header from "@/Components/Dashboard/Header.vue";
 import Footer from "@/Components/Dashboard/Footer.vue";
 
-const isSidebarCollapsed = ref(false);
+const isSidebarCollapsed = ref(true);
+
+const page = usePage();
+
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (!flash) return;
+
+        if (flash.success) {
+            toast.success(flash.success);
+        }
+
+        if (flash.error) {
+            toast.error(flash.error);
+        }
+
+        if (flash.warning) {
+            toast.warning(flash.warning);
+        }
+
+        if (flash.info) {
+            toast.info(flash.info);
+        }
+    },
+    { immediate: true, deep: true }
+);
 </script>
 
 <template>

@@ -10,3 +10,24 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+.Toastify__toast-container {
+    width: 100%;
+    max-width: 100%;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.Toastify__toast {
+    width: 100%;
+    min-height: 56px;
+    border-radius: 8px;
+}
+
+.Toastify__toast-body {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 14px;
+}

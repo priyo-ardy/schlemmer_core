@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Blameable;
 use App\HasActivityLogs;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,9 +12,9 @@ use Illuminate\Support\Str;
 
 class ProcessHeader extends Model
 {
-    use HasFactory, HasActivityLogs, Blameable;
+    use HasFactory, HasActivityLogs, Blameable, HasUuids;
 
-    protected $table = 'process_function';
+    protected $table = 'process_functions';
 
     protected $fillable = [
         'uuid',
@@ -28,15 +29,16 @@ class ProcessHeader extends Model
 
     public function details(): HasMany
     {
-        return $this->hasMany(ProcessDetail::class, 'header_id');
+        return $this->hasMany(ProcessDetail::class, 'header_id', 'id');
     }
 
-    protected static function booted()
+    public function uniqueIds(): array
     {
-        static::creating(function (ProcessHeader $model) {
-            if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid7();
-            }
-        });
+        return ['uuid'];
+    }
+
+    public function newUniqueId(): string
+    {
+        return (string) Str::uuid7();
     }
 }

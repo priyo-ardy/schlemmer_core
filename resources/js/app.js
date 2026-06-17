@@ -2,6 +2,8 @@ import '../css/app.css';
 import './bootstrap';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { createApp, h } from 'vue';
+import Vue3Toastify from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
 
 createInertiaApp({
     resolve: name => {
@@ -11,6 +13,11 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         createApp({ render: () => h(App, props) })
             .use(plugin)
+            .use(Vue3Toastify, {
+                position: 'top-center',
+                autoClose: 3000,
+                theme: 'colored',
+            })
             .mount(el);
     },
 });

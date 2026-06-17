@@ -67,36 +67,46 @@ const toggleProcessList = () => {
             </div>
 
             <div class="space-y-1">
-                <span
-                    class="block px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2"
-                >
+                <span class="block px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                     Master Data
                 </span>
+                
                 <div>
+                    <button 
+                        @click="isProcessOpen = !isProcessOpen" 
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150"
+                    >
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span>Process Templates</span>
+                        </div>
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            class="h-4 w-4 transition-transform duration-200" 
+                            :class="isProcessOpen ? 'rotate-180' : ''" 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
                     <div
                         v-show="isProcessOpen"
                         class="mt-1 ml-4 pl-4 border-l space-y-1 transition duration-150"
-                        :class="
-                            currentPath.startsWith('/process')
-                                ? 'border-blue-500'
-                                : 'border-slate-800'
-                        "
+                        :class="currentPath.startsWith('/process') ? 'border-blue-500' : 'border-slate-800'"
                     >
                         <Link
-                                href="/process"
-                                class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
-                                :class="
-                                    currentPath === '/process'
-                                        ? 'text-white font-bold bg-slate-800/60'
-                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                                "
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3" />
-                                </svg>
-
-                                <span>Process Template</span>
-                            </Link>
+                            href="/process"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
+                            :class="currentPath === '/process' ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3" />
+                            </svg>
+                            <span>Process Template</span>
+                        </Link>
                     </div>
                 </div>
             </div>

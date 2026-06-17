@@ -1,37 +1,26 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Head, useForm, router, Link } from '@inertiajs/vue3';
-import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { toast } from 'vue3-toastify';
 
 defineOptions({layout:AuthenticatedLayout});
 const props = defineProps({
     users: Array,
+    header: {
+        type: Object,
+        default: () => ({})
+    }
 });
 
-const cancelForm = () => {
-    router.get('/process');
-}
-
-// Tambah baris pada table detail
-const processItems = ref([
-    {
-        previous_problem: '',
-        requirements: '',
-        potential_failure_mode: '',
-        potential_effect_of_failure: '',
-        potential_cause_of_failure: '',
-        controls_prevention: '',
-        controls_detection: ''
-    }
-]);
-
 const form = useForm({
-    name: '',
-    revision: '',
-    remark:'',
-    processItems: [
-        {
+    name: props.header?.name || '',
+    revision: props.header?.revision || '0',
+    remark: props.header?.remark || '',
+    // Jika tidak ada data dari backend, set default 1 baris kosong
+    processItems: props.header?.details?.length > 0 
+        ? props.header.details 
+        : [{
             previous_problem: '',
             requirements: '',
             potential_failure_mode: '',
@@ -39,8 +28,7 @@ const form = useForm({
             potential_cause_of_failure: '',
             controls_prevention: '',
             controls_detection: ''
-        }
-    ]
+        }]
 });
 
 const addRow = () => {
@@ -53,68 +41,28 @@ const addRow = () => {
         controls_prevention: '',
         controls_detection: ''
     });
-}
+};
 
 const removerRow = (index) => {
-    if(form.processItems.length > 1){
+    if (form.processItems.length > 1) {
         form.processItems.splice(index, 1);
     }
-}
+};
+
+const cancelForm = () => {
+    router.visit('/process');
+};
 
 const validateAndSave = () => {
-    form.clearErrors();
-    let isValid = true;
-    const nameValue = form.name ? form.name.trim() : '';
-
-    if (!nameValue) {
-        form.setError('name', 'Function name is required');
-        isValid = false;
-    } else if (nameValue.length > 150) {
-        form.setError('name', 'Function name cannot exceed 150 characters');
-        isValid = false;
-    }
-
-    form.processItems.forEach((item, index) => {
-        // Contoh pengecekan untuk setiap kolom yang wajib diisi
-        if (!item.requirements || item.requirements.trim() === '') {
-            form.setError(`processItems.${index}.requirements`, 'Required');
-            isValid = false;
-        }
-        if (!item.potential_failure_mode || item.potential_failure_mode.trim() === '') {
-            form.setError(`processItems.${index}.potential_failure_mode`, 'Required');
-            isValid = false;
-        }
-        if (!item.potential_effect_of_failure || item.potential_effect_of_failure.trim() === '') {
-            form.setError(`processItems.${index}.potential_effect_of_failure`, 'Required');
-            isValid = false;
-        }
-        if (!item.potential_cause_of_failure || item.potential_cause_of_failure.trim() === '') {
-            form.setError(`processItems.${index}.potential_cause_of_failure`, 'Required');
-            isValid = false;
-        }
-        if (!item.controls_prevention || item.controls_prevention.trim() === '') {
-            form.setError(`processItems.${index}.controls_prevention`, 'Required');
-            isValid = false;
-        }
-        if (!item.controls_detection || item.controls_detection.trim() === '') {
-            form.setError(`processItems.${index}.controls_detection`, 'Required');
-            isValid = false;
+    form.post('/process', { // Sesuaikan route-nya jika pakai nama route: route('process.store')
+        onSuccess: () => {
+            showToast('success', 'Data PMFEA berhasil disimpan!');
+        },
+        onError: () => {
+            showToast('error', 'Cek kembali form anda, ada yang belum valid!');
         }
     });
-
-    if(!isValid){
-        return;
-    }
-
-    form.post('/process/store', {
-        preserveScroll: true,
-        onError: (errors) => {
-            const firstErrorMessage = Object.values(errors)[0];
-            toast.error(firstErrorMessage);
-        }
-    });
-}
-
+};
 </script>
 
 <template>
@@ -155,7 +103,7 @@ const validateAndSave = () => {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7" />
                                 </svg>
                             </div>
-                            <input type="text" v-model="form.name" placeholder="Enter process function name..." maxlength="255" autocomplete="off" 
+                            <input type="text" v-model="form.name" placeholder="Enter process function name..." maxlength="255" autocomplete="off"
                             :class="[
                                 'w-full pl-10 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 rounded-xl text-xs font-medium transition-all outline-none',
                                 form.errors.name 
@@ -305,7 +253,7 @@ const validateAndSave = () => {
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                                             </svg>
                                         </button>
-                                        <button type="button" @click="removerRow(index)" :disabled="processItems.length === 1" 
+                                        <button type="button" @click="removerRow(index)" :disabled="form.processItems.length === 1" 
                                             class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
