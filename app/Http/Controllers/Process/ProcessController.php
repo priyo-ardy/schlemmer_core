@@ -18,14 +18,23 @@ class ProcessController extends Controller
         $this->processService = $processService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 10);
+
         $headers = ProcessHeader::with(['details', 'updater'])
+            ->when($request->search, function ($query, $search) {
+                // Mencari berdasarkan nama atau remark
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('remark', 'like', "%{$search}%");
+            })
             ->orderBy('id', 'asc')
-            ->paginate(10);
+            ->paginate($perPage)
+            ->withQueryString(); // Wajib agar search query terbawa saat pindah halaman
 
         return Inertia::render('Process/process-list', [
-            'headers' => $headers
+            'headers' => $headers,
+            'filters' => $request->only(['search', 'per_page']) // Kirim balik filter ke FE
         ]);
     }
 

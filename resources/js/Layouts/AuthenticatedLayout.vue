@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { toast } from "vue3-toastify";
 import { usePage } from "@inertiajs/vue3";
 import Sidebar from "@/Components/Dashboard/Sidebar.vue";
@@ -9,6 +9,17 @@ import Footer from "@/Components/Dashboard/Footer.vue";
 const isSidebarCollapsed = ref(true);
 
 const page = usePage();
+
+const isMobile = ref(false);
+
+onMounted(() => {
+    const checkMobile = () => {
+        isMobile.value = window.innerWidth < 768;
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+});
 
 watch(
     () => page.props.flash,
@@ -36,19 +47,21 @@ watch(
 </script>
 
 <template>
+    <div v-if="isMobile" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900 text-white p-6 text-center">
+        <div>
+            <h2 class="text-xl font-bold mb-2">Perangkat Tidak Didukung</h2>
+            <p class="text-sm text-slate-400">Aplikasi ini hanya tersedia untuk tampilan desktop.</p>
+        </div>
+    </div>
+
     <div
         class="h-screen w-screen flex overflow-hidden bg-slate-50 font-sans antialiased text-slate-800"
+        :class="{'opacity-20 pointer-events-none': isMobile}"
     >
         <Sidebar :is-collapsed="isSidebarCollapsed" />
 
         <div class="flex-1 flex flex-col h-full overflow-hidden">
-            <Header
-                @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed"
-            />
-
-            <!-- <main class="flex-1 overflow-y-auto p-6 sm:p-8 bg-slate-50/50">
-                <slot />
-            </main> -->
+            <Header @toggle-sidebar="isSidebarCollapsed = !isSidebarCollapsed" />
 
             <main class="flex-1 overflow-y-auto p-2 sm:p-4 bg-slate-50/50">
                 <slot />
