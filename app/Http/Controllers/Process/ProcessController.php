@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Process;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProcessDetail;
 use App\Models\ProcessHeader;
 use App\Services\ProcessTemplate\ProcessTemplateServices;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProcessController extends Controller
@@ -20,7 +20,13 @@ class ProcessController extends Controller
 
     public function index()
     {
-        return Inertia::render('Process/process-list');
+        $headers = ProcessHeader::with(['details', 'updater'])
+            ->orderBy('id', 'asc')
+            ->paginate(10);
+
+        return Inertia::render('Process/process-list', [
+            'headers' => $headers
+        ]);
     }
 
     public function create()
@@ -55,9 +61,40 @@ class ProcessController extends Controller
     public function view($id)
     {
         $header = ProcessHeader::with('details')->findOrFail($id);
+        $allIds = ProcessHeader::orderBy('id')->pluck('id');
 
         return Inertia::render('Process/view', [
             'header' => $header,
+            'allIds' => $allIds
         ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::unique('process_functions', 'name')->ignore($id),
+            ],
+            'remark' => 'nullable|string',
+
+            // Validasi Array Details
+            'processItems' => 'required|array|min:1',
+            'processItems.*.previous_problem' => 'nullable|string|max:255',
+            'processItems.*.requirements' => 'required|string|max:255',
+            'processItems.*.potential_failure_mode' => 'required|string|max:255',
+            'processItems.*.potential_effect_of_failure' => 'required|string|max:255',
+            'processItems.*.potential_cause_of_failure' => 'required|string|max:255',
+            'processItems.*.controls_prevention' => 'required|string|max:255',
+            'processItems.*.controls_detection' => 'required|string|max:255',
+        ]);
+
+        $this->processService->updateData($id, $validated);
+
+        return redirect()
+            ->route('process.view', $id)
+            ->with('success', 'PMFEA template data updated successfully');
     }
 }

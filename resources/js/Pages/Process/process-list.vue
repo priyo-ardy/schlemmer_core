@@ -4,10 +4,34 @@ import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineOptions({layout:AuthenticatedLayout});
+
+const searchQuery = ref('');
+
 const props = defineProps({
     users: Array,
+    headers: {
+        type: Object,
+        default: () => ({})
+    }
 });
 
+const formatDateTime = (dateString) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false // Menggunakan format 24 jam
+    })
+    .replace(',', '')
+    .replace(/\./g, ':');; // Menghapus koma bawaan jika tidak diinginkan
+};
+
+const goToDetail = (id) => {
+    router.get(`/process/${id}`);
+};
 </script>
 
 <template>
@@ -41,18 +65,39 @@ const props = defineProps({
             </div>
 
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-auto">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-left">
-                        <thead class="bg-slate-50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <div class="overflow-auto min-h-96 rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse bg-white">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px] font-bold">
                             <tr>
                                 <th class="px-6 py-4 w-12 text-center">
-                                    <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" class="rounded border-slate-300 text-blue-600 h-4 w-4 transition cursor-pointer" />
+                                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4" />
                                 </th>
                                 <th class="px-6 py-4">Process Function Name</th>
-                                <th class="px-6 py-4 text-center">Remarks</th>
-                                <th class="px-6 py-4">Child Count</th>
+                                <th class="px-6 py-4 text-center">Revision</th>
+                                <th class="px-6 py-4">Remarks</th>
+                                <th class="px-6 py-4 text-center">Children</th>
+                                <th class="px-6 py-4 text-center">Updated At</th>
+                                <th class="px-6 py-4 text-center">Updated By</th>
                             </tr>
                         </thead>
+                        
+                        <tbody class="divide-y divide-slate-100 text-xs text-slate-600">
+                            <tr v-for="header in headers.data" :key="header.id" @click="goToDetail(header.id)" class="hover:bg-blue-50 transition-colors cursor-pointer">
+                                <td class="px-6 py-4 text-center">
+                                    <input type="checkbox" class="rounded border-slate-300 text-blue-600 h-4 w-4" />
+                                </td>
+                                <td class="px-6 py-4 font-semibold text-slate-900">{{ header.name }}</td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                        Rev. {{ header.revision }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 truncate">{{ header.remark || '-' }}</td>
+                                <td class="px-6 py-4 text-center">{{ header.details?.length || 0 }}</td>
+                                <td class="px-6 py-4 text-center font-medium">{{ formatDateTime(header.updated_at) }}</td>
+                                <td class="px-6 py-4 text-center font-medium">{{ header.updater?.name }}</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
