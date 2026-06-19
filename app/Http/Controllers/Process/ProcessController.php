@@ -26,6 +26,7 @@ class ProcessController extends Controller
             ->when($request->search, function ($query, $search) {
                 // Mencari berdasarkan nama atau remark
                 $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('revision', "{$search}")
                     ->orWhere('remark', 'like', "%{$search}%");
             })
             ->orderBy('id', 'asc')
@@ -105,5 +106,28 @@ class ProcessController extends Controller
         return redirect()
             ->route('process.view', $id)
             ->with('success', 'PMFEA template data updated successfully');
+    }
+
+    public function getChangeLogs($headerId)
+    {
+        $logs = $this->processService->getLogs($headerId);
+
+        return response()->json($logs);
+    }
+
+    public function getChangeLogsDetails($logId)
+    {
+        $details = $this->processService->getLogDetail($logId);
+
+        return response()->json($details);
+    }
+
+    public function delete(Request $request)
+    {
+        $request->validate(['ids' => 'required|array']);
+
+        $delete = $this->processService->bulkDelete($request->ids);
+
+        return redirect()->route('process.index')->with('success', 'Data deleted successfully');
     }
 }

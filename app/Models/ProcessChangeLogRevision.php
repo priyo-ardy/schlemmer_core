@@ -5,6 +5,7 @@ namespace App\Models;
 use App\HasActivityLogs;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProcessChangeLogRevision extends Model
 {
@@ -20,4 +21,15 @@ class ProcessChangeLogRevision extends Model
         'created_by',
 
     ];
+
+    public function revisionHeader(): BelongsTo
+    {
+        return $this->belongsTo(ProcessHeaderRevision::class, 'header_id', 'header_id')
+            ->where('revision', $this->revision);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Repositories\ProcessTemplate;
 
+use App\Models\ProcessChangeLogRevision;
 use App\Models\ProcessDetail;
 use App\Models\ProcessHeader;
+use App\Models\ProcessHeaderRevision;
 
 class ProcessTemplateRepository
 {
@@ -41,5 +43,27 @@ class ProcessTemplateRepository
     public function createDetail($data)
     {
         return ProcessDetail::create($data); // atau insert()
+    }
+
+    public function getLogs($headerId)
+    {
+        return ProcessChangeLogRevision::where('header_id', $headerId)
+            ->with(['revisionHeader:id,revision,change_reason', 'creator:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    public function getLogDetail($logId)
+    {
+        return ProcessHeaderRevision::with(['details' => function ($query) {
+            $query->orderBy('order', 'asc'); // Sort di level detail
+        }])
+            ->where('id', $logId)
+            ->first();
+    }
+
+    public function deleteAll($ids)
+    {
+        return ProcessHeader::whereIn('id', $ids)->delete();
     }
 }

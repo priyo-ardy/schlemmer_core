@@ -37,8 +37,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/process/create', [ProcessController::class, 'create'])->name('process.create');
     Route::post('/process/store', [ProcessController::class, 'store'])->name('process.store');
     Route::get('/process/{process}', [ProcessController::class, 'view'])->name('process.view');
+    Route::get('/process/logs/{process}', [ProcessController::class, 'getChangeLogs'])->name('process.logs');
+    Route::get('/process/logs/detail/{log_id}', [ProcessController::class, 'getChangeLogsDetails'])->name('process.logs_details');
     Route::put('/process/{process}', [ProcessController::class, 'update'])->name('process.update');
-    Route::post('/process/bulk-delete', [ProcessController::class, 'delete'])->name('process.bulk-delete');
+    Route::post('/process/delete', [ProcessController::class, 'delete'])->name('process.delete');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

@@ -2,7 +2,9 @@
 
 namespace App\Services\ProcessTemplate;
 
+use App\Models\ProcessChangeLogRevision;
 use App\Models\ProcessHeader;
+use App\Models\ProcessHeaderRevision;
 use App\Repositories\ProcessTemplate\ProcessTemplateRepository;
 use App\Services\ProcessRevision\ProcessRevisionService;
 use Illuminate\Support\Facades\Auth;
@@ -143,6 +145,66 @@ class ProcessTemplateServices
                     'line' => $e->getLine()
                 ])
                 ->log('Save failed: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function getLogs($headerId)
+    {
+        try {
+            return $this->processRepo->getLogs($headerId);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete process data');
+            activity()
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Bulk delete failed: Failed to perform bulk delete');
+            throw $e;
+        }
+    }
+
+    public function getLogDetail($logId)
+    {
+        try {
+            return $this->processRepo->getLogDetail($logId);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete process data');
+            activity()
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Bulk delete failed: Failed to perform bulk delete');
+            throw $e;
+        }
+    }
+
+    public function bulkDelete($ids)
+    {
+        try {
+            return $this->processRepo->deleteAll($ids);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete process data');
+            activity()
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Bulk delete failed: Failed to perform bulk delete');
             throw $e;
         }
     }

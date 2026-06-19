@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Head, useForm, router, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { toast } from 'vue3-toastify';
+import axios from 'axios';
 
 defineOptions({layout:AuthenticatedLayout});
 const props = defineProps({
@@ -11,10 +12,51 @@ const props = defineProps({
     header: {
         type: Object,
         default: () => ({})
-    }
+    },
+    show: Boolean,
+    logs: Array,
 });
 
+defineEmits(['close']);
+
 const isEditing = ref(false);
+const showModal = ref(false);
+const showDetailModal = ref(false);
+const loadingLogs = ref(false);
+const logs = ref([]);
+const selectedLogDetail = ref([]);
+const detailLogs = ref([]);
+const isFetching = ref(false);
+const selectedLogRemark = ref([]);
+
+const openLogs = async (id) => {
+    isFetching.value = true;
+    try{
+        const response = await axios.get(`/process/logs/${id}`);
+        logs.value = response.data;
+        showModal.value = true;
+    } catch(e){
+        toast.error('Failed to getting logs data: ', e);
+    }
+    finally{
+        isFetching.value = false;
+    }
+};
+
+const openDetail = async(log) => {
+    isFetching.value = true;
+    try{
+        const response = await axios.get(`/process/logs/detail/${log.id}`);
+        detailLogs.value = response.data.details;
+        selectedLogDetail.value = response.data.name + " (Rev. " + response.data.revision + ")";
+        selectedLogRemark.value = response.data.remark;
+        showDetailModal.value = true;
+    } catch(e){
+        toast.error('Failed to getting logs detail data: ', e);
+    } finally{
+        isFetching.value = false;
+    }
+}
 
 watch(isEditing, (newValue) => {
     document.title = (newValue ? 'Edit' : 'View') + ' PMFEA Template Data';
@@ -67,12 +109,18 @@ const validateAndSave = () => {
     form.clearErrors();
     let isValid = true;
     const nameValue = form.name ? form.name.trim() : '';
+    const remarkValue = form.remark ? form.remark.trim() : '';
 
     if (!nameValue) {
         form.setError('name', 'Function name is required');
         isValid = false;
     } else if (nameValue.length > 150) {
         form.setError('name', 'Function name cannot exceed 150 characters');
+        isValid = false;
+    }
+
+    if(!remarkValue){
+        form.setError('Please fill the change reason before save the data')
         isValid = false;
     }
 
@@ -230,9 +278,10 @@ const newForm = () => {
                                     <span>{{ form.processing ? 'Saving...' : 'Save' }}</span>
                                 </button>
                                <button 
+                                    v-if="!isEditing"
                                     type="button" 
                                     @click="newForm"
-                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-lg transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
+                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-green-600 bg-blue-50 border border-blue-100 rounded-lg transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -271,6 +320,20 @@ const newForm = () => {
                                     </button>
                                     <div class="absolute right-0 top-full mt-1.5 w-40 bg-white border border-slate-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden origin-top-right transform scale-95 group-hover:scale-100">
                                         <div class="py-1 flex flex-col">
+                                            <button type="button" @click="openLogs(props.header.id)" :disabled="loadingLogs" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
+                                                    <path d="M21 6.375c0 2.692-4.03 4.875-9 4.875S3 9.067 3 6.375 7.03 1.5 12 1.5s9 2.183 9 4.875Z" />
+                                                    <path d="M12 12.75c2.685 0 5.19-.586 7.078-1.609a8.283 8.283 0 0 0 1.897-1.384c.016.121.025.244.025.368C21 12.817 16.97 15 12 15s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.285 8.285 0 0 0 1.897 1.384C6.809 12.164 9.315 12.75 12 12.75Z" />
+                                                    <path d="M12 16.5c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 0 0 1.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 0 0 1.897 1.384C6.809 15.914 9.315 16.5 12 16.5Z" />
+                                                    <path d="M12 20.25c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 0 0 1.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 0 0 1.897 1.384C6.809 19.664 9.315 20.25 12 20.25Z" />
+                                                </svg>
+                                                <svg v-if="loadingLogs" class="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                
+                                                {{ loadingLogs ? 'Loading...' : 'View Change Logs' }}
+                                            </button>
                                             <button type="button" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -338,7 +401,7 @@ const newForm = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                                 </svg>
-                                <span class="text-xs font-black tracking-widest">v.<span class="text-sm">{{ props.header?.revision }}</span></span>
+                                <span class="text-xs font-black tracking-widest">Rev.<span class="text-sm">{{ props.header?.revision }}</span></span>
                                 <input type="hidden" name="revision" value="0">
                             </div>
                         </div>
@@ -348,7 +411,7 @@ const newForm = () => {
                     <div class="lg:col-span-6">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
-                                Remarks (Optional)
+                                Remarks (Change reason) <span class="text-rose-500">*</span>
                             </label>
                         </div>
                         <textarea v-model="form.remark" rows="2" placeholder="Provide detailed context, e.g., on equipment conditions, key dependencies, environmental factors..." 
@@ -487,4 +550,121 @@ const newForm = () => {
             </div>
         </div>
     </div>
+
+    <!-- Modal buat nampilin change logs -->
+    <transition
+        enter-active-class="transition duration-500 ease-out"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-4"
+    >
+    
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl p-6">
+            <h2 class="text-lg font-black mb-6">Change History Timeline</h2>
+            
+            <div class="max-h-96 overflow-y-auto pl-2">
+                <!-- Timeline Container -->
+                <div class="relative border-l-2 border-blue-200 ml-2 space-y-8 pb-4">
+                    
+                    <div v-for="log in logs" :key="log.id" class="relative pl-6">
+                        <!-- Dot penanda (Garis Timeline) -->
+                        <div class="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-4 border-white bg-blue-600 shadow"></div>
+                        
+                        <!-- Content -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <p @click="openDetail(log)" class="text-xs font-bold text-blue-700 uppercase cursor-pointer hover:underline">
+                                {{ log.action }} (V.{{ log.revision }})
+                            </p>
+                            <p class="text-xs text-slate-600 mt-1">
+                                <span class="font-semibold">Reason:</span> {{ log.change_reason || '-' }}
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-2 font-mono">
+                                {{ new Date(log.created_at).toLocaleString('id-ID') }}
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-2 font-mono">Updated By: {{ log.creator.name }}</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <button @click="showModal = false" class="mt-6 w-full py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition">
+                Close
+            </button>
+        </div>
+        </div>
+    
+    </transition>
+
+    <!-- Modal Log Details -->
+    <transition
+        enter-active-class="transition duration-500 ease-out"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 translate-y-4"
+    >
+        <div v-if="showDetailModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white rounded-2xl w-full shadow-xl p-6 max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-lg font-black">Detail Log: {{ selectedLogDetail }}</h2>
+                        <p class="text-sm font-slate-500 mt-1">Remark: {{ selectedLogRemark }}</p>
+                    </div>
+                    <button @click="showDetailModal = false" class="text-slate-400 hover:text-black">✕</button>
+                </div>
+
+                <!-- Tabel Detail -->
+                <table class="w-full text-[11px] border-collapse bg-white">
+                    <thead class="bg-blue-300 text-slate-500 uppercase tracking-wider text-[12px] font-bold">
+                        <tr>
+                            <th class="px-6 py-4 text-center">Step</th>
+                            <th class="px-6 py-4 text-center">Previous Problem</th>
+                            <th class="px-6 py-4 text-center">Requirement</th>
+                            <th class="px-6 py-4 text-center">Potential Failure Mode</th>
+                            <th class="px-6 py-4 text-center">Potential Effect of Failure</th>
+                            <th class="px-6 py-4 text-center">Potential Cause of Failure</th>
+                            <th class="px-6 py-4 text-center">Controls Prevention</th>
+                            <th class="px-6 py-4 text-center">Controls Detection</th>
+                            <th class="px-6 py-4 text-center">Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs text-slate-600">
+                        <tr v-for="item in detailLogs" :key="item.id" class=" hover:bg-slate-50">
+                            <td class="px-6 py-4 font-medium text-center font-mono">{{ item.order }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.previous_problem }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.requirements }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.potential_failure_mode }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.potential_effect_of_failure }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.potential_cause_of_failure }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.controls_prevention }}</td>
+                            <td class="px-6 py-4 font-medium">{{ item.controls_detection }}</td>
+                            <td class="px-6 py-4 font-medium">
+                                {{ new Date(item.created_at).toLocaleString('id-ID') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </transition>
+
+   <!-- Loading Overlay -->
+    <div v-if="isFetching" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+        <div class="flex flex-col items-center">
+            <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-sm font-black text-blue-900 animate-pulse tracking-widest">
+                Retrieving data, please wait...
+            </p>
+        </div>
+    </div>
+
+    
 </template>
