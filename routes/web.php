@@ -41,6 +41,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/process/logs/detail/{log_id}', [ProcessController::class, 'getChangeLogsDetails'])->name('process.logs_details');
     Route::put('/process/{process}', [ProcessController::class, 'update'])->name('process.update');
     Route::post('/process/delete', [ProcessController::class, 'delete'])->name('process.delete');
+    Route::post('/process/remove', [ProcessController::class, 'remove'])->name('process.remove');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

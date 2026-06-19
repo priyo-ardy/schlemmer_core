@@ -130,4 +130,13 @@ class ProcessController extends Controller
 
         return redirect()->route('process.index')->with('success', 'Data deleted successfully');
     }
+
+    public function remove(Request $request)
+    {
+        $request->validate(['id' => 'required']);
+
+        $delete = $this->processService->removeRow($request->id);
+
+        return redirect()->route('process.index')->with('success', 'Data deleted successfully');
+    }
 }

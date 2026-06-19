@@ -2,9 +2,7 @@
 
 namespace App\Services\ProcessTemplate;
 
-use App\Models\ProcessChangeLogRevision;
 use App\Models\ProcessHeader;
-use App\Models\ProcessHeaderRevision;
 use App\Repositories\ProcessTemplate\ProcessTemplateRepository;
 use App\Services\ProcessRevision\ProcessRevisionService;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +33,7 @@ class ProcessTemplateServices
                 $headerData = [
                     'name' => trim($data['name']),
                     'revision' => 0,
-                    'remark' => !empty($data['remark']) ? trim($data['remark']) : null,
+                    'remark' => !empty($data['remark']) ? trim($data['remark']) : 'Initial PFMEA',
                     'is_active' => true,
                     'created_by' => Auth::id(),
                     'updated_by' => Auth::id()
@@ -193,6 +191,26 @@ class ProcessTemplateServices
     {
         try {
             return $this->processRepo->deleteAll($ids);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete process data');
+            activity()
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Bulk delete failed: Failed to perform bulk delete');
+            throw $e;
+        }
+    }
+
+    public function removeRow($id)
+    {
+        try {
+            return ProcessHeader::where('id', $id)->delete();
         } catch (\Exception $e) {
             Log::error('Failed to delete process data');
             activity()

@@ -28,6 +28,7 @@ const selectedLogDetail = ref([]);
 const detailLogs = ref([]);
 const isFetching = ref(false);
 const selectedLogRemark = ref([]);
+const showConfirmModal = ref(false);
 
 const openLogs = async (id) => {
     isFetching.value = true;
@@ -42,6 +43,19 @@ const openLogs = async (id) => {
         isFetching.value = false;
     }
 };
+
+const deleteSelected = (headerId) => {
+    showConfirmModal.value = true;
+}
+
+const confirmAction = (headerId) => {
+    router.post('/process/remove', {id: headerId},{
+        onSuccess: () => {
+            showConfirmModal.value = false;
+            toast.success('Process function data deleted successfuully')
+        }
+    });
+}
 
 const openDetail = async(log) => {
     isFetching.value = true;
@@ -346,7 +360,7 @@ const newForm = () => {
 
                                 <div class="w-px h-4 bg-slate-200 mx-1"></div>
 
-                                <button type="button" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500 rounded-lg transition-colors" title="Delete Record">
+                                <button type="button" @click="deleteSelected(header?.id)" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500 rounded-lg transition-colors" title="Delete Record">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -666,5 +680,22 @@ const newForm = () => {
         </div>
     </div>
 
-    
+    <!-- Modal konfirmasi -->
+    <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+        <div v-if="showConfirmModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 border border-slate-100">
+                <div class="flex flex-col items-center text-center">
+                    <div class="p-3 bg-rose-50 text-rose-500 rounded-full mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-900">Confirm Deletion</h3>
+                    <p class="text-sm text-slate-500 mt-2 mb-6">Are you sure you want to delete these process function data (<span class="font-bold text-slate-900">{{ header?.name }}</span>)? This action cannot be undone.</p>
+                    <div class="flex gap-3 w-full">
+                        <button @click="showConfirmModal = false" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">Cancel</button>
+                        <button @click="confirmAction(header?.id)" class="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-lg transition">Yes, Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </transition>
 </template>
