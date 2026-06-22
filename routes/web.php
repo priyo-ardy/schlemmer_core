@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Material\MaterialController;
 use App\Http\Controllers\Process\ProcessController;
+use App\Http\Controllers\Units\UnitController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -42,6 +44,16 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/process/{process}', [ProcessController::class, 'update'])->name('process.update');
     Route::post('/process/delete', [ProcessController::class, 'delete'])->name('process.delete');
     Route::post('/process/remove', [ProcessController::class, 'remove'])->name('process.remove');
+
+    // Units management
+    Route::get('/units', [UnitController::class, 'index'])->name('unit.index');
+    Route::post('/units', [UnitController::class, 'store'])->name('unit.store');
+    Route::put('/units/{unit}', [UnitController::class, 'update'])->name('unit.update');
+    Route::post('/units/mass-delete', [UnitController::class, 'massDelete'])->name('unit.delete');
+
+    // Material Management
+    Route::get('/materials', [MaterialController::class, 'index'])->name('material.index');
+    Route::get('/materials/create', [MaterialController::class, 'create'])->name('material.create');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

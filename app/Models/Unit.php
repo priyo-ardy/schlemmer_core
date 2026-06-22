@@ -8,24 +8,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
-class Material extends Model
+class Unit extends Model
 {
-    use HasFactory, HasActivityLogs, Blameable, SoftDeletes;
+    use HasFactory, SoftDeletes, HasActivityLogs, Blameable;
 
-    protected $table = 'materials';
+    protected $table = 'units';
 
     protected $fillable = [
-        'part_number',
-        'part_name',
+        'symbol',
         'revision',
-        'material_type',
-        'is_safety_part',
-        'warehouse_code',
-        'rack_code',
-        'bin_code',
-        'min_stock',
-        'unit_of_measure',
+        'name',
+        'is_active',
+        'remark',
         'created_by',
         'updated_by'
     ];
@@ -37,6 +33,15 @@ class Material extends Model
 
     public function updater(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function (Unit $unit) {
+            if (empty($unit->uuid)) {
+                $unit->uuid = (string) Str::uuid7();
+            }
+        });
     }
 }

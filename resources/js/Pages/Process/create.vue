@@ -156,8 +156,7 @@ const validateAndSave = () => {
                             </div>
                         </div>
                     </div>
-                </div>
-                
+                </div>     
             </div>
 
             <!-- Buat header -->

@@ -10,6 +10,9 @@ const currentPath = computed(() => page.url.split("?")[0]);
 // Otomatis buka dropdown kalau jalurnya diawali dengan /users
 const isUserManagementOpen = ref(currentPath.value.startsWith("/users"));
 const isProcessOpen = ref(currentPath.value.startsWith("/process"));
+const isMaterialOpen = ref(currentPath.value.startsWith("/materials"));
+const isProjectOpen = ref(currentPath.value.startsWith("/projects"));
+const isUnitOpen = ref(currentPath.value.startsWith("/units"));
 
 const toggleUserManagement = () => {
     isUserManagementOpen.value = !isUserManagementOpen.value;
@@ -18,6 +21,18 @@ const toggleUserManagement = () => {
 const toggleProcessList = () => {
     isProcessOpen.value = !isProcessOpen.value
 };
+
+const toggleProjects = () => {
+    isProcessOpen.value = !isProcessOpen.value;
+}
+
+const toggleUnits = () => {
+    isUnitOpen.value = !isUnitOpen.value;
+}
+
+const toggleMaterials = () => {
+    isMaterialOpen.value = !isMaterialOpen.value;
+}
 </script>
 
 <template>
@@ -71,6 +86,7 @@ const toggleProcessList = () => {
                     Master Data
                 </span>
                 
+                <!-- Process function menu -->
                 <div>
                     <button 
                         @click="isProcessOpen = !isProcessOpen" 
@@ -100,12 +116,121 @@ const toggleProcessList = () => {
                         <Link
                             href="/process"
                             class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
-                            :class="currentPath === '/process' ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
+                            :class="currentPath.startsWith('/process') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3" />
                             </svg>
                             <span>Process Template</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Project Menu -->
+                <div>
+                    <button 
+                        @click="isProjectOpen = !isProjectOpen" 
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150"
+                    >
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span>Projects Setup</span>
+                        </div>
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            class="h-4 w-4 transition-transform duration-200" 
+                            :class="isProjectOpen ? 'rotate-180' : ''" 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div
+                        v-show="isProjectOpen"
+                        class="mt-1 ml-4 pl-4 border-l space-y-1 transition duration-150"
+                        :class="currentPath.startsWith('/projects') ? 'border-blue-500' : 'border-slate-800'"
+                    >
+                        <Link
+                            href="/projects"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
+                            :class="currentPath.startsWith('/projects') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
+                        >
+                            <span>List of Project</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- UoM -->
+                <div>
+                    <button 
+                        @click="isUnitOpen = !isUnitOpen" 
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150"
+                    >
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <span>Unit of Measure</span>
+                        </div>
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            class="h-4 w-4 transition-transform duration-200" 
+                            :class="isUnitOpen ? 'rotate-180' : ''" 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div
+                        v-show="isUnitOpen"
+                        class="mt-1 ml-4 pl-4 border-l space-y-1 transition duration-150"
+                        :class="currentPath.startsWith('/units') ? 'border-blue-500' : 'border-slate-800'"
+                    >
+                        <Link
+                            href="/units"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
+                            :class="currentPath.startsWith('/units') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
+                        >
+                            <span>List of UoM</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Materials Menu -->
+                <div>
+                    <button 
+                        @click="isMaterialOpen = !isMaterialOpen" 
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150"
+                    >
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <span>Materials</span>
+                        </div>
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            class="h-4 w-4 transition-transform duration-200" 
+                            :class="isMaterialOpen ? 'rotate-180' : ''" 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div
+                        v-show="isMaterialOpen"
+                        class="mt-1 ml-4 pl-4 border-l space-y-1 transition duration-150"
+                        :class="currentPath.startsWith('/materials') ? 'border-blue-500' : 'border-slate-800'"
+                    >
+                        <Link
+                            href="/materials"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150"
+                            :class="currentPath.startsWith('/materials') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'"
+                        >
+                            <span>List of Materials</span>
                         </Link>
                     </div>
                 </div>

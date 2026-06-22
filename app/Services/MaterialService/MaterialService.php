@@ -4,19 +4,36 @@ namespace App\Services\MaterialService;
 
 use App\Models\Material;
 use App\Models\MaterialLogs;
+use App\Repositories\Material\MaterialRepository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MaterialService
 {
+    protected MaterialRepository $materialRepo;
+
+    public function __construct(MaterialRepository $materialRepo)
+    {
+        $this->materialRepo = $materialRepo;
+    }
+
+    public function getMaterialList($page, $search = null)
+    {
+        try {
+            return $this->materialRepo->getMaterialList($page, $search);
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
     public function store(array $data)
     {
         try {
             return DB::transaction(function () use ($data) {
                 $data['created_by'] = Auth::id();
 
-                $material = Material::create($data);
+                $material = $this->materialRepo->store($data);
 
                 $this->logEvent($material, 'create', 'Register new material data', null, $material->toArray());
 
@@ -40,7 +57,7 @@ class MaterialService
     public function getMaterialData($id)
     {
         try {
-            return Material::find($id);
+            return $this->materialRepo->getDataById($id);
         } catch (\Exception) {
             Log::error('Material data not found');
             activity()
