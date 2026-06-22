@@ -25,12 +25,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->toResponse(request())
                     ->setStatusCode(404);
             }
-
-            if ($response->getStatusCode() === 500) {
-                return Inertia::render('Errors/Error_500', ['status' => 500])
-                    ->toResponse(request())
-                    ->setStatusCode(500);
-            }
             return $response;
         });
     })->create();
