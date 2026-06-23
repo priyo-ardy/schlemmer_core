@@ -33,10 +33,9 @@ class AutoNumberService
                 }
 
                 $nextSequence = $counter->last_sequence + 1;
-                $paddedSequence = str_pad($nextSequence, $counter->sequence_length, '0', STR_PAD_LEFT);
+                $paddedSequence = str_pad($nextSequence, $counter->sequence_length, '0', \STR_PAD_LEFT);
                 $now = Carbon::now();
 
-                $generatedCode = $counter->format;
                 $generatedCode = $counter->format;
                 $generatedCode = str_replace('{PREFIX}', $counter->prefix, $generatedCode);
                 $generatedCode = str_replace('{YEAR}', $now->format('Y'), $generatedCode);
