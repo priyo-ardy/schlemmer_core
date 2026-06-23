@@ -40,17 +40,6 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
-
-        Schema::create('change_logs', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('detail_item_id')->constrained('process_function_details')->cascadeOnDelete();
-            $table->string('text_before', 150);
-            $table->string('text_after', 150);
-            $table->integer('revision');
-            $table->timestamps();
-            $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('users')->restrictOnDelete();
-        });
     }
 
     /**
