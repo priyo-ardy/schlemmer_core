@@ -17,9 +17,10 @@ class CustomerController extends Controller
     {
         return Inertia::render('Customer/List', [
             'customers' => $this->customerService->getAllData(
+                $request->input('filter'),
                 $request->input('per_page', 10),
                 $request->input('search')
-            )
+            ),
         ]);
     }
 
@@ -78,7 +79,7 @@ class CustomerController extends Controller
         $validated = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:units,id',
-            'remark' => 'required|string|min:5'
+            'remark' => 'required|string|min:5',
         ]);
 
         $this->customerService->massDelete($request->ids, $request->remark);

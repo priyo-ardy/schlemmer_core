@@ -23,7 +23,6 @@ return new class extends Migration
             $table->unsignedTinyInteger('login_attempts')->default(0);
             $table->boolean('is_locked')->default(false);
 
-
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip', 45)->nullable();
@@ -55,8 +54,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
+        Schema::enableForeignKeyConstraints();
     }
 };

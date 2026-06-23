@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,7 +13,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        User::updateOrInsert(
+        User::updateOrCreate(
             ['email' => 'priyo.ardy@schlemmer.co.id'],
             [
                 'name' => 'Ardy Priyo Sudiyantoko',
@@ -24,13 +23,13 @@ class UserSeeder extends Seeder
                 'login_attempts' => 0,
                 'metadata' => [
                     'role' => 'superadmin',
-                    'department' => 'IT Development'
-                ]
+                    'department' => 'IT Development',
+                ],
             ]
         );
 
-        User::updateOrInsert(
-            ['email' => 'budi@schlemmer.co.id',],
+        User::updateOrCreate(
+            ['email' => 'budi@schlemmer.co.id'],
             [
                 'name' => 'Budi Security Flaw',
                 'password' => Hash::make('password123'),
@@ -39,12 +38,12 @@ class UserSeeder extends Seeder
                 'login_attempts' => 5,
                 'metadata' => [
                     'locked_reason' => 'Brute force attack detected by system',
-                ]
+                ],
             ]
         );
 
-        User::updateOrInsert(
-            ['email' => 'siti@schlemmer.co.id',],
+        User::updateOrCreate(
+            ['email' => 'siti@schlemmer.co.id'],
             [
                 'name' => 'Siti Resigned',
 

@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CustomerRepository
 {
-    public function getAllData($page, $search = null)
+    public function getAllData($filter, $page, $search = null)
     {
         $query = Customer::orderBy('code', 'asc');
+
+        if ($filter && $filter !== 'all') {
+            $query->where('is_active', $filter === 'enable' ? 1 : 0);
+        }
 
         if ($search) {
             // BUNGKUS DENGAN CLOSURE BIAR AMAN!

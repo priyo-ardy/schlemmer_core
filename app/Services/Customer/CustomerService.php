@@ -2,8 +2,6 @@
 
 namespace App\Services\Customer;
 
-use App\Models\ChangeLogs;
-use App\Models\Customer;
 use App\Repositories\Customer\CustomerRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
 use App\Services\GenerateCode\AutoNumberService;
@@ -13,26 +11,25 @@ use Illuminate\Support\Facades\Request;
 
 class CustomerService
 {
-
     public function __construct(
         protected CustomerRepository $customerRepo,
         protected ChangeLogsService $logService,
         protected AutoNumberService $autoNumber
     ) {}
 
-    public function getAllData($page, $search = null)
+    public function getAllData($filter, $page, $search = null)
     {
         try {
-            return $this->customerRepo->getAllData($page, $search);
+            return $this->customerRepo->getAllData($filter, $page, $search);
         } catch (\Exception $e) {
             activity('get_all_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'message'   => $e->getMessage(),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
-                    'trace'     => $e->getTraceAsString(),
-                    'ip'        => Request::ip()
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
                 ])
                 ->log('Load failed: Failed to load customer data');
             throw $e;
@@ -46,20 +43,20 @@ class CustomerService
                 $generatedCode = $this->autoNumber->generate('customer');
 
                 $dataInsert = [
-                    'revision'          => 0,
-                    'code'              => $generatedCode,
-                    'name'              => isset($data['name']) ? trim($data['name']) : '',
-                    'alias'             => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
-                    'tax_number'        => filled($data['tax_number'] ?? null) ? trim($data['tax_number']) : null,
-                    'tier_level'        => $data['tier_level'] ?? 'tier-1',
+                    'revision' => 0,
+                    'code' => $generatedCode,
+                    'name' => isset($data['name']) ? trim($data['name']) : '',
+                    'alias' => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
+                    'tax_number' => filled($data['tax_number'] ?? null) ? trim($data['tax_number']) : null,
+                    'tier_level' => $data['tier_level'] ?? 'tier-1',
                     'csr_reference_doc' => filled($data['csr_reference_doc'] ?? null) ? trim($data['csr_reference_doc']) : null,
-                    'risk_profile'      => $data['risk_profile'] ?? 'medium',
-                    'email'             => filled($data['email'] ?? null) ? trim($data['email']) : null,
-                    'phone'             => filled($data['phone'] ?? null) ? trim($data['phone']) : null,
-                    'billing_address'   => filled($data['billing_address'] ?? null) ? trim($data['billing_address']) : null,
-                    'shipping_address'  => filled($data['shipping_address'] ?? null) ? trim($data['shipping_address']) : null,
-                    'is_active'         => $data['is_active'] ?? true,
-                    'remark'            => filled($data['remark'] ?? null) ? trim($data['remark']) : null
+                    'risk_profile' => $data['risk_profile'] ?? 'medium',
+                    'email' => filled($data['email'] ?? null) ? trim($data['email']) : null,
+                    'phone' => filled($data['phone'] ?? null) ? trim($data['phone']) : null,
+                    'billing_address' => filled($data['billing_address'] ?? null) ? trim($data['billing_address']) : null,
+                    'shipping_address' => filled($data['shipping_address'] ?? null) ? trim($data['shipping_address']) : null,
+                    'is_active' => $data['is_active'] ?? true,
+                    'remark' => filled($data['remark'] ?? null) ? trim($data['remark']) : null,
                 ];
 
                 $insertData = $this->customerRepo->create($dataInsert);
@@ -69,8 +66,8 @@ class CustomerService
                 activity('save_new_customer')
                     ->causedBy(Auth::id())
                     ->withProperties([
-                        'data'  => $insertData->toArray(),
-                        'ip'    => Request::ip()
+                        'data' => $insertData->toArray(),
+                        'ip' => Request::ip(),
                     ])
                     ->log('Save success: Successfully register new customer data');
 
@@ -80,12 +77,12 @@ class CustomerService
             activity('save_new_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'input_data'    => $data,
-                    'message'       => $e->getMessage(),
-                    'file'          => $e->getFile(),
-                    'line'          => $e->getLine(),
-                    'trace'         => $e->getTraceAsString(),
-                    'ip'            => Request::ip()
+                    'input_data' => $data,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
                 ])
                 ->log('Save failed: Failed to register new customer data');
             throw $e;
@@ -103,24 +100,25 @@ class CustomerService
             return DB::transaction(function () use ($id, $data) {
                 $old = $this->customerRepo->findById($id);
 
-                if (!$old) throw new \Exception("Customer not found.");
+                if (! $old) {
+                    throw new \Exception('Customer not found.');
+                }
 
                 $dataUpdate = [
-                    'name'              => isset($data['name']) ? trim($data['name']) : '',
-                    'alias'             => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
-                    'tax_number'        => filled($data['tax_number'] ?? null) ? trim($data['tax_number']) : null,
-                    'revision'          => $old->revision + 1,
-                    'tier_level'        => $data['tier_level'] ?? 'tier-1',
+                    'name' => isset($data['name']) ? trim($data['name']) : '',
+                    'alias' => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
+                    'tax_number' => filled($data['tax_number'] ?? null) ? trim($data['tax_number']) : null,
+                    'revision' => $old->revision + 1,
+                    'tier_level' => $data['tier_level'] ?? 'tier-1',
                     'csr_reference_doc' => filled($data['csr_reference_doc'] ?? null) ? trim($data['csr_reference_doc']) : null,
-                    'risk_profile'      => $data['risk_profile'] ?? 'medium',
-                    'email'             => filled($data['email'] ?? null) ? trim($data['email']) : null,
-                    'phone'             => filled($data['phone'] ?? null) ? trim($data['phone']) : null,
-                    'billing_address'   => filled($data['billing_address'] ?? null) ? trim($data['billing_address']) : null,
-                    'shipping_address'  => filled($data['shipping_address'] ?? null) ? trim($data['shipping_address']) : null,
-                    'is_active'         => $data['is_active'] ?? true,
-                    'remark'            => filled($data['remark'] ?? null) ? trim($data['remark']) : null
+                    'risk_profile' => $data['risk_profile'] ?? 'medium',
+                    'email' => filled($data['email'] ?? null) ? trim($data['email']) : null,
+                    'phone' => filled($data['phone'] ?? null) ? trim($data['phone']) : null,
+                    'billing_address' => filled($data['billing_address'] ?? null) ? trim($data['billing_address']) : null,
+                    'shipping_address' => filled($data['shipping_address'] ?? null) ? trim($data['shipping_address']) : null,
+                    'is_active' => $data['is_active'] ?? true,
+                    'remark' => filled($data['remark'] ?? null) ? trim($data['remark']) : null,
                 ];
-
 
                 $update = $this->customerRepo->update($id, $dataUpdate);
 
@@ -128,15 +126,14 @@ class CustomerService
 
                 $reason = filled($data['remark'] ?? null) ? trim($data['remark']) : 'Update customer details';
 
-
                 $this->logService->store($newData, 'update', $reason, $old->toArray(), $newData->toArray());
 
                 activity('update_customer')
                     ->causedBy(Auth::id())
                     ->withProperties([
-                        'input_id'      => $id,
-                        'input_data'    => $newData->toArray(),
-                        'ip'            => Request::ip()
+                        'input_id' => $id,
+                        'input_data' => $newData->toArray(),
+                        'ip' => Request::ip(),
                     ])
                     ->log('Update success: Successfully udated customer data');
 
@@ -146,13 +143,13 @@ class CustomerService
             activity('update_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'input_id'      => $id,
-                    'input_data'    => $data,
-                    'message'       => $e->getMessage(),
-                    'file'          => $e->getFile(),
-                    'line'          => $e->getLine(),
-                    'trace'         => $e->getTraceAsString(),
-                    'ip'            => Request::ip()
+                    'input_id' => $id,
+                    'input_data' => $data,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
                 ])
                 ->log('Update failed: Failed to update customer data');
             throw $e;
@@ -166,7 +163,7 @@ class CustomerService
             return DB::transaction(function () use ($id, $reason) {
                 $customer = $this->customerRepo->findById($id);
 
-                if (!$customer) {
+                if (! $customer) {
                     throw new \Exception("Customer data not found for ID: {$id}");
                 }
 
@@ -178,9 +175,9 @@ class CustomerService
                     ->causedBy(Auth::id())
                     ->performedOn($customer)
                     ->withProperties([
-                        'input_id'  => $id,
-                        'old_data'  => $oldData,
-                        'ip'        => Request::ip()
+                        'input_id' => $id,
+                        'old_data' => $oldData,
+                        'ip' => Request::ip(),
                     ])
                     ->log('Delete success: Successfully deleted customer data');
 
@@ -193,11 +190,11 @@ class CustomerService
                 ->causedBy(Auth::id())
                 ->withProperties([
                     'input_id' => $id,
-                    'message'   => $e->getMessage(),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
-                    'trace'     => $e->getTraceAsString(),
-                    'ip'        => Request::ip()
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
                 ])
                 ->log('Delete failed: Failed to delete customer data');
 
@@ -213,7 +210,7 @@ class CustomerService
                 $customers = $this->customerRepo->findManyByIds($ids);
 
                 if ($customers->isEmpty()) {
-                    throw new \Exception("No customer data found for the provided IDs.");
+                    throw new \Exception('No customer data found for the provided IDs.');
                 }
 
                 foreach ($customers as $customer) {
@@ -225,7 +222,7 @@ class CustomerService
                         ->withProperties([
                             'input_id' => $customer->id,
                             'old_data' => $oldData,
-                            'ip'       => Request::ip()
+                            'ip' => Request::ip(),
                         ])
                         ->log('Mass Delete Success: Successfully deleted customer data');
 
@@ -240,12 +237,12 @@ class CustomerService
             activity('mass_delete_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'input_id'  => $ids,
-                    'message'   => $e->getMessage(),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
-                    'trace'     => $e->getTraceAsString(),
-                    'ip'        => Request::ip()
+                    'input_id' => $ids,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
                 ])
                 ->log('Delete failed: Failed to mass delete customer data');
 
