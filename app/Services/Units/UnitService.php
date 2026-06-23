@@ -28,7 +28,7 @@ class UnitService
             return DB::transaction(function () use ($data) {
                 $dataInsert = [
                     'symbol' => $data['symbol'],
-                    'revision' => $data['revision'],
+                    'revision' => $data['revision'] ?? 0,
                     'name' => $data['name'],
                     'is_active' => $data['is_active'] ?? true,
                     'remark'    => $data['remark'] ?? null

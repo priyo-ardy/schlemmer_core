@@ -12,18 +12,21 @@ class CustomerRepository
         $query = Customer::orderBy('code', 'asc');
 
         if ($search) {
-            $query->where('code', 'like', "%{$search}%")
-                ->orWhere('name', 'like', "%{$search}%")
-                ->orWhere('alias', 'like', "%{$search}%")
-                ->orWhere('tax_number', 'like', "%{$search}%")
-                ->orWhere('tier_level', 'like', "%{$search}%")
-                ->orWhere('csr_reference_doc', 'like', "%{$search}%")
-                ->orWhere('risk_profile', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
-                ->orWhere('billing_address', 'like', "%{$search}%")
-                ->orWhere('shipping_address', 'like', "%{$search}%")
-                ->orWhere('remark', 'like', "%{$search}%");
+            // BUNGKUS DENGAN CLOSURE BIAR AMAN!
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('alias', 'like', "%{$search}%")
+                    ->orWhere('tax_number', 'like', "%{$search}%")
+                    ->orWhere('tier_level', 'like', "%{$search}%")
+                    ->orWhere('csr_reference_doc', 'like', "%{$search}%")
+                    ->orWhere('risk_profile', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('billing_address', 'like', "%{$search}%")
+                    ->orWhere('shipping_address', 'like', "%{$search}%")
+                    ->orWhere('remark', 'like', "%{$search}%");
+            });
         }
 
         return $query->paginate($page);
@@ -49,7 +52,7 @@ class CustomerRepository
         return Customer::create($data);
     }
 
-    public function update(int $id, array $data): ?Customer
+    public function update(int $id, array $data)
     {
         return Customer::where('id', $id)->update($data);
     }
@@ -59,7 +62,7 @@ class CustomerRepository
         return Customer::delete($id);
     }
 
-    public function deleteAll(array $ids): ?Customer
+    public function deleteAll(array $ids)
     {
         return Customer::whereIn('id', $ids)->delete();
     }

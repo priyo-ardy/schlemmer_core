@@ -1,8 +1,10 @@
 <script setup>
+import 'vue3-toastify/dist/index.css';
 import { ref, computed } from "vue";
 import { Head, useForm, router } from "@inertiajs/vue3";
 import Sidebar from "@/Components/Dashboard/Sidebar.vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { toast } from 'vue3-toastify';
 import dayjs from 'dayjs'; // Ganti jadi default import
 import 'dayjs/locale/id';    // Tetep pake ini buat lokalisasi
 

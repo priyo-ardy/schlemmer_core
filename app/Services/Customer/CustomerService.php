@@ -28,11 +28,11 @@ class CustomerService
             activity('get_all_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString(),
-                    'ip' => Request::ip()
+                    'message'   => $e->getMessage(),
+                    'file'      => $e->getFile(),
+                    'line'      => $e->getLine(),
+                    'trace'     => $e->getTraceAsString(),
+                    'ip'        => Request::ip()
                 ])
                 ->log('Load failed: Failed to load customer data');
             throw $e;
@@ -46,6 +46,7 @@ class CustomerService
                 $generatedCode = $this->autoNumber->generate('customer');
 
                 $dataInsert = [
+                    'revision'          => 0,
                     'code'              => $generatedCode,
                     'name'              => isset($data['name']) ? trim($data['name']) : '',
                     'alias'             => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
@@ -68,8 +69,8 @@ class CustomerService
                 activity('save_new_customer')
                     ->causedBy(Auth::id())
                     ->withProperties([
-                        'data' => $insertData->toArray(),
-                        'ip' => Request::ip()
+                        'data'  => $insertData->toArray(),
+                        'ip'    => Request::ip()
                     ])
                     ->log('Save success: Successfully register new customer data');
 
@@ -84,7 +85,7 @@ class CustomerService
                     'file'          => $e->getFile(),
                     'line'          => $e->getLine(),
                     'trace'         => $e->getTraceAsString(),
-                    'ip' => Request::ip()
+                    'ip'            => Request::ip()
                 ])
                 ->log('Save failed: Failed to register new customer data');
             throw $e;
@@ -102,6 +103,8 @@ class CustomerService
             return DB::transaction(function () use ($id, $data) {
                 $old = $this->customerRepo->findById($id);
 
+                if (!$old) throw new \Exception("Customer not found.");
+
                 $dataUpdate = [
                     'name'              => isset($data['name']) ? trim($data['name']) : '',
                     'alias'             => filled($data['alias'] ?? null) ? trim($data['alias']) : null,
@@ -118,18 +121,22 @@ class CustomerService
                     'remark'            => filled($data['remark'] ?? null) ? trim($data['remark']) : null
                 ];
 
+
                 $update = $this->customerRepo->update($id, $dataUpdate);
+
+                $newData = $this->customerRepo->findById($id);
 
                 $reason = filled($data['remark'] ?? null) ? trim($data['remark']) : 'Update customer details';
 
-                $this->logService->store($update, 'update', $reason, $old->toArray(), $update->toArray());
+
+                $this->logService->store($newData, 'update', $reason, $old->toArray(), $newData->toArray());
 
                 activity('update_customer')
                     ->causedBy(Auth::id())
                     ->withProperties([
-                        'input_id' => $id,
-                        'input_data' => $update->toArray(),
-                        'ip' => Request::ip()
+                        'input_id'      => $id,
+                        'input_data'    => $newData->toArray(),
+                        'ip'            => Request::ip()
                     ])
                     ->log('Update success: Successfully udated customer data');
 
@@ -139,13 +146,13 @@ class CustomerService
             activity('update_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'input_id'  => $id,
-                    'input_data' => $data,
-                    'message'   => $e->getMessage(),
-                    'file'      => $e->getFile(),
-                    'line'      => $e->getLine(),
-                    'trace'     => $e->getTraceAsString(),
-                    'ip'        => Request::ip()
+                    'input_id'      => $id,
+                    'input_data'    => $data,
+                    'message'       => $e->getMessage(),
+                    'file'          => $e->getFile(),
+                    'line'          => $e->getLine(),
+                    'trace'         => $e->getTraceAsString(),
+                    'ip'            => Request::ip()
                 ])
                 ->log('Update failed: Failed to update customer data');
             throw $e;
@@ -171,9 +178,9 @@ class CustomerService
                     ->causedBy(Auth::id())
                     ->performedOn($customer)
                     ->withProperties([
-                        'input_id' => $id,
-                        'old_data' => $oldData,
-                        'ip' => Request::ip()
+                        'input_id'  => $id,
+                        'old_data'  => $oldData,
+                        'ip'        => Request::ip()
                     ])
                     ->log('Delete success: Successfully deleted customer data');
 
@@ -190,7 +197,7 @@ class CustomerService
                     'file'      => $e->getFile(),
                     'line'      => $e->getLine(),
                     'trace'     => $e->getTraceAsString(),
-                    'ip' => Request::ip()
+                    'ip'        => Request::ip()
                 ])
                 ->log('Delete failed: Failed to delete customer data');
 
@@ -233,7 +240,7 @@ class CustomerService
             activity('mass_delete_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
-                    'input_id' => $ids,
+                    'input_id'  => $ids,
                     'message'   => $e->getMessage(),
                     'file'      => $e->getFile(),
                     'line'      => $e->getLine(),

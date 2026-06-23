@@ -15,6 +15,7 @@ class ChangeLogs extends Model
 
     protected $fillable = [
         'uuid',
+        'revision',
         'user_id',
         'table_name',
         'item_id',

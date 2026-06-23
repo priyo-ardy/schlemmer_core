@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
 use App\Http\Controllers\Process\ProcessController;
 use App\Http\Controllers\Units\UnitController;
@@ -44,6 +45,16 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/process/{process}', [ProcessController::class, 'update'])->name('process.update');
     Route::post('/process/delete', [ProcessController::class, 'delete'])->name('process.delete');
     Route::post('/process/remove', [ProcessController::class, 'remove'])->name('process.remove');
+
+    // Customer management
+    Route::get('/customer', [CustomerController::class, 'index'])->name('customer');
+    Route::get('/customer/create', [CustomerController::class, 'create'])->name('customer.create');
+    Route::post('/customer', [CustomerController::class, 'store'])->name('customer.store');
+    Route::get('/customer/{customer}', [CustomerController::class, 'view'])->name('customer.view');
+    Route::put('/customer/{customer}', [CustomerController::class, 'update'])->name('customer.update');
+    Route::post('/customer/delete', [CustomerController::class, 'delete'])->name('customer.delete');
+    Route::post('/customer/mass-delete', [CustomerController::class, 'massDelete'])->name('customer.mass-delete');
+    Route::get('/customer/log/{logId}', [CustomerController::class, 'getLog'])->name('customer.getlog');
 
     // Units management
     Route::get('/units', [UnitController::class, 'index'])->name('unit.index');
