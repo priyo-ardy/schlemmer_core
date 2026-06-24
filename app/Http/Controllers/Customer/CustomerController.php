@@ -19,8 +19,9 @@ class CustomerController extends Controller
             'customers' => $this->customerService->getAllData(
                 $request->input('filter'),
                 $request->input('per_page', 10),
-                $request->input('search')
+                $request->input('search'),
             ),
+            'page_title' => 'Master Data / Customer Management'
         ]);
     }
 
@@ -87,5 +88,16 @@ class CustomerController extends Controller
         return redirect()->back()->with('success', 'Data deleted successfully');
     }
 
-    public function getLog(Request $request, int $id) {}
+    public function getLog(Request $request, int $id)
+    {
+        try {
+            $logs = $this->customerService->getLogsData($id);
+
+            return response()->json($logs);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'bulk_error' => $e->getMessage()
+            ]);
+        }
+    }
 }

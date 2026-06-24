@@ -2,7 +2,9 @@
 
 namespace App\Services\Units;
 
+use App\Models\ChangeLogs;
 use App\Repositories\Units\UnitRepository;
+use App\Services\ChangeLogs\ChangeLogsService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -10,12 +12,11 @@ use Illuminate\Support\Facades\Request;
 
 class UnitService
 {
-    protected UnitRepository $unitRepo;
 
-    public function __construct(UnitRepository $unitRepo)
-    {
-        $this->unitRepo = $unitRepo;
-    }
+    public function __construct(
+        protected UnitRepository $unitRepo,
+        protected ChangeLogsService $logService
+    ) {}
 
     public function getAllData()
     {
@@ -35,6 +36,9 @@ class UnitService
                 ];
 
                 $insert = $this->unitRepo->create($dataInsert);
+
+                $this->logService->store($insert, 'create', 'register new uom data', null, $insert->toArray());
+
                 activity('save_material')
                     ->causedBy(Auth::id())
                     ->performedOn($insert)
@@ -77,6 +81,10 @@ class UnitService
                 $this->unitRepo->update($id, $dataUpdate);
                 $updated = $this->unitRepo->findById($id);
 
+                $newData = $this->unitRepo->findById($id);
+
+                $this->logService->store($newData, 'update', $data['remark'], $oldData->toArray(), $newData->toArray());
+
                 activity('update_success')
                     ->causedBy(Auth::id())
                     ->performedOn($updated)
@@ -111,6 +119,8 @@ class UnitService
                 $unit = $this->unitRepo->findById($id);
                 $deleted = $this->unitRepo->delete($id);
 
+                $this->logService->store($unit, 'delete', 'Delete data', $unit->toArray(), null);
+
                 activity('delete_success')
                     ->causedBy(Auth::id())
                     ->performedOn($unit)
@@ -137,23 +147,37 @@ class UnitService
         }
     }
 
-    public function massDelete(array $ids)
+    public function massDelete(array $ids, string $reason)
     {
         try {
-            return DB::transaction(function () use ($ids) {
+            return DB::transaction(function () use ($ids, $reason) {
                 if (empty($ids)) {
-                    return false;
+                    throw new \Exception('No UoM data found provided.');
+                }
+
+                $units = $this->unitRepo->findManyByIds($ids);
+
+                if ($units->isEmpty()) {
+                    throw new \Exception('No customer data found for the provided IDs.');
+                }
+
+                foreach ($units as $unit) {
+                    $oldData = $unit->toArray();
+
+                    activity('mass_delete_unit')
+                        ->causedBy(Auth::id())
+                        ->causedBy($unit)
+                        ->withProperties([
+                            'input_id' => $ids,
+                            'old_data' => $oldData,
+                            'ip' => Request::ip(),
+                        ])
+                        ->log('Mass delete success: Successfully deleted multiple unit data');
+
+                    $this->logService->store($unit, 'delete', $reason, $oldData, null);
                 }
 
                 $mass_delete = $this->unitRepo->deleteAll($ids);
-
-                activity('mass_delete')
-                    ->causedBy(Auth::id())
-                    ->withProperties([
-                        'ids' => $ids,
-                        'ip' => Request::ip(),
-                    ])
-                    ->log('Mass delete success: Successfully deleted multiple unit data');
 
                 return $mass_delete;
             });
@@ -162,12 +186,35 @@ class UnitService
             activity('system_error')
                 ->causedBy(Auth::id())
                 ->withProperties([
+                    'input_id' => $ids,
                     'error_message' => $e->getMessage(),
                     'input_data' => ['ids' => $ids],
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
+                    'ip' => Request::ip()
                 ])
-                ->log('Delete failed: ' . $e->getMessage());
+                ->log('Delete failed: failed to mass delete units data ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function getLogsData(int $id)
+    {
+        try {
+            return $this->logService->getLogsData($id, 'units');
+        } catch (\Exception $e) {
+            activity('get_logs_data')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_id' => $id,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Load failed: Failed to load UoM history data');
+
             throw $e;
         }
     }

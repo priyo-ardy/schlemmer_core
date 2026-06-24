@@ -4,6 +4,12 @@ import { ref, watch, computed } from "vue";
 import { Head, router, Link, usePage, useForm } from "@inertiajs/vue3";
 import { toast } from "vue3-toastify";
 import { debounce } from "lodash";
+import axios from "axios";
+import dayjs from "dayjs";
+import "dayjs/locale/id";
+
+dayjs.locale("id");
+
 
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
@@ -18,11 +24,24 @@ const selectedFilter = ref("all");
 const isSearching = ref(false);
 const deleteReason = ref("");
 const isHistoryModalOpen = ref(false);
+const historyLogs = ref([]);
+const isLoadingHistory = ref(false);
+const selectedCustomerName = ref("");
 
 const deleteForm = useForm({
     ids: [],
     remark: "", // Alasan penghapusan
 });
+
+const formatLogDate = (date) => {
+    if (!date) return "-"; // Guard clause jika data tanggal kosong/null
+    return dayjs(date).format("DD MMM YYYY, HH:mm:ss [WIB]");
+};
+
+const formatTableDate = (date) => {
+    if (!date) return "-";
+    return dayjs(date).format("DD-MMM-YYYY HH:mm:ss");
+};
 
 const props = defineProps({
     customers: {
@@ -193,12 +212,80 @@ watch(
     }, 300),
 );
 
-const openHistoryModal = (id) => {
+const openHistoryModal = async (id, name) => {
     isHistoryModalOpen.value = true;
+    isLoadingHistory.value = true;
+    selectedCustomerName.value = name;
+    historyLogs.value = [];
+
+    try{
+        const response = await axios.get(`/customer/${id}/logs`);
+        historyLogs.value = response.data;
+
+        
+    } catch(error){
+        toast.error("Failed to load revision history data.");
+    }finally{
+        isLoadingHistory.value = false;
+    }
 };
 
 const closeHistoryModal = () => {
     isHistoryModalOpen.value = false;
+    isHistoryModalOpen.value = false;
+    selectedCustomerName.value = "";
+    historyLogs.value = [];
+};
+
+
+// Isi perubahan
+const getChangedFields = (log) => {
+    // Kolom-kolom teknis database yang tidak perlu ditampilkan ke user
+    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
+    const changes = [];
+    
+    if (log.event_name === 'update' && log.before && log.after) {
+        // Cari perbedaan antara data sebelum dan sesudah
+        Object.keys(log.after).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before[key] !== log.after[key]) {
+                changes.push({
+                    field: key,
+                    before: log.before[key],
+                    after: log.after[key]
+                });
+            }
+        });
+    } else if (log.event_name === 'delete' && log.before) {
+        // Tampilkan semua data yang dihapus
+        Object.keys(log.before).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: log.before[key],
+                    after: null
+                });
+            }
+        });
+    } else if (log.event_name === 'create' && log.after) {
+        // Tampilkan semua data yang baru dibuat
+        Object.keys(log.after).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.after[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: null,
+                    after: log.after[key]
+                });
+            }
+        });
+    }
+    
+    return changes;
+};
+
+// Helper untuk mempercantik nama kolom (contoh: billing_address -> Billing Address)
+const formatFieldName = (text) => {
+    if (!text) return '';
+    return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 </script>
 
@@ -209,22 +296,16 @@ const closeHistoryModal = () => {
     >
         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
             <!-- HEADER SECTION -->
-            <div
-                class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 px-6 pt-6"
-            >
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
-                    <h1
-                        class="text-2xl font-black text-slate-900 tracking-tight"
-                    >
+                    <h1 class="text-2xl font-black text-slate-900 tracking-tight">
                         Customer Management
                     </h1>
                     <p class="text-xs text-slate-500 mt-1">
                         Manage corporate clients and IATF requirements.
                     </p>
                 </div>
-                <div
-                    class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm"
-                >
+                <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm">
                     <div class="flex items-center justify-between w-full">
                         <div class="flex items-center gap-1.5">
                             <!-- Button New -->
@@ -309,15 +390,11 @@ const closeHistoryModal = () => {
                 </div>
             </div>
 
-            <div class="px-6 flex-1 flex flex-col">
+            <div class="flex-1 flex flex-col">
                 <!-- SEARCH & FILTER SECTION -->
-                <div
-                    class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4"
-                >
+                <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                     <div class="relative flex-1 max-w-md">
-                        <span
-                            class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400"
-                        >
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg
                                 v-if="isSearching"
                                 class="animate-spin h-4 w-4 text-blue-600"
@@ -454,7 +531,7 @@ const closeHistoryModal = () => {
                                     <td
                                         class="px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
                                         @click.stop="
-                                            openHistoryModal(customer.id)
+                                            openHistoryModal(customer.id, customer.name)
                                         "
                                     >
                                         <div class="flex justify-center">
@@ -567,7 +644,7 @@ const closeHistoryModal = () => {
     <!-- ========================================== -->
     <div
         v-show="isDrawerOpen"
-        class="fixed inset-0 z-50 overflow-hidden"
+        class="fixed inset-0 z-40 overflow-hidden"
         role="dialog"
         aria-modal="true"
     >
@@ -646,7 +723,7 @@ const closeHistoryModal = () => {
                             @submit.prevent="submitForm"
                             class="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-200/70"
                         >
-                            <div class="space-y-3">
+                            <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50">
                                 <h4
                                     class="text-[10px] font-bold text-blue-600 uppercase tracking-wide border-b border-slate-300 pb-1"
                                 >
@@ -1001,389 +1078,124 @@ const closeHistoryModal = () => {
         leave-to-class="opacity-0 scale-95"
     >
         <div
-            v-if="isHistoryModalOpen"
+            v-show="isHistoryModalOpen"
             @click.self="closeHistoryModal"
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
         >
             <div
-                class="bg-white w-full max-w-3xl border border-slate-200 shadow-2xl rounded-xl flex flex-col max-h-[90vh] overflow-hidden"
+                class="bg-white w-full max-w-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
             >
-                <div
-                    class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white z-10"
-                >
-                    <h3 class="text-lg font-bold text-slate-800">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="h-6 w-6 inline-block mr-1 text-blue-600"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                            />
+                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-
-                        Revision History
+                        Customer Revision History
                     </h3>
-                    <button
-                        @click="closeHistoryModal"
-                        class="text-slate-400 hover:text-red-500 transition-colors"
-                        title="Tutup"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
+                    <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <div class="overflow-y-auto flex-1 px-6 py-4">
-                    <div
-                        class="relative border-l-2 border-slate-200 ml-3 space-y-8"
-                    >
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-blue-500 rounded-full -left-[9px] top-1 border-4 border-white shadow-sm"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full"
-                                        >Rev. 3</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Ardy Priyo Sudiyantoko</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >23 Jun 2026, 14:30 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Update
-                                <strong>potential failure mode</strong> dan
-                                koreksi <strong>controls detection</strong> pada
-                                parameter injeksi plastik.
-                            </div>
-                        </div>
+                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
+                    
+                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
+                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
+                    </div>
 
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 2</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Budi Security Flaw</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >20 Jun 2026, 09:15 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Penambahan standar ISO baru pada section
-                                <strong>requirements</strong>.
-                            </div>
-                        </div>
+                    <div v-else-if="historyLogs.length === 0" class="text-center py-12 border border-dashed border-slate-200 bg-white p-8 ">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">This customer profile has no recorded changes.</p>
+                    </div>
 
-                        <div class="relative pl-6">
+                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+                        <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
+                            
                             <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
+                                :class="{
+                                    'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
+                                    'bg-blue-600 border-blue-100 ring-4 ring-blue-50': log.event_name === 'update' && index === 0,
+                                    'bg-slate-400 border-white': log.event_name === 'update' && index !== 0,
+                                    'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete'
+                                }"
+                                class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
                             ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
+                            
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-mono font-bold uppercase px-2 py-0.5  border bg-white shadow-sm text-slate-700">
+                                        Rev. {{ log.revision }}
+                                    </span>
+                                    <span 
+                                        :class="{
+                                            'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
+                                            'bg-blue-50 text-blue-700 border-blue-200': log.event_name === 'update',
+                                            'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete'
+                                        }"
+                                        class="text-[9px] font-bold uppercase px-1.5 py-0.5 border -sm tracking-wide"
                                     >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
+                                        {{ log.event_name }}
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-900">
+                                        {{ log.creator?.name || 'System Auto' }}
+                                    </span>
                                 </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
+                                <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                                    {{ formatLogDate(log.created_at) }}
+                                </span>
                             </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
 
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
+                            <div class="bg-white p-4 border border-slate-200 shadow-sm space-y-3">
+                                <div>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Change Reason</span>
+                                    <p class="text-xs font-bold text-slate-800 leading-relaxed whitespace-pre-line">
+                                        {{ log.change_reason || 'No description provided.' }}
+                                    </p>
                                 </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
 
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
+                                <div v-if="getChangedFields(log).length > 0" class="pt-2 border-t border-slate-100 overflow-x-auto">
+                                    <table class="min-w-full text-[11px] font-mono">
+                                        <thead>
+                                            <tr class="text-slate-400 border-b border-slate-100 text-left font-bold uppercase tracking-wider text-[10px]">
+                                                <th class="pb-1.5 w-1/4">Field Data</th>
+                                                <th class="pb-1.5 w-3/8 text-rose-600" v-if="log.event_name !== 'create'">Data Before</th>
+                                                <th class="pb-1.5 w-3/8 text-emerald-600" v-if="log.event_name !== 'delete'">Data After</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
+                                            <tr v-for="item in getChangedFields(log)" :key="item.field" class="hover:bg-slate-50/50">
+                                                <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
+                                                
+                                                <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
+                                                    <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 -sm line-through block w-fit max-w-xs truncate" :title="String(item.before)">
+                                                        {{ item.before === null || item.before === '' ? '-' : item.before }}
+                                                    </span>
+                                                </td>
+                                                
+                                                <td class="py-1.5" v-if="log.event_name !== 'delete'">
+                                                    <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 -sm font-bold block w-fit max-w-xs truncate" :title="String(item.after)">
+                                                        {{ item.after === null || item.after === '' ? '-' : item.after }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
                             </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
 
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
-
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
-
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
-
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
-
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
-                        </div>
-
-                        <div class="relative pl-6">
-                            <div
-                                class="absolute w-4 h-4 bg-slate-300 rounded-full -left-[9px] top-1 border-4 border-white"
-                            ></div>
-                            <div
-                                class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1 sm:gap-0"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span
-                                        class="px-2.5 py-0.5 text-xs font-medium text-slate-700 bg-slate-200 rounded-full"
-                                        >Rev. 1</span
-                                    >
-                                    <span
-                                        class="text-sm font-semibold text-slate-800"
-                                        >Siti Resigned</span
-                                    >
-                                </div>
-                                <span class="text-xs text-slate-500 font-medium"
-                                    >15 Jun 2026, 11:00 WIB</span
-                                >
-                            </div>
-                            <div
-                                class="mt-1 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100"
-                            >
-                                Initial draft pembuatan dokumen Process Function
-                                Details.
-                            </div>
                         </div>
                     </div>
+
                 </div>
 
-                <div
-                    class="border-t border-slate-100 px-6 py-4 bg-slate-50 flex justify-end z-10"
-                >
+                <div class="border-t border-slate-100 px-6 py-3.5 bg-white flex justify-end shrink-0">
                     <button
+                        type="button"
                         @click="closeHistoryModal"
-                        class="px-5 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm"
+                        class="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-200 transition active:scale-95 shadow-sm -lg"
                     >
                         Close
                     </button>

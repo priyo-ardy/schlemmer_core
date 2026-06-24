@@ -20,7 +20,8 @@ class UnitController extends Controller
     public function index()
     {
         return Inertia::render('Units/Unit', [
-            'units' => $this->unitService->getAllData()
+            'units' => $this->unitService->getAllData(),
+            'page_title' => 'Master Data / UoM Management'
         ]);
     }
 
@@ -61,11 +62,25 @@ class UnitController extends Controller
     {
         $validated = $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'integer|exists:units,id'
+            'ids.*' => 'integer|exists:units,id',
+            'remark' => 'required|string'
         ]);
 
-        $this->unitService->massDelete($request->ids);
+        $this->unitService->massDelete($request->ids, $request->input('remark'));
 
         return redirect()->back()->with('success', 'Data deleted successfully');
+    }
+
+    public function getLog(Request $request, int $id)
+    {
+        try {
+            $logs = $this->unitService->getLogsData($id);
+
+            return response()->json($logs);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'bulk_error' => $e->getMessage()
+            ]);
+        }
     }
 }

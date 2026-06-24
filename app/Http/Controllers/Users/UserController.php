@@ -7,6 +7,8 @@ use App\Http\Requests\StoreUserRequest;
 use App\Services\Users\UserServices;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -22,56 +24,76 @@ class UserController extends Controller
     {
         return Inertia::render('Users/Users', [
             'users' => $this->userService->getAllUsers(),
-            'current_user_id' => Auth::id()
+            'current_user_id' => Auth::id(),
+            'page_title' => 'Application / User Management'
         ]);
     }
 
     public function store(StoreUserRequest $request)
     {
-        $validatedData = $request->validated();
+        try {
+            $validatedData = $request->validated();
 
-        $this->userService->registerUser($validatedData);
+            $this->userService->registerUser($validatedData);
 
-        return redirect()->back();
+            return redirect()->back()->with('success', 'New user registered successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        // Validasi input form secara dinamis, avatar dibuat nullable & wajib file gambar
-        $validated = $request->validate([
-            'name' => 'required|string|max:150',
-            'email' => 'required|string|email|max:150',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'login_attempts' => 'required|integer|min:0',
-            'is_locked' => 'required|string',
-            'is_active' => 'required|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'name'              => 'required|string|max:150',
+                'email'             => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')->ignore($id)],
+                'avatar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+                'login_attempts'    => 'required|integer|min:0',
+                'is_locked'         => 'required|boolean',
+                'is_active'         => 'required|boolean',
+                'password'          => 'nullable|string|min:8',
+            ]);
 
-        $validated['is_locked'] = filter_var($request->is_locked, FILTER_VALIDATE_BOOLEAN);
-        $validated['is_active'] = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
+            $validated['is_locked'] = filter_var($request->is_locked, FILTER_VALIDATE_BOOLEAN);
+            $validated['is_active'] = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN);
 
-        if ($request->hasFile('avatar')) {
-            $validated['avatar'] = $request->file('avatar');
+            if ($request->hasFile('avatar')) {
+                $validated['avatar'] = $request->file('avatar');
+            }
+
+            $this->userService->updateSecuritySettings($id, $validated);
+            return redirect()->back()->with('success', 'User data updated successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'error' => $e->getMessage()
+            ]);
         }
-
-        $this->userService->updateSecuritySettings($id, $validated);
-        return redirect()->back();
     }
 
     public function bulkDestroy(Request $request)
     {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:users,id'
-        ]);
-
         try {
-            $this->userService->bulkDeleteUsers($request->ids, Auth::id());
+            $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'integer|exists:users,id',
+                'remark' => 'required|string|min:5'
+            ]);
 
-            return redirect()->back();
+            try {
+                $this->userService->bulkDeleteUsers($request->ids, Auth::id(), $request->input('remark'));
+
+                return redirect()->back();
+            } catch (\Exception $e) {
+                return redirect()->back()->withErrors([
+                    'bulk_error' => $e->getMessage()
+                ]);
+            }
         } catch (\Exception $e) {
             return redirect()->back()->withErrors([
-                'bulk_error' => $e->getMessage()
+                'error' => $e->getMessage()
             ]);
         }
     }

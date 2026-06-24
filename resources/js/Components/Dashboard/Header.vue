@@ -1,12 +1,18 @@
 <script setup>
 import { router, usePage } from "@inertiajs/vue3";
 import { ref, computed } from "vue";
+import { useSidebar } from "../../Composables/useSidebar";
+
+const { toggleSidebar } = useSidebar();
+
 
 defineEmits(["toggle-sidebar"]);
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const isProfileDropdownOpen = ref(false);
+
+const pageTitle = computed(() => page.props.page_title || "Overview / Analytics");
 
 const handleLogout = () => {
     router.post("/logout");
@@ -38,7 +44,7 @@ const userInitials = computed(() => {
     >
         <div class="flex items-center gap-4">
             <button
-                @click="$emit('toggle-sidebar')"
+                @click="toggleSidebar"
                 class="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition duration-150 focus:outline-none"
             >
                 <svg
@@ -57,7 +63,7 @@ const userInitials = computed(() => {
                 </svg>
             </button>
             <h2 class="text-sm font-semibold text-slate-400 hidden sm:block">
-                Overview / Analytics
+                {{ pageTitle }}
             </h2>
         </div>
 

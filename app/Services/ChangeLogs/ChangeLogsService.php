@@ -3,6 +3,7 @@
 namespace App\Services\ChangeLogs;
 
 use App\Models\ChangeLogs;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,5 +22,14 @@ class ChangeLogsService
             'after' => $new ?? null,
             'created_by' => Auth::id()
         ]);
+    }
+
+    public function getLogsData(int $id, string $table_name): Collection
+    {
+        return ChangeLogs::with('creator')
+            ->where('item_id', $id)
+            ->where('table_name', $table_name)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
 use App\Http\Controllers\Process\ProcessController;
+use App\Http\Controllers\RecycleBin\RecycleBinController;
 use App\Http\Controllers\Units\UnitController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Http\Request;
@@ -53,13 +54,14 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/customer/{customer}', [CustomerController::class, 'update'])->name('customer.update');
     Route::post('/customer/delete', [CustomerController::class, 'delete'])->name('customer.delete');
     Route::post('/customer/mass-delete', [CustomerController::class, 'massDelete'])->name('customer.mass-delete');
-    Route::get('/customer/log/{logId}', [CustomerController::class, 'getLog'])->name('customer.getlog');
+    Route::get('/customer/{logId}/logs', [CustomerController::class, 'getLog'])->name('customer.getlog');
 
     // Units management
     Route::get('/units', [UnitController::class, 'index'])->name('unit.index');
     Route::post('/units', [UnitController::class, 'store'])->name('unit.store');
     Route::put('/units/{unit}', [UnitController::class, 'update'])->name('unit.update');
     Route::post('/units/mass-delete', [UnitController::class, 'massDelete'])->name('unit.delete');
+    Route::get('/units/{logId}/logs', [UnitController::class, 'getLog'])->name('unit.getlog');
 
     // Material Management
     Route::get('/materials', [MaterialController::class, 'index'])->name('material.index');
@@ -77,4 +79,8 @@ Route::middleware(['auth'])->group(function () {
         $request->session()->regenerateToken();
         return redirect('/');
     })->name('logout');
+
+    // Recycle Bin
+    Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('recycle-bin.index');
+    Route::post('/recycle-bin/restore', [RecycleBinController::class, 'restore'])->name('recycle-bin.restore');
 });

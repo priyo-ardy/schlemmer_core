@@ -2,9 +2,11 @@
 
 namespace App\Services\Customer;
 
+use App\Models\ChangeLogs;
 use App\Repositories\Customer\CustomerRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
 use App\Services\GenerateCode\AutoNumberService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
@@ -245,6 +247,31 @@ class CustomerService
                     'ip' => Request::ip(),
                 ])
                 ->log('Delete failed: Failed to mass delete customer data');
+
+            throw $e;
+        }
+    }
+
+    public function getLogsData(int $id): Collection
+    {
+        try {
+            return ChangeLogs::with('creator')
+                ->where('item_id', $id)
+                ->where('table_name', 'customers')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } catch (\Exception $e) {
+            activity('get_logs_data')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_id' => $id,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Load failed: Failed to load revision history data');
 
             throw $e;
         }

@@ -3,6 +3,7 @@
 namespace App\Repositories\Units;
 
 use App\Models\Unit;
+use Illuminate\Database\Eloquent\Collection;
 
 class UnitRepository
 {
@@ -51,5 +52,10 @@ class UnitRepository
     public function getAllData()
     {
         return Unit::orderBy('symbol', 'asc')->get();
+    }
+
+    public function findManyByIds($ids): Collection
+    {
+        return Unit::whereIn('id', $ids)->get();
     }
 }

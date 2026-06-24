@@ -35,7 +35,8 @@ class ProcessController extends Controller
 
         return Inertia::render('Process/process-list', [
             'headers' => $headers,
-            'filters' => $request->only(['search', 'per_page']) // Kirim balik filter ke FE
+            'filters' => $request->only(['search', 'per_page']),
+            'page_title' => 'Master Data / Process Function Template'
         ]);
     }
 

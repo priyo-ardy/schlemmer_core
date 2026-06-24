@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Blameable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class ChangeLogs extends Model
@@ -32,6 +33,11 @@ class ChangeLogs extends Model
         'before' => 'array',
         'after'  => 'array',
     ];
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     protected static function booted()
     {

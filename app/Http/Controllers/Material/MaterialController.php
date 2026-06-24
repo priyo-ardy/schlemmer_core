@@ -24,7 +24,8 @@ class MaterialController extends Controller
         );
 
         return Inertia::render('Material/list', [
-            'materials' => $materials
+            'materials' => $materials,
+            'page_title' => 'Master Data / Material Management'
         ]);
     }
 
