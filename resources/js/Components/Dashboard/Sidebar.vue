@@ -13,7 +13,7 @@ const isUserManagementOpen = ref(currentPath.value.startsWith("/users"));
 const isProcessOpen = ref(currentPath.value.startsWith("/process"));
 const isMaterialOpen = ref(currentPath.value.startsWith("/materials"));
 const isProjectOpen = ref(currentPath.value.startsWith("/projects"));
-const isUnitOpen = ref(currentPath.value.startsWith("/units"));
+const isUnitOpen = ref(currentPath.value.startsWith("/units") || currentPath.value.startsWith("/unit_category"));
 const isCustomerOpen = ref(currentPath.value.startsWith("/customer"));
 
 const toggleUserManagement = () => { if (!isCollapsed.value) isUserManagementOpen.value = !isUserManagementOpen.value; };
@@ -39,7 +39,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
         </div>
 
         <nav class="flex-1 px-3 py-6 space-y-7 overflow-y-auto overflow-x-hidden select-none">
-            
+
             <div class="space-y-1">
                 <Link
                     href="/dashboard"
@@ -57,7 +57,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                 <span v-show="!isCollapsed" class="block px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 whitespace-nowrap">
                     Master Data
                 </span>
-                
+
                 <div>
                     <button @click="toggleProcessList" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
@@ -127,7 +127,11 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
+
                     <div v-show="isUnitOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-slate-800 space-y-1">
+                        <Link href="/unit_category" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath.startsWith('/unit_category') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
+                            <span>UoM Categories</span>
+                        </Link>
                         <Link href="/units" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath.startsWith('/units') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
                             <span>List of UoM</span>
                         </Link>
@@ -158,7 +162,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                 <span v-show="!isCollapsed" class="block px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 whitespace-nowrap">
                     Application Setting
                 </span>
-                
+
                 <div>
                     <button
                         @click="toggleUserManagement"
@@ -166,7 +170,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                         :class="currentPath.startsWith('/users') ? 'bg-slate-800 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
                     >
                         <div class="flex items-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 transition" :class="currentPath.startsWith('/users') ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/xl" class="h-5 w-5 shrink-0 transition" :class="currentPath.startsWith('/users') ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                                 <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>

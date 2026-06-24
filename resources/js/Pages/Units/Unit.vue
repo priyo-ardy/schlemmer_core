@@ -61,8 +61,8 @@ const filteredUnits = computed(() => {
         const remark = unit.remark ? unit.remark.toLowerCase() : '';
         const search = searchQuery.value.toLowerCase();
 
-        const matchesSearch = symbol.includes(search) || 
-                              name.includes(search) || 
+        const matchesSearch = symbol.includes(search) ||
+                              name.includes(search) ||
                               remark.includes(search);
 
         if (selectedFilter.value === 'enable') return matchesSearch && unit.is_active;
@@ -89,12 +89,12 @@ const refreshTable = () => {
 };
 
 watch(
-    errors, 
+    errors,
     (newErrors) => {
         if (newErrors && newErrors.error) {
             toast.error(newErrors.error);
         }
-    }, 
+    },
     { deep: true }
 );
 
@@ -111,7 +111,7 @@ const paginateUnits = computed(() => {
 });
 
 const totalFiltered = computed(() => filteredUnits.value.length);
-const totalPages = computed(() => Math,ceil(totalFiltered.value / itemsPerPage.value));
+const totalPages = computed(() => Math.ceil(totalFiltered.value / itemsPerPage.value));
 
 const paginationStart = computed(() => {
     if(totalFiltered.value === 0) return 0;
@@ -127,12 +127,12 @@ const goToNext = () => { if(currentPage.value < totalPages.value) currentPage.va
 
 // Checkbox
 const isAllSelected = computed(
-    () => 
+    () =>
     paginateUnits.value.length > 0 &&
     paginateUnits.value.every((u) => selectedUnits.value.includes(u.id))
 );
 
-const toggleSelectAll = () => { 
+const toggleSelectAll = () => {
     if(isAllSelected.value){
         selectedUnits.value = selectedUnits.value.filter(
             (id) => !paginateUnits.value.some((u) => u.id === id)
@@ -252,7 +252,7 @@ const confirmAction = () => {
         onSuccess: () => {
             selectedUnits.value = [];
             showConfirmModal.value = false;
-            deleteReason.value = ""; 
+            deleteReason.value = "";
             deleteForm.clearErrors();
         }
     });
@@ -285,7 +285,7 @@ const closeHistoryModal = () => {
 const getChangedFields = (log) => {
     const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
     const changes = [];
-    
+
     if (log.event_name === 'update' && log.before && log.after) {
         Object.keys(log.after).forEach(key => {
             if (!ignoredKeys.includes(key) && log.before[key] !== log.after[key]) {
@@ -317,7 +317,7 @@ const getChangedFields = (log) => {
             }
         });
     }
-    
+
     return changes;
 };
 
@@ -356,18 +356,18 @@ const formatFieldName = (text) => {
                                     :disabled="isRefreshing"
                                     class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 bg-orange-50 border border-slate-200 transition-all  hover:bg-orange-50 active:scale-95 shadow-sm disabled:opacity-60"
                                 >
-                                    <svg 
-                                        xmlns="http://www.w3.org/2000/svg" 
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
                                         :class="isRefreshing ? 'animate-spin text-blue-600' : 'text-slate-500'"
-                                        class="h-3.5 w-3.5 transition-colors duration-150" 
-                                        fill="none" 
-                                        viewBox="0 0 24 24" 
-                                        stroke-width="2" 
+                                        class="h-3.5 w-3.5 transition-colors duration-150"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke-width="2"
                                         stroke="currentColor"
                                     >
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                     </svg>
-                                    
+
                                     <span>{{ isRefreshing ? 'Refreshing...' : 'Refresh' }}</span>
                                 </button>
                                 <div v-if="selectedUnits.length > 0" class="w-px h-4 bg-slate-200 mx-1"></div>
@@ -382,7 +382,7 @@ const formatFieldName = (text) => {
                     </div>
                 </div>
             </div>
-            
+
             <!-- Search Bar, Per Page, Status-->
             <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="relative flex-1 max-w-md">
@@ -425,7 +425,7 @@ const formatFieldName = (text) => {
                     </select>
                 </div>
             </div>
-            
+
             <!-- Content table -->
             <div class="bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-auto flex flex-col">
                 <div class="overflow-auto">
@@ -443,11 +443,11 @@ const formatFieldName = (text) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
-                            <tr 
-                                v-for="unit in filteredUnits" 
-                                :key="unit.id" 
+                            <tr
+                                v-for="unit in filteredUnits"
+                                :key="unit.id"
                                 @click="openEditDrawer(unit)"
-                                class="hover:bg-blue-50/50 transition hover:cursor-pointer duration-150" 
+                                class="hover:bg-blue-50/50 transition hover:cursor-pointer duration-150"
                                 :class="{'bg-blue-50/30 font-medium': selectedUnits.includes(unit.id)}"
                             >
                                 <td class="px-6 py-4 text-center" @click.stop>
@@ -460,17 +460,17 @@ const formatFieldName = (text) => {
                                     {{ unit.name }}
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <span 
-                                        :class="unit.is_active 
-                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                            : 'bg-rose-50 text-rose-600 border border-rose-100'" 
+                                    <span
+                                        :class="unit.is_active
+                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                            : 'bg-rose-50 text-rose-600 border border-rose-100'"
                                         class="inline-flex items-center px-2.5 py-0.5 text-xs text-[10px] font-bold uppercase tracking-wide shadow-sm"
                                     >
                                         <span :class="unit.is_active ? 'bg-emerald-500' : 'bg-rose-500'" class="h-1.5 w-1.5 rounded-full mr-1.5"></span>
                                         {{ unit.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
-                                <td 
+                                <td
                                     @click.stop="openHistoryModal(unit.id, unit.name)"
                                     class="px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
                                 >
@@ -498,23 +498,23 @@ const formatFieldName = (text) => {
                     <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         Showing {{ totalFiltered === 0 ? 0 : paginationStart }} to {{ paginationEnd }} of {{ totalFiltered }}
                     </div>
-                    
+
                     <div class="flex items-center gap-1 text-[11px] font-bold">
-                        <button 
-                            @click="goToPrev" 
-                            :disabled="currentPage === 1" 
+                        <button
+                            @click="goToPrev"
+                            :disabled="currentPage === 1"
                             class="px-2 py-1.5 text-slate-400 hover:text-blue-600 disabled:opacity-50 disabled:hover:text-slate-400 transition"
                         >
                             &laquo; Previous
                         </button>
-                        
+
                         <div class="bg-blue-600 text-white rounded-sm w-7 h-7 flex items-center justify-center shadow-sm">
                             {{ currentPage }}
                         </div>
-                        
-                        <button 
-                            @click="goToNext" 
-                            :disabled="currentPage === totalPages || totalFiltered === 0" 
+
+                        <button
+                            @click="goToNext"
+                            :disabled="currentPage === totalPages || totalFiltered === 0"
                             class="px-2 py-1.5 text-slate-400 hover:text-blue-600 disabled:opacity-50 disabled:hover:text-slate-400 transition"
                         >
                             Next &raquo;
@@ -549,11 +549,11 @@ const formatFieldName = (text) => {
                                 <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50">
                                     <div>
                                         <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">UoM Symbol <span class="text-rose-500 text-bold">*</span></label>
-                                        <input type="text" v-model="form.symbol" maxlength="10" placeholder="UoM Symbol" 
+                                        <input type="text" v-model="form.symbol" maxlength="10" placeholder="UoM Symbol"
                                             :class="[
                                                 'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
-                                                form.errors.symbol 
-                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
+                                                form.errors.symbol
+                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
                                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                                             ]"
                                         />
@@ -562,11 +562,11 @@ const formatFieldName = (text) => {
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">UoM Name <span class="text-rose-500 text-bold">*</span></label>
-                                        <input type="text" v-model="form.name" maxlength="150" placeholder="UoM Name" 
+                                        <input type="text" v-model="form.name" maxlength="150" placeholder="UoM Name"
                                             :class="[
                                                 'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
-                                                form.errors.name 
-                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
+                                                form.errors.name
+                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
                                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                                             ]"
                                         />
@@ -583,19 +583,19 @@ const formatFieldName = (text) => {
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">{{ !isEditMode ? 'Remark (Optional)' :  'Change Reason' }} <span class="text-bold text-rose-500" v-if="isEditMode">*</span></label>
-                                        <textarea 
-                                            v-model="form.remark" 
+                                        <textarea
+                                            v-model="form.remark"
                                             :placeholder="isEditMode ? 'Describe why you are altering this data (Required) ...' : 'Write additional information here (Optional) ...'"
                                             @input="form.clearErrors('remark')"
                                             rows="3"
                                             :class="[
                                                 'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
-                                                form.errors.remark 
-                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
+                                                form.errors.remark
+                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
                                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                                             ]"
                                         ></textarea>
-                                        
+
                                         <Transition
                                             enter-active-class="transition duration-150 ease-out"
                                             enter-from-class="transform -translate-y-1 opacity-0"
@@ -663,7 +663,7 @@ const formatFieldName = (text) => {
                             <textarea
                                 v-model="deleteReason"
                                 rows="2"
-                                @input="deleteForm.clearErrors('remark')" 
+                                @input="deleteForm.clearErrors('remark')"
                                 :class="deleteForm.errors.remark ? 'border-rose-500' : 'border-slate-300'"
                                 class="w-full p-2 border text-xs focus:outline-none focus:border-blue-500 transition-all"
                                 placeholder="e.g. Data redundancy, wrong entry, etc."
@@ -728,7 +728,7 @@ const formatFieldName = (text) => {
                     </div>
 
                     <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
-                        
+
                         <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
                             <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
@@ -741,7 +741,7 @@ const formatFieldName = (text) => {
 
                         <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
                             <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
-                                
+
                                 <div
                                     :class="{
                                         'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
@@ -751,13 +751,13 @@ const formatFieldName = (text) => {
                                     }"
                                     class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
                                 ></div>
-                                
+
                                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
                                     <div class="flex items-center gap-2">
                                         <span class="text-[10px] font-mono font-bold uppercase px-2 py-0.5  border bg-white shadow-sm text-slate-700">
                                             Rev. {{ log.revision }}
                                         </span>
-                                        <span 
+                                        <span
                                             :class="{
                                                 'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
                                                 'bg-blue-50 text-blue-700 border-blue-200': log.event_name === 'update',
@@ -796,13 +796,13 @@ const formatFieldName = (text) => {
                                             <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
                                                 <tr v-for="item in getChangedFields(log)" :key="item.field" class="hover:bg-slate-50/50">
                                                     <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
-                                                    
+
                                                     <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
                                                         <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 -sm line-through block w-fit max-w-xs truncate" :title="String(item.before)">
                                                             {{ item.before === null || item.before === '' ? '-' : item.before }}
                                                         </span>
                                                     </td>
-                                                    
+
                                                     <td class="py-1.5" v-if="log.event_name !== 'delete'">
                                                         <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 -sm font-bold block w-fit max-w-xs truncate" :title="String(item.after)">
                                                             {{ item.after === null || item.after === '' ? '-' : item.after }}

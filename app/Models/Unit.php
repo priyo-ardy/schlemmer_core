@@ -22,6 +22,11 @@ class Unit extends Model
         'name',
         'is_active',
         'remark',
+        'category_id',
+        'code',
+        'is_base_unit',
+        'conversion_factor',
+        'conversion_offset',
         'created_by',
         'updated_by'
     ];
