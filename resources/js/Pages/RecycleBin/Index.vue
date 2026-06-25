@@ -124,10 +124,13 @@ const confirmRestore = () => {
         preserveScroll: true,
         onSuccess: () => {
             closeRestoreModal();
-            toast.success("Data restored successfully");
         },
-        onError: () => {
-            toast.error("Failed to restore data");
+        onError: (errors) => {
+            if (errors.error) {// Munculin pesan spesifik dari try-catch laravel
+                console.error(errors.error);
+            } else {
+                toast.error("Failed to restore data");
+            }
         }
     });
 };
@@ -207,6 +210,7 @@ const confirmRestore = () => {
                             <option value="Material">Material</option>
                             <option value="Customer">Customer</option>
                             <option value="User">User</option>
+                            <option value="UnitCategory">Unit Categories</option>
                             <option value="Unit">Unit</option>
                         </select>
                     </div>

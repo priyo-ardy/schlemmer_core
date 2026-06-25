@@ -24,7 +24,8 @@ const formatTableDate = (date) => {
 
 // Initialize data form controller
 const props = defineProps({
-    units: Array
+    categories: Array,
+    units: Array,
 })
 
 const page = usePage();
@@ -156,10 +157,18 @@ const toggleSelectUnit = (id) => {
 // Form binding
 const form = useForm({
     id: null,
+    code:"",
+    category_id: null,
+    revision:"",
     symbol: "",
     name: "",
     is_active: true,
-    remark: ""
+    is_base_unit: false,
+    conversion_factor: 1,
+    conversion_offset: 0,
+    decimal_places: 2,
+    remark: "",
+    reason: ""
 });
 
 const openCreateDrawer = () => {
@@ -173,14 +182,21 @@ const openCreateDrawer = () => {
 
 const openEditDrawer = (unit) => {
     isEditMode.value = true;
-    slideOverTitle.value = `Update UoM data: ${unit.symbol}`;
+    slideOverTitle.value = `Update UoM data: ${unit.name} ( ${unit.symbol} )`;
     form.clearErrors();
 
     form.id = unit.id;
-    form.symbol = unit.symbol;
-    form.name = unit.name;
-    form.remark = unit.remark;
-    form.is_active = !!unit.is_active;
+    form.code = unit.code,
+    form.category_id = unit.category_id;
+    form.revision = unit.revision,
+    form.symbol = unit.symbol,
+    form.name = unit.name,
+    form.is_active =  !!unit.is_active,
+    form.is_base_unit = !!unit.is_base_unit,
+    form.conversion_factor = unit.conversion_factor,
+    form.conversion_offset = unit.conversion_offset,
+    form.decimal_places = unit.decimal_places,
+    form.remark = unit.remark
 
     isSlideOverOpen.value = true;
 }
@@ -204,8 +220,8 @@ const handleSubmit = () => {
     }
 
     if (isEditMode.value) {
-        if (!form.remark || !form.remark.trim()) {
-            form.setError('remark', 'Please fill the content change reason');
+        if (!form.reason || !form.reason.trim()) {
+            form.setError('reason', 'Please fill the content change reason');
             isValid = false;
         }
     }
@@ -225,7 +241,9 @@ const handleSubmit = () => {
     }).post(isEditMode.value ? `/units/${form.id}` : '/units', {
         preserveErrors: true,
         onSuccess: () => {
-            isSlideOverOpen.value = false;
+            if(isEditMode.value){
+                isSlideOverOpen.value = false;
+            }
             form.reset();
         },
         onError: (errrs) => {
@@ -324,6 +342,33 @@ const getChangedFields = (log) => {
 const formatFieldName = (text) => {
     if (!text) return '';
     return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+// Dropdown model select2
+const isDropdownOpen = ref(false);
+const categorySearchQuery = ref("");
+
+const filteredCategoriesForSelect = computed(() => {
+    const search = categorySearchQuery.value.toLowerCase().trim();
+    return (props.categories || []).filter((cat) => {
+        const name = cat.name ? cat.name.toLowerCase() : '';
+        const code = cat.code ? cat.code.toLowerCase() : '';
+        const description = cat.description ? cat.description.toLowerCase() : ''; 
+
+        return name.includes(search) || code.includes(search) || description.includes(search);
+    });
+});
+
+const selectedCategoryName = computed(() => {
+    const matched = (props.categories || []).find(cat => cat.id === form.category_id);
+    return matched ? `${matched.name} (${matched.code} - ${matched.description || '-'})` : "Select a unit category...";
+});
+
+const selectCategory = (category) => {
+    form.category_id = category.id;
+    form.clearErrors('category_id');
+    isDropdownOpen.value = false; 
+    categorySearchQuery.value = ""; 
 };
 </script>
 
@@ -435,9 +480,15 @@ const formatFieldName = (text) => {
                                 <th class="px-6 py-4 w-12 text-center">
                                     <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll" class="rounded border-slate-300 text-blue-600 h-4 w-4 transition cursor-pointer" />
                                 </th>
-                                <th class="px-6 py-4">Symbol</th>
+                                <th class="px-6 py-4">Code</th>
+                                <th class="px-6 py-4">Category</th>
                                 <th class="px-6 py-4">Name</th>
+                                <th class="px-6 py-4">Symbol</th>
                                 <th class="px-6 py-4 text-center">Status</th>
+                                <th class="px-6 py-4">Base Unit</th>
+                                <th class="px-6 py-4">Conversion Factor</th>
+                                <th class="px-6 py-4">Conversion Offset</th>
+                                <th class="px-6 py-4">Decimal Place</th>
                                 <th class="px-6 py-4">Revision</th>
                                 <th class="px-6 py-4">Remark</th>
                             </tr>
@@ -454,10 +505,16 @@ const formatFieldName = (text) => {
                                     <input type="checkbox" :value="unit.id" :checked="selectedUnits.includes(unit.id)" @change="toggleSelectUnit(unit.id)" class="rounded border-slate-300 text-blue-600 h-4 w-4 transition cursor-pointer" />
                                 </td>
                                 <td class="px-6 py-4 font-mono font-bold text-slate-900">
-                                    {{ unit.symbol }}
+                                    {{ unit.code }}
+                                </td>
+                                <td class="px-6 py-4 font-mono font-bold text-slate-900">
+                                    {{ unit.category ? unit.category.name : '-' }}
                                 </td>
                                 <td class="px-6 py-4 font-semibold text-slate-700">
                                     {{ unit.name }}
+                                </td>
+                                <td class="px-6 py-4 font-mono font-bold text-slate-900">
+                                    {{ unit.symbol }}
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <span
@@ -469,6 +526,26 @@ const formatFieldName = (text) => {
                                         <span :class="unit.is_active ? 'bg-emerald-500' : 'bg-rose-500'" class="h-1.5 w-1.5 rounded-full mr-1.5"></span>
                                         {{ unit.is_active ? 'Active' : 'Inactive' }}
                                     </span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span
+                                        :class="unit.is_base_unit
+                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                            : 'bg-rose-50 text-rose-600 border border-rose-100'"
+                                        class="inline-flex items-center px-2.5 py-0.5 text-xs text-[10px] font-bold uppercase tracking-wide shadow-sm"
+                                    >
+                                        <span :class="unit.is_base_unit ? 'bg-emerald-500' : 'bg-rose-500'" class="h-1.5 w-1.5 rounded-full mr-1.5"></span>
+                                        {{ unit.is_base_unit ? 'Yes' : 'No' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {{ unit.conversion_factor  }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {{ unit.conversion_offset  }}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    {{ unit.decimal_places  }}
                                 </td>
                                 <td
                                     @click.stop="openHistoryModal(unit.id, unit.name)"
@@ -548,17 +625,85 @@ const formatFieldName = (text) => {
                             <form @submit.prevent="handleSubmit" class="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-200/70">
                                 <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50/50">
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">UoM Symbol <span class="text-rose-500 text-bold">*</span></label>
-                                        <input type="text" v-model="form.symbol" maxlength="10" placeholder="UoM Symbol"
+                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">Unit Categories <span class="text-bold text-rose-500">*</span></label>
+                                        <button
+                                            type="button"
+                                            @click="isDropdownOpen = !isDropdownOpen"
                                             :class="[
-                                                'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
-                                                form.errors.symbol
-                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
-                                                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                                'w-full flex items-center justify-between pl-4 pr-3 py-2 bg-slate-50 border text-xs font-medium transition-all outline-none text-left', // ✅ FIXED: py-2 biar lebih compact
+                                                form.errors.category_id 
+                                                    ? 'border-rose-500 bg-rose-50/30 text-rose-600 focus:ring-2 focus:ring-rose-100' 
+                                                    : 'border-slate-200 text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500'
                                             ]"
-                                        />
-                                        <p v-if="form.errors.symbol" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.symbol }}</p>
-                                        <p v-else class="mt-1.5 text-[10px] font-medium text-slate-400">Unique units symbol</p>
+                                        >
+                                            <span :class="{ 'text-slate-400': !form.category_id }">
+                                                {{ selectedCategoryName }}
+                                            </span>
+                                            <svg 
+                                                xmlns="http://www.w3.org/2000/svg" 
+                                                class="h-4 w-4 text-slate-400 transition-transform duration-200" 
+                                                :class="{ 'rotate-180': isDropdownOpen }" 
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Overlay penutup otomatis -->
+                                        <div v-if="isDropdownOpen" class="fixed inset-0 z-40" @click="isDropdownOpen = false"></div>
+
+                                        <!-- Panel Dropdown Menu -->
+                                        <div
+                                            v-if="isDropdownOpen"
+                                            class="absolute z-50 mt-1 w-full bg-white border border-slate-200 shadow-xl flex flex-col animate-fade-in"
+                                        >
+                                            <!-- Kolom Input Pencarian Internal -->
+                                            <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                                <input
+                                                    type="text"
+                                                    v-model="categorySearchQuery"
+                                                    placeholder="Type category name or code to search..."
+                                                    class="w-full pl-3 pr-3 py-1.5 bg-white border border-slate-200 text-xs font-semibold focus:border-blue-500 focus:outline-none transition"
+                                                />
+                                            </div>
+
+                                            <!-- Daftar Opsi Kategori -->
+                                            <ul class="overflow-y-auto max-h-52 divide-y divide-slate-100 text-xs">
+                                                <li v-if="filteredCategoriesForSelect.length === 0" class="px-4 py-3 text-slate-400 italic text-center bg-white">
+                                                    No matching categories found
+                                                </li>
+                                                
+                                                <li
+                                                    v-else
+                                                    v-for="cat in filteredCategoriesForSelect"
+                                                    :key="cat.id"
+                                                    @mousedown.prevent="selectCategory(cat)"
+                                                    :class="form.category_id === cat.id 
+                                                        ? 'bg-blue-50 text-blue-600 font-bold' 
+                                                        : 'text-slate-700 hover:bg-slate-50 bg-white'"
+                                                    class="px-4 py-1.5 cursor-pointer transition flex items-center justify-between"
+                                                >
+                                                    <div class="min-w-0 flex-1 pr-2">
+                                                        <span class="block font-bold text-slate-800">{{ cat.name }}</span>
+                                                        
+                                                        <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                                                            <span class="font-mono tracking-wide bg-slate-100 px-1 py-0.2 text-slate-500">{{ cat.code }}</span>
+                                                            <span v-if="cat.description" class="truncate font-normal" :title="cat.description">
+                                                                • {{ cat.description }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <svg v-if="form.category_id === cat.id" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <p v-if="form.errors.category_id" class="mt-1.5 text-[10px] font-bold text-rose-500">
+                                            {{ form.errors.category_id }}
+                                        </p>
                                     </div>
                                     <div>
                                         <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">UoM Name <span class="text-rose-500 text-bold">*</span></label>
@@ -572,6 +717,96 @@ const formatFieldName = (text) => {
                                         />
                                         <p v-if="form.errors.name" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.name }}</p>
                                     </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">UoM Symbol <span class="text-rose-500 text-bold">*</span></label>
+                                        <input type="text" v-model="form.symbol" maxlength="10" placeholder="UoM Symbol"
+                                            :class="[
+                                                'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
+                                                form.errors.symbol
+                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
+                                                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                            ]"
+                                        />
+                                        <p v-if="form.errors.symbol" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.symbol }}</p>
+                                        <p v-else class="mt-1.5 text-[10px] font-medium text-slate-400">Unique units symbol</p>
+                                    </div>
+                                    <div class="space-y-4 pt-2">
+                                        <div class="flex items-center justify-between p-3.5 bg-white border border-slate-200/80  shadow-sm">
+                                            <div class="flex flex-col min-w-0 pr-4">
+                                                <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Base Unit <span class="text-bold text-rose-500">*</span></span>
+                                                <span class="text-[11px] font-medium text-slate-400 mt-0.5 truncate">{{ form.is_base_unit ? "🟢 Yes." : "🔴 No." }}</span>
+                                            </div>
+                                            <button type="button" @click="form.is_base_unit = !form.is_base_unit" :class="form.is_base_unit ? 'bg-emerald-500' : 'bg-slate-200'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"><span :class="form.is_base_unit ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200"></span></button>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4 pt-2">
+                                        <div class="grid grid-cols-3 gap-4">
+                                            <div>
+                                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">
+                                                    Conv. Factor
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    step="any"
+                                                    v-model="form.conversion_factor" 
+                                                    placeholder="1.00"
+                                                    :class="[
+                                                        'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none text-right', // 🟢 FIXED: Tambah text-right
+                                                        form.errors.conversion_factor
+                                                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
+                                                            : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                                    ]"
+                                                />
+                                                <p v-if="form.errors.conversion_factor" class="mt-1.5 text-[10px] font-bold text-rose-500">
+                                                    {{ form.errors.conversion_factor }}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">
+                                                    Conv. Offset
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    step="any"
+                                                    v-model="form.conversion_offset" 
+                                                    placeholder="0.00"
+                                                    :class="[
+                                                        'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none text-right', // 🟢 FIXED: Tambah text-right
+                                                        form.errors.conversion_offset
+                                                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
+                                                            : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                                    ]"
+                                                />
+                                                <p v-if="form.errors.conversion_offset" class="mt-1.5 text-[10px] font-bold text-rose-500">
+                                                    {{ form.errors.conversion_offset }}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">
+                                                    Decimal Places
+                                                </label>
+                                                <input 
+                                                    type="number" 
+                                                    min="0"
+                                                    max="10"
+                                                    step="1"
+                                                    v-model="form.decimal_places" 
+                                                    placeholder="2"
+                                                    :class="[
+                                                        'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none text-right', // 🟢 FIXED: Tambah text-right
+                                                        form.errors.decimal_places
+                                                            ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
+                                                            : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                                    ]"
+                                                />
+                                                <p v-if="form.errors.decimal_places" class="mt-1.5 text-[10px] font-bold text-rose-500">
+                                                    {{ form.errors.decimal_places }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="space-y-4 pt-2">
                                         <div class="flex items-center justify-between p-3.5 bg-white border border-slate-200/80  shadow-sm">
                                             <div class="flex flex-col min-w-0 pr-4">
@@ -582,15 +817,26 @@ const formatFieldName = (text) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">{{ !isEditMode ? 'Remark (Optional)' :  'Change Reason' }} <span class="text-bold text-rose-500" v-if="isEditMode">*</span></label>
+                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">Description</label>
                                         <textarea
                                             v-model="form.remark"
-                                            :placeholder="isEditMode ? 'Describe why you are altering this data (Required) ...' : 'Write additional information here (Optional) ...'"
+                                            placeholder="Write additional information here ..."
                                             @input="form.clearErrors('remark')"
+                                            rows="3"
+                                            class="w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700"
+                                        ></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-400 tracking-wider mb-2">Change Reason <span class="text-bold text-rose-500" v-if="isEditMode">*</span></label>
+                                        <textarea
+                                            v-model="form.reason"
+                                            placeholder="Describe the change reason here ..."
+                                            @input="form.clearErrors('reason')"
                                             rows="3"
                                             :class="[
                                                 'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none ',
-                                                form.errors.remark
+                                                form.errors.reason
                                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
                                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                                             ]"
@@ -601,11 +847,11 @@ const formatFieldName = (text) => {
                                             enter-from-class="transform -translate-y-1 opacity-0"
                                             enter-to-class="transform translate-y-0 opacity-100"
                                         >
-                                            <p v-if="form.errors.remark" class="text-xs text-rose-600 mt-1 font-bold flex items-center gap-1">
+                                            <p v-if="form.errors.reason" class="text-xs text-rose-600 mt-1 font-bold flex items-center gap-1">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
                                                     <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
                                                 </svg>
-                                                {{ form.errors.remark }}
+                                                {{ form.errors.reason }}
                                             </p>
                                         </Transition>
                                     </div>
@@ -618,7 +864,7 @@ const formatFieldName = (text) => {
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    {{ form.processing ? "Saving..." : isEditMode ? "Update" : "Save" }}
+                                    {{ form.processing ? "Saving..." : isEditMode ? "Apply Changed" : "Save" }}
                                 </button>
                             </div>
                         </div>
@@ -718,7 +964,7 @@ const formatFieldName = (text) => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                            UoM Revision History
+                            UoM Revision History ( {{ selectedUnitsName }} )
                         </h3>
                         <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -735,7 +981,7 @@ const formatFieldName = (text) => {
                         </div>
 
                         <div v-else-if="historyLogs.length === 0" class="text-center py-12 border border-dashed border-slate-200 bg-white p-8 ">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records</span>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records ( {{ selectedUnitsName }})</span>
                             <p class="text-[11px] text-slate-400 mt-0.5">This customer profile has no recorded changes.</p>
                         </div>
 
@@ -747,7 +993,8 @@ const formatFieldName = (text) => {
                                         'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
                                         'bg-blue-600 border-blue-100 ring-4 ring-blue-50': log.event_name === 'update' && index === 0,
                                         'bg-slate-400 border-white': log.event_name === 'update' && index !== 0,
-                                        'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete'
+                                        'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete',
+                                        'bg-orange-500 border-orange-100 ring-4 ring-orange-50': log.event_name === 'restore'
                                     }"
                                     class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
                                 ></div>
@@ -761,7 +1008,8 @@ const formatFieldName = (text) => {
                                             :class="{
                                                 'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
                                                 'bg-blue-50 text-blue-700 border-blue-200': log.event_name === 'update',
-                                                'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete'
+                                                'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete',
+                                                'bg-orange-50 text-orange-700 border-orange-200': log.event_name === 'restore',
                                             }"
                                             class="text-[9px] font-bold uppercase px-1.5 py-0.5 border -sm tracking-wide"
                                         >

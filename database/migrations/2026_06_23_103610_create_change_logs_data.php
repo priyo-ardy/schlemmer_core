@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             $table->string('table_name', 255);
             $table->bigInteger('item_id');
-            $table->enum('event_name', ['create', 'update', 'delete']);
+            $table->enum('event_name', ['create', 'update', 'delete', 'restore']);
             $table->integer('revision')->default(0);
             $table->text('change_reason')->nullable();
             $table->json('before')->nullable();

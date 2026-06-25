@@ -51,7 +51,8 @@ class UnitRepository
 
     public function getAllData()
     {
-        return Unit::orderBy('symbol', 'asc')->get();
+        return Unit::with(['creator', 'updater', 'category'])
+            ->orderBy('code', 'asc')->get();
     }
 
     public function findManyByIds($ids): Collection

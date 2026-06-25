@@ -4,7 +4,9 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
 use App\Http\Controllers\Process\ProcessController;
+use App\Http\Controllers\Project\ProjectController;
 use App\Http\Controllers\RecycleBin\RecycleBinController;
+use App\Http\Controllers\UnitCategory\UnitCategoryController;
 use App\Http\Controllers\Units\UnitController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Http\Request;
@@ -55,6 +57,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/customer/delete', [CustomerController::class, 'delete'])->name('customer.delete');
     Route::post('/customer/mass-delete', [CustomerController::class, 'massDelete'])->name('customer.mass-delete');
     Route::get('/customer/{logId}/logs', [CustomerController::class, 'getLog'])->name('customer.getlog');
+
+    // Project management
+    Route::get('/projects', [ProjectController::class, 'index'])->name('project.index');
+
+    // UoM Category
+    Route::get('/unit_category', [UnitCategoryController::class, 'index'])->name('uom_category.index');
+    Route::post('/unit_category', [UnitCategoryController::class, 'store'])->name('uom_category.store');
+    Route::put('/unit_category/{category}', [UnitCategoryController::class, 'update'])->name('uom_category.update');
+    Route::post('/unit_category/mass-delete', [UnitCategoryController::class, 'massDelete'])->name('uom_category.mass-delete');
+    Route::get('/unit_category/{logId}/logs', [UnitCategoryController::class, 'getLog'])->name('uom_category.getlog');
 
     // Units management
     Route::get('/units', [UnitController::class, 'index'])->name('unit.index');

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Material;
 use App\Models\Unit;
+use App\Models\UnitCategory;
 use App\Models\User;
 use App\Services\ChangeLogs\ChangeLogsService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -24,7 +26,9 @@ class RecycleBinController extends Controller
         $masterModel = [
             'User' => User::class,
             'Customer' => Customer::class,
-            'Units' => Unit::class
+            'Material' => Material::class,
+            'UnitCategory' => UnitCategory::class,
+            'Unit' => Unit::class
         ];
 
 
@@ -39,35 +43,36 @@ class RecycleBinController extends Controller
                 $trashList->push([
                     'id'           => $item->id,
                     'uuid'         => $item->uuid,
-                    'resource'     => $resourceName, // 'Material', 'Customer', atau 'User'
-                    'identifier'   => $identitas,    // Biar frontend gampang nampilin namanya
+                    'resource'     => $resourceName,
+                    'identifier'   => $identitas,
                     'deleted_at'   => $item->deleted_at,
-                    'deleted_by'   => $item->deleted_by ?? null, // Jika kamu tracking user pencet hapus
+                    'deleted_by'   => $item->deleted_by ?? null,
                 ]);
             }
-
-            $sortedTrash = $trashList->sortByDesc('deleted_at')->values()->all();
-
-            return Inertia::render('RecycleBin/Index', [
-                'trashItems' => $sortedTrash,
-                'page_title' => 'Application Setting / Recycle Bin'
-            ]);
         }
+
+        $sortedTrash = $trashList->sortByDesc('deleted_at')->values()->all();
+
+        return Inertia::render('RecycleBin/Index', [
+            'trashItems' => $sortedTrash,
+            'page_title' => 'Application Setting / Recycle Bin'
+        ]);
     }
 
     public function restore(Request $request)
     {
         $request->validate([
-            'resource' => 'required|string',
             'id'       => 'required|integer',
-            'remark'   => 'nullable|string'
+            'remark'   => 'nullable|string',
+            'resource' => 'required|string',
         ]);
 
         $modelMap = [
-            'User'      => User::class,
-            'Customer'  => Customer::class,
-            'Material'  => Material::class,
-            'Unit'      => Unit::class,
+            'User'         => User::class,
+            'Customer'     => Customer::class,
+            'Material'     => Material::class,
+            'UnitCategory' => UnitCategory::class,
+            'Unit'         => Unit::class,
         ];
 
         if (!array_key_exists($request->resource, $modelMap)) {
@@ -76,27 +81,34 @@ class RecycleBinController extends Controller
 
         $modelClass = $modelMap[$request->resource];
 
-        $item = $modelClass::onlyTrashed()->findOrFail($request->id);
+        try {
+            $item = $modelClass::onlyTrashed()->findOrFail($request->id);
 
-        $beforeData = $item->toArray();
+            $beforeData = $item->toArray();
+            $item->restore();
+            $afterData = $item->toArray();
 
-        $item->restore();
+            $reason = $request->input('remark') ?? 'Restore deleted data via Recycle Bin';
+            $this->logService->store($item, 'restore', $reason, $beforeData, $afterData);
 
-        $afterData = $item->toArray();
+            activity('restore_data')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'resource' => $request->resource,
+                    'item_id'  => $request->id,
+                    'remark'   => $reason
+                ])
+                ->log("Restored {$request->resource}: " . ($item->name ?? $item->id));
 
-        $reason = $request->input('remark') ?? 'Restore deleted data via Recycle Bin';
-
-        $this->logService->store($item, 'restore', $reason, $beforeData, $afterData);
-
-        activity('restore_data')
-            ->causedBy(Auth::id())
-            ->withProperties([
-                'resource' => $request->resource,
-                'item_id'  => $request->id,
-                'remark'   => $reason
-            ])
-            ->log("Restored {$request->resource}: " . ($item->name ?? $item->id));
-
-        return redirect()->back()->with('success', "Data {$request->resource} berhasil dikembalikan!");
+            return redirect()->back()->with('success', "Data {$request->resource} restored!");
+        } catch (ModelNotFoundException $e) {
+            return redirect()->back()->withErrors([
+                'error' => "Restore failed! Data {$request->resource} with ID {$request->id} not found in recycle bin."
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'error' => "System failure: " . $e->getMessage()
+            ]);
+        }
     }
 }

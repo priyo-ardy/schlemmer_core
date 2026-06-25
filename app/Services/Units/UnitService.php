@@ -5,6 +5,7 @@ namespace App\Services\Units;
 use App\Models\ChangeLogs;
 use App\Repositories\Units\UnitRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
+use App\Services\GenerateCode\AutoNumberService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +16,8 @@ class UnitService
 
     public function __construct(
         protected UnitRepository $unitRepo,
-        protected ChangeLogsService $logService
+        protected ChangeLogsService $logService,
+        protected AutoNumberService $autoService
     ) {}
 
     public function getAllData()
@@ -28,10 +30,16 @@ class UnitService
         try {
             return DB::transaction(function () use ($data) {
                 $dataInsert = [
+                    'category_id' => $data['category_id'],
+                    'code' => $this->autoService->generate('unit'),
                     'symbol' => $data['symbol'],
                     'revision' => $data['revision'] ?? 0,
                     'name' => $data['name'],
                     'is_active' => $data['is_active'] ?? true,
+                    'is_base_unit' => $data['is_base_unit'],
+                    'conversion_factor' => $data['conversion_factor'],
+                    'conversion_offset' => $data['conversion_offset'],
+                    'decimal_places' => $data['decimal_places'],
                     'remark'    => $data['remark'] ?? null
                 ];
 
@@ -71,9 +79,14 @@ class UnitService
             return DB::transaction(function () use ($id, $data) {
                 $oldData = $this->unitRepo->findById($id);
                 $dataUpdate = [
+                    'category_id' => $data['category_id'],
+                    'name' => $data['name'],
                     'symbol' => $data['symbol'],
                     'revision'  => ($oldData->revision ?? 0) + 1,
-                    'name' => $data['name'],
+                    'is_base_unit' => $data['is_base_unit'],
+                    'conversion_factor' => $data['conversion_factor'],
+                    'conversion_offset' => $data['conversion_offset'],
+                    'decimal_places' => $data['decimal_places'],
                     'is_active' => $data['is_active'] ?? true,
                     'remark'    => $data['remark'] ?? null
                 ];
@@ -89,6 +102,7 @@ class UnitService
                     ->causedBy(Auth::id())
                     ->performedOn($updated)
                     ->withProperties([
+                        'input_id' => $id,
                         'old_data' => $oldData,
                         'new_data' => $dataUpdate,
                         'ip' => Request::ip()

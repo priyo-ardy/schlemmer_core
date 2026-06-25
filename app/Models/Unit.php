@@ -17,18 +17,20 @@ class Unit extends Model
     protected $table = 'units';
 
     protected $fillable = [
-        'symbol',
+        'uuid',
         'revision',
-        'name',
-        'is_active',
-        'remark',
         'category_id',
         'code',
+        'name',
+        'symbol',
+        'is_active',
         'is_base_unit',
         'conversion_factor',
         'conversion_offset',
+        'decimal_places',
+        'remark',
         'created_by',
-        'updated_by'
+        'updated_by',
     ];
 
     public function creator(): BelongsTo
@@ -39,6 +41,11 @@ class Unit extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(UnitCategory::class, 'category_id');
     }
 
     protected static function booted()
