@@ -198,6 +198,17 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     <span v-show="!isCollapsed">Recycle Bin</span>
                 </Link>
 
+                <Link
+                    href="/activity-logs"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition duration-150 group whitespace-nowrap"
+                    :class="currentPath.startsWith('/activity-logs') ? 'bg-slate-800 text-white font-semibold shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 transition" :class="currentPath.startsWith('/activity-logs') ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2a4 4 0 014-4h3m0 0l3-3m-3 3l-3 3m-7 4h2a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span v-show="!isCollapsed">Activity Logs</span>
+                </Link>
+
             </div>
         </nav>
 

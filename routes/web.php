@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLog\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
@@ -99,4 +100,6 @@ Route::middleware(['auth'])->group(function () {
     // Recycle Bin
     Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('recycle-bin.index');
     Route::post('/recycle-bin/restore', [RecycleBinController::class, 'restore'])->name('recycle-bin.restore');
+
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 });
