@@ -5,6 +5,7 @@ namespace App\Http\Controllers\RecycleBin;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Material;
+use App\Models\Project;
 use App\Models\Unit;
 use App\Models\UnitCategory;
 use App\Models\User;
@@ -28,7 +29,8 @@ class RecycleBinController extends Controller
             'Customer' => Customer::class,
             'Material' => Material::class,
             'UnitCategory' => UnitCategory::class,
-            'Unit' => Unit::class
+            'Unit' => Unit::class,
+            'Project' => Project::class
         ];
 
 
@@ -73,6 +75,7 @@ class RecycleBinController extends Controller
             'Material'     => Material::class,
             'UnitCategory' => UnitCategory::class,
             'Unit'         => Unit::class,
+            'Project' => Project::class
         ];
 
         if (!array_key_exists($request->resource, $modelMap)) {

@@ -28,7 +28,7 @@ class ProjectService
                 $dataInput = [
                     'code' => strtoupper(trim($data['code'])),
                     'name' => trim($data['name']),
-                    'customer_id' => trim($data['customer']),
+                    'customer_id' => trim($data['customer_id']),
                     'vehicle_model' => trim($data['vehicle_model']),
                     'main_part_number' => trim($data['main_part_number']),
                     'main_part_name' => trim($data['main_part_number']),
@@ -88,7 +88,7 @@ class ProjectService
                 $updateData = [
                     'code' => strtoupper(trim($data['code'])),
                     'name' => trim($data['name']),
-                    'customer_id' => trim($data['customer']),
+                    'customer_id' => trim($data['customer_id']),
                     'vehicle_model' => trim($data['vehicle_model']),
                     'main_part_number' => trim($data['main_part_number']),
                     'main_part_name' => trim($data['main_part_number']),
@@ -184,7 +184,7 @@ class ProjectService
     public function getLogsData(int $id)
     {
         try {
-            return $this->logService->getLogsData($id, 'project');
+            return $this->logService->getLogsData($id, 'projects');
         } catch (\Exception $e) {
             activity('get_logs_data')
                 ->causedBy(Auth::id())

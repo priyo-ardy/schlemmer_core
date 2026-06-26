@@ -11,7 +11,7 @@ class ProjectRepository
     public function getAllData($filter, $page, $search = null)
     {
         // return Project::orderBy('code', 'asc')->get();
-        $query = Project::orderBy('code', 'asc');
+        $query = Project::with('customer')->orderBy('code', 'asc');
 
         if ($filter && $filter !== 'all') {
             $query->where('is_active', $filter === 'enable' ? 1 : 0);

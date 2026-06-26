@@ -3,6 +3,7 @@
 namespace App\Services\Customer;
 
 use App\Models\ChangeLogs;
+use App\Models\Customer;
 use App\Repositories\Customer\CustomerRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
 use App\Services\GenerateCode\AutoNumberService;
@@ -257,7 +258,7 @@ class CustomerService
         try {
             return ChangeLogs::with('creator')
                 ->where('item_id', $id)
-                ->where('table_name', 'customers')
+                ->where('table_name', 'projects')
                 ->orderBy('created_at', 'desc')
                 ->get();
         } catch (\Exception $e) {
@@ -275,5 +276,10 @@ class CustomerService
 
             throw $e;
         }
+    }
+
+    public function getCustomerList()
+    {
+        return Customer::select('id', 'code', 'name')->orderBy('code', 'asc')->get();
     }
 }

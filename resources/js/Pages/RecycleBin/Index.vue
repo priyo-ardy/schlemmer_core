@@ -212,6 +212,7 @@ const confirmRestore = () => {
                             <option value="User">User</option>
                             <option value="UnitCategory">Unit Categories</option>
                             <option value="Unit">Unit</option>
+                            <option value="Project">Project</option>
                         </select>
                     </div>
                 </div>

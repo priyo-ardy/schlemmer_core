@@ -154,23 +154,30 @@ const deleteSelected = () => {
 };
 
 const confirmAction = () => {
-    if (!deleteReason.value) {
-        toast.error("Reason for deletion is required!");
+    // Bersihin error sebelumnya
+    deleteForm.clearErrors();
+
+    if (!deleteReason.value || deleteReason.value.trim() === "") {
+        // Cuma set error di form, gak usah panggil toast
+        deleteForm.setError('remark', 'This field is required');
         return;
     }
 
     deleteForm.ids = selectedIds.value;
     deleteForm.remark = deleteReason.value;
 
-    deleteForm.post("/customer/mass-delete", {
+    deleteForm.post("/projects/mass-delete", {
+        preserveScroll: true,
         onSuccess: () => {
             selectedIds.value = [];
             showConfirmModal.value = false;
-            deleteReason.value = ""; // Reset
+            deleteReason.value = "";
+            toast.success("Selected items deleted successfully");
         },
         onError: (errors) => {
-            toast.error("Failed to delete data");
-        },
+            const firstError = Object.values(errors)[0];
+            toast.error(firstError || "Failed to delete items");
+        }
     });
 };
 
@@ -1240,9 +1247,18 @@ const formatFieldName = (text) => {
                         <textarea
                             v-model="deleteReason"
                             rows="2"
-                            class="w-full p-2 border border-slate-300 text-xs focus:outline-none focus:border-blue-500"
+                            class="w-full p-2 border text-xs focus:outline-none focus:ring-1 transition-colors"
+                            :class="deleteForm.errors.remark ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500' : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'"
                             placeholder="e.g. Data redundancy, wrong entry, etc."
+                            @input="deleteForm.clearErrors('remark')"
                         ></textarea>
+
+                        <p
+                            v-if="deleteForm.errors.remark"
+                            class="mt-1 text-[10px] font-bold text-rose-500"
+                        >
+                            {{ deleteForm.errors.remark }}
+                        </p>
                     </div>
 
                     <div class="flex gap-3 w-full">

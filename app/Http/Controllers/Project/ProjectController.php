@@ -3,14 +3,17 @@
 namespace App\Http\Controllers\Project;
 
 use App\Http\Controllers\Controller;
+use App\Services\Customer\CustomerService;
 use App\Services\Project\ProjectService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
 {
     public function __construct(
-        protected ProjectService $projectService
+        protected ProjectService $projectService,
+        protected CustomerService $customerService
     ) {}
 
     public function index(Request $request)
@@ -21,6 +24,7 @@ class ProjectController extends Controller
                 $request->input('per_page', 10),
                 $request->input('search'),
             ),
+            'customers' => $this->customerService->getCustomerList(),
             'page_title' => 'Master Data / Project Management / List of Project'
         ]);
     }
@@ -28,7 +32,24 @@ class ProjectController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([]);
+            $validated = $request->validate([
+                'code' => 'required|string|max:50|unique:projects,code|regex:/^[a-zA-Z0-9\-\/]+$/',
+                'name' => 'required|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'customer_id' => 'required|exists:customers,id',
+                'vehicle_model' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_number' => 'nullable|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_name' => 'nullable|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'apqp_phase' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'status' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'kick_off_date' => 'nullable|date',
+                'target_proto_date' => 'nullable|date',
+                'target_ppap_date' => 'nullable|date',
+                'target_sop_date' => 'nullable|date',
+                'confidentiality_level' => 'nullable|max:30',
+                'revision' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean',
+                'remark' => 'nullable|string|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+            ]);
 
             $this->projectService->store($validated);
 
@@ -43,7 +64,31 @@ class ProjectController extends Controller
     public function update(Request $request, int $id)
     {
         try {
-            $validated = $request->validate([]);
+            $validated = $request->validate([
+                'code' => [
+                    'required',
+                    'string',
+                    'max:50',
+                    'regex:/^[a-zA-Z0-9\-\/]+$/',
+                    Rule::unique('units', 'code')->ignore($id),
+                ],
+                'name' => 'required|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'customer_id' => 'required|exists:customers,id',
+                'vehicle_model' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_number' => 'nullable|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_name' => 'nullable|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'apqp_phase' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'status' => 'nullable|string',
+                'kick_off_date' => 'nullable|date',
+                'target_proto_date' => 'nullable|date',
+                'target_ppap_date' => 'nullable|date',
+                'target_sop_date' => 'nullable|date',
+                'confidentiality_level' => 'nullable|max:30',
+                'revision' => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean',
+                'remark' => 'nullable|string|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'reason' => 'required|string|regex:/^[a-zA-Z0-9\-\/\s]+$/'
+            ]);
 
             $this->projectService->update($id, $validated);
 
