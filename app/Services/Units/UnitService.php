@@ -96,7 +96,7 @@ class UnitService
 
                 $newData = $this->unitRepo->findById($id);
 
-                $this->logService->store($newData, 'update', $data['remark'], $oldData->toArray(), $newData->toArray());
+                $this->logService->store($newData, 'update', $data['reason'], $oldData->toArray(), $newData->toArray());
 
                 activity('update_success')
                     ->causedBy(Auth::id())

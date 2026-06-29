@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Material extends Model
 {
@@ -16,18 +17,40 @@ class Material extends Model
     protected $table = 'materials';
 
     protected $fillable = [
-        'part_number',
-        'part_name',
+        'uuid',
         'revision',
-        'material_type',
-        'is_safety_part',
-        'warehouse_code',
-        'rack_code',
-        'bin_code',
-        'min_stock',
-        'unit_of_measure',
+        'category',
+        'code',
+        'name',
+        'specification',
+        'customer_part_name',
+        'unit_id',
+        'grade',
+        'density',
+        'melt_flow_index',
+        'color',
+        'shrinkage_rate',
+        'gross_weight',
+        'net_weight',
+        'sprue_weight',
+        'has_rohs',
+        'imds_number',
+        'msds_doc_path',
+        'risk_profile',
+        'is_active',
+        'remark',
         'created_by',
-        'updated_by'
+        'updated_by',
+    ];
+
+    protected $casts = [
+        'has_rohs' => 'boolean',
+        'is_active' => 'boolean',
+        'gross_weight' => 'decimal:4',
+        'net_weight' => 'decimal:4',
+        'sprue_weight' => 'decimal:4',
+        'density' => 'decimal:4',
+        'melt_flow_index' => 'decimal:4',
     ];
 
     public function creator(): BelongsTo
@@ -38,5 +61,19 @@ class Material extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function units(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    protected static function booted()
+    {
+        static::creating(function (Material $material) {
+            if (empty($material->uuid)) {
+                $material->uuid = (string) Str::uuid7();
+            }
+        });
     }
 }

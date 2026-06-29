@@ -30,7 +30,8 @@ class RecycleBinController extends Controller
             'Material' => Material::class,
             'UnitCategory' => UnitCategory::class,
             'Unit' => Unit::class,
-            'Project' => Project::class
+            'Project' => Project::class,
+            'Material' => Material::class
         ];
 
 
@@ -70,12 +71,13 @@ class RecycleBinController extends Controller
         ]);
 
         $modelMap = [
-            'User'         => User::class,
-            'Customer'     => Customer::class,
-            'Material'     => Material::class,
-            'UnitCategory' => UnitCategory::class,
-            'Unit'         => Unit::class,
-            'Project' => Project::class
+            'User'          => User::class,
+            'Customer'      => Customer::class,
+            'Material'      => Material::class,
+            'UnitCategory'  => UnitCategory::class,
+            'Unit'          => Unit::class,
+            'Project'       => Project::class,
+            'Material'      => Material::class
         ];
 
         if (!array_key_exists($request->resource, $modelMap)) {

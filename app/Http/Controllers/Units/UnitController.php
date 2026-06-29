@@ -61,6 +61,7 @@ class UnitController extends Controller
             'conversion_factor' => 'nullable|numeric',
             'conversion_offset' => 'nullable|numeric',
             'decimal_places' => 'nullable|integer|min:0',
+            'reason' => 'required|string'
         ]);
 
         $this->unitService->update($id, $validated);

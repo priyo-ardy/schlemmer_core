@@ -82,7 +82,11 @@ Route::middleware(['auth'])->group(function () {
 
     // Material Management
     Route::get('/materials', [MaterialController::class, 'index'])->name('material.index');
-    Route::get('/materials/create', [MaterialController::class, 'create'])->name('material.create');
+    Route::post('/materials', [MaterialController::class, 'store'])->name('material.store');
+    Route::put('/materials/{material}', [MaterialController::class, 'update'])->name('material.update');
+    Route::post('/materials/mass-delete', [MaterialController::class, 'massDelete'])->name('material.delete');
+    Route::get('/materials/{logId}/logs', [MaterialController::class, 'getLog'])->name('material.getlog');
+
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

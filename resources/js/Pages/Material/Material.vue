@@ -7,7 +7,7 @@ import { debounce } from "lodash";
 import axios from "axios";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import AuthenticatedLayout from "../../Layouts/AuthenticatedLayout.vue";
 
 defineOptions({ layout: AuthenticatedLayout });
 
@@ -36,8 +36,8 @@ const historyLogs = ref([]);
 const isLoadingHistory = ref(false);
 const selectedName = ref("");
 const isDrawerOpen = ref(false);
-const selectedProject = ref(null);
-const isEditMode = computed(() => selectedProject.value !== null);
+const selectedMaterial = ref(null);
+const isEditMode = computed(() => selectedMaterial.value !== null);
 
 // Delete form dalam modal
 const deleteForm =useForm({
@@ -45,38 +45,43 @@ const deleteForm =useForm({
     remark: ""
 });
 
-// Tangkap data dari BE
+
+// Data dari BE
 const props = defineProps({
-    projects:{
+    materials:{
         type: Object,
         default: () => ({ data:[], links:[], per_page: 10}),
     },
-    customers: Array
+    units: Array,
 });
 
-// Definisikan form
+// Form
 const form = useForm({
+    category: "",
     code: "",
     name: "",
-    customer_id: "",
-    vehicle_model: "",
-    main_part_number: "",
-    main_part_name: "",
-    apqp_phase: "",
-    status: "",
-    kick_off_date: "",
-    target_proto_date: "",
-    target_ppap_date: "",
-    target_sop_date: "",
-    confidentiality_level: "",
-    revision: "",
+    specification: "",
+    customer_part_name: "",
+    unit_id: "",
+    grade: "",
+    density: 0,
+    melt_flow_index: 0,
+    color: "",
+    shrinkage_rate: "",
+    gross_weight: 0,
+    net_weight: 0,
+    sprue_weight: 0,
+    has_rohs: false,
+    imds_number: "",
+    msds_doc_path: "",
+    risk_profile: "low",
     is_active: true,
     remark: "",
-    reason: "",
+    reason: ""
 });
 
 // Setup per page
-const perPage = ref(props.projects?.per_page || 10);
+const perPage = ref(props.materials?.per_page || 10);
 // Setup form processing
 const isProcessing = computed(() => form.processing || false);
 // Setup error
@@ -86,7 +91,7 @@ const errors = computed(() => page.props.errors || {});
 const refreshTable = () => {
     isRefreshing.value = true;
     router.reload({
-        only:["projects"],
+        only:["materials"],
         onSuccess: () => {
             isRefreshing.value = false;
         },
@@ -95,13 +100,6 @@ const refreshTable = () => {
             toast.error("Failed to refresh data");
         }
     })
-}
-
-// Event untuk Select All
-const toggleSelectAll = (event) => {
-    selectedIds.value = event.target.checked
-        ? props.projects.data.map((c) => c.id)
-        : [];
 }
 
 // Event untuk pengecekan error
@@ -117,34 +115,47 @@ watch(
     }
 );
 
+// Event untuk Select All
+const toggleSelectAll = (event) => {
+    selectedIds.value = event.target.checked
+        ? props.materials.data.map((c) => c.id)
+        : [];
+}
+
+// Open Create Drawer
 const openCreateDrawer = () => {
-    selectedProject.value = null;
+    selectedMaterial.value = null;
     form.reset();
     form.clearErrors();
     isDrawerOpen.value = true;
-}
+};
 
-const openEditDrawer = (project) => {
-    selectedProject.value = project;
+// Open edit drawer
+const openEditDrawer = (material) => {
+    selectedMaterial.value = material;
     form.clearErrors();
 
-    form.id = project.id;
-    form.code = project.code ?? "";
-    form.name = project.name ?? "";
-    form.customer_id = project.customer_id ?? "";
-    form.vehicle_model = project.vehicle_model ?? "";
-    form.main_part_number = project.main_part_number ?? "";
-    form.main_part_name = project.main_part_name ?? "";
-    form.apqp_phase = project.apqp_phase ?? "";
-    form.status = project.status ?? "";
-    form.kick_off_date = project.kick_off_date ?? "";
-    form.target_proto_date = project.target_proto_date ?? "";
-    form.target_ppap_date = project.target_ppap_date ?? "";
-    form.target_sop_date = project.target_sop_date ?? "";
-    form.confidentiality_level = project.confidentiality_level ?? "";
-    form.revision = project.revision ?? "";
-    form.is_active = project.is_active ?? true;
-    form.remark = project.remark ?? "";
+    form.id = material.id;
+    form.category = material.category ?? "";
+    form.code = material.code ?? "";
+    form.name = material.name ?? "";
+    form.specification = material.specification ?? "";
+    form.customer_part_name = material.customer_part_name ?? "";
+    form.unit_id = material.unit_id ?? "";
+    form.grade = material.grade ?? "";
+    form.density = material.density ?? "";
+    form.melt_flow_index = material.melt_flow_index ?? "";
+    form.color = material.color ?? "";
+    form.shrinkage_rate = material.shrinkage_rate ?? "";
+    form.gross_weight = material.gross_weight ?? "";
+    form.net_weight = material.net_weight ?? "";
+    form.sprue_weight = material.sprue_weight ?? "";
+    form.has_rohs = material.has_rohs ?? false;
+    form.imds_number = material.imds_number ?? "";
+    form.msds_doc_path = material.msds_doc_path ?? "";
+    form.risk_profile = material.risk_profile ?? "";
+    form.is_active = material.is_active ?? true;
+    form.remark = material.remark ?? "";
 
     isDrawerOpen.value = true;
 }
@@ -170,6 +181,21 @@ const submitForm = () => {
         isValid = false;
     }
 
+    if(!form.specification){
+        form.setError('specification', 'This field is required')
+        isValid = false;
+    }
+
+    if(!form.unit_id){
+        form.setError('unit_id', 'This field is required')
+        isValid = false;
+    }
+
+    if(!form.category){
+        form.setError('category', 'This field is required')
+        isValid = false;
+    }
+
     if(isEditMode.value){
         if(!form.reason){
             form.setError('reason', 'Please fill the changed reason');
@@ -192,40 +218,36 @@ const submitForm = () => {
         }
 
         return payload;
-    }).post(isEditMode.value ? `/projects/${form.id}` : '/projects', {
+    }).post(isEditMode.value ? `/materials/${form.id}` : '/materials', {
         preserveScroll: true,
         onSuccess: () => {
             form.reset();
-        },
-        onError: (errors) => {
-            const firstError = Object.values(errors)[0];
-            toast.error(firstError);
         }
     });
 }
 
+// Delete selected
 const deleteSelected = () => {
     if(selectedIds.value.length > 0) showConfirmModal.value = true;
 }
 
+// Konfirmasi hapus
 const confirmAction = () => {
     deleteForm.clearErrors();
 
-    // Langsung cek dari deleteForm.remark
     if (!deleteForm.remark || deleteForm.remark.trim() === "") {
         deleteForm.setError('remark', 'This field is required');
         return;
     }
 
-    // IDS diambil dari selectedIds
     deleteForm.ids = selectedIds.value;
 
-    deleteForm.post("/projects/mass-delete", {
+    deleteForm.post("/materials/mass-delete", {
         preserveScroll: true,
         onSuccess: () => {
             selectedIds.value = [];
             showConfirmModal.value = false;
-            deleteForm.reset(); // Ini bakal nge-reset remark ke string kosong ""
+            deleteForm.reset();
             toast.success("Selected items deleted successfully");
         },
         onError: (errors) => {
@@ -235,6 +257,7 @@ const confirmAction = () => {
     });
 };
 
+// Batalin penghapusan
 const cancelConfirmAction = () => {
     deleteForm.clearErrors();
     selectedIds.value = [];
@@ -242,7 +265,7 @@ const cancelConfirmAction = () => {
     deleteForm.reset();
 }
 
-// fungsi buat update jumlah perhalaman
+// Update jumlah data per halaman
 const updatePerPage = () => {
     router.get(
         window.location.pathname,
@@ -259,7 +282,7 @@ const updatePerPage = () => {
     )
 }
 
-// Search Query
+// Query pencarian
 watch(
     searchQuery,
     debounce((value) => {
@@ -289,7 +312,7 @@ const openHistoryModal = async(id, name) => {
     historyLogs.value = [];
 
     try{
-        const response = await axios.get(`/projects/${id}/logs`);
+        const response = await axios.get(`/materials/${id}/logs`);
         historyLogs.value = response.data;
     } catch(errors){
         const firstError = Object.values(err)[0];
@@ -346,74 +369,131 @@ const getChangedFields = (log) => {
 };
 
 const formatFieldName = (text) => {
-    if (!text) return '';
+    if (!text) return '-';
     return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
-// --- State untuk Custom Select2 ---
-const isCustomerDropdownOpen = ref(false);
-const customerSearch = ref("");
+// Dropdown uom
+const isUnitDropdownOpen = ref(false);
+const unitSearch = ref("");
 
-// Filter data customer berdasarkan inputan search
-const filteredCustomers = computed(() => {
-    if (!customerSearch.value) return props.customers;
-    const lowerSearch = customerSearch.value.toLowerCase();
-    return props.customers.filter(c =>
-        c.name.toLowerCase().includes(lowerSearch)
+// Filter data uom berdasarkan inputan search
+const filteredUnits = computed(() => {
+    if(!unitSearch.value) return props.units;
+    const lowerSearch = unitSearch.value.toLowerCase();
+    return props.units.filter(c => c.name.toLowerCase().includes(lowerSearch));
+});
+
+// Nampilin UoM pada kotak utama
+const selectedUnitName = computed(() => {
+    if(!form.unit_id) return "Select UoM";
+
+    const uom = props.units.find(c => c.id === form.unit_id);
+    return uom ? `${uom.symbol} - ${uom.name}` : "Select UoM";
+});
+
+// Fungsi ketika data yang dibutuhkan di klik
+const selectUnit = (id) => {
+    form.unit_id = id;
+    isUnitDropdownOpen.value = false;
+    unitSearch.value = "";
+}
+
+// Benerin isi table kalo isidatanya kosong atau null
+const formStatus = (status) => {
+    if (!status) return "-";
+
+    const statusMap = {
+        'raw_material': 'Raw Material',
+        'purchased_parts': 'Purchased Parts',
+        'chemical_additive': 'Chemical Additive',
+        'tooling_consumable': 'Tooling Consumable',
+        'packaging': 'Packaging',
+        'sfg': 'Semi Finished Goods',
+        'fg': 'Finished Goods'
+    };
+
+    return statusMap[status] || status;
+}
+
+
+// Dropdown Category ala Select2
+const isCategoryDropdownOpen = ref(false);
+const categorySearch = ref("");
+
+const materialCategories = [
+    { value: 'raw_material', label: 'Raw Material' },
+    { value: 'purchased_parts', label: 'Purchased Parts' },
+    { value: 'chemical_additive', label: 'Chemical Additive' },
+    { value: 'tooling_consumable', label: 'Tooling & Consumable' },
+    { value: 'packaging', label: 'Packaging' },
+    { value: 'sfg', label: 'Semi-Finished Goods (SFG)' },
+    { value: 'fg', label: 'Finished Goods (FG)' },
+];
+
+// Menampilkan label terpilih di kotak utama
+const selectedCategoryName = computed(() => {
+    if(!form.category) return "Select Category";
+    const match = materialCategories.find(c => c.value === form.category);
+    return match ? match.label : "Select Category";
+});
+
+// Memfilter isi list berdasarkan inputan pencarian
+const filteredCategories = computed(() => {
+    if(!categorySearch.value) return materialCategories;
+    const lowerSearch = categorySearch.value.toLowerCase();
+    return materialCategories.filter(c => 
+        c.label.toLowerCase().includes(lowerSearch) || 
+        c.value.toLowerCase().includes(lowerSearch)
     );
 });
 
-// Nampilin nama customer yang dipilih di kotak utama
-const selectedCustomerName = computed(() => {
-    if (!form.customer_id) return "Select Core Customer";
-    // Cari nama customer dari props.customers berdasarkan form.customer_id
-    const cust = props.customers.find(c => c.id === form.customer_id);
-    return cust ? cust.name : "Select Core Customer";
-});
+// Aksi ketika item dipilih
+const selectCategory = (value) => {
+    form.category = value;
+    isCategoryDropdownOpen.value = false;
+    categorySearch.value = "";
+}
 
-// Fungsi eksekusi pas data diklik
-const selectCustomer = (id) => {
-    form.customer_id = id; // Nah, ini yang bikin datanya kepilih beneran!
-    isCustomerDropdownOpen.value = false;
-    customerSearch.value = ""; // Reset search tiap habis milih
-};
+// Hitung berat sprue
+const sprueCalculate = () => {
+    if (form.gross_weight && form.net_weight) {
+        const gross = parseFloat(form.gross_weight);
+        const net = parseFloat(form.net_weight);
 
-const formatStatus = (status) => {
-    // Kalau kosong/null/string kosong, langsung balikin "-"
-    if (!status) return "-";
+        if (gross >= net) {
+            form.sprue_weight = (gross - net).toFixed(4);
+        } else {
+            form.sprue_weight = (0).toFixed(4);
+        }
+    }
+}
 
-    // 1. Cek kalau 4 huruf terakhirnya adalah "_dev", ubah jadi "_development"
-    let formatted = status.replace(/_dev$/, "_development");
-
-    // 2. Replace semua underscore "_" jadi spasi " "
-    formatted = formatted.replace(/_/g, " ");
-
-    // 3. Bikin ucwords (Huruf depan tiap kata jadi kapital)
-    formatted = formatted.replace(/\b\w/g, (char) => char.toUpperCase());
-
-    return formatted;
-};
+const ucwords = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+}
 </script>
 
 <template>
-    <Head title="List of Project" />
-    <!-- Page Wrapper -->
+    <Head title="Material Management"/>
+    <!-- Page wrapper -->
     <div class="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-800">
         <!-- Content Wrapper -->
-         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-            <!-- Heading -->
+        <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+            <!-- Heading Section -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <!-- Head Title -->
+                <!-- Heading title -->
                 <div>
                     <h1 class="text-2xl font-black text-slate-900 tracking-tight">
-                        Projects Management
+                        Material Management
                     </h1>
                     <p class="text-xs text-slate-500 mt-1">
-                        Manage project.
+                        Manage your material.
                     </p>
                 </div>
-
-                <!-- Toolbar -->
+                
+                <!-- toolbar -->
                 <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm">
                     <div class="flex items-center justify-between w-full">
                         <div class="flex items-center gap-1.5">
@@ -496,11 +576,11 @@ const formatStatus = (status) => {
                     </div>
                 </div>
             </div>
-            
+
             <!-- Search, per page, status -->
             <div class="flex-1 flex flex-col">
                 <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-                    <!-- Search bar -->
+                    <!-- Search input -->
                     <div class="relative flex-1 max-w-md">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg
@@ -549,6 +629,7 @@ const formatStatus = (status) => {
                         />
                     </div>
 
+                    <!-- Perpage and action status -->
                     <div class="flex items-center gap-4">
                         <!-- Per page -->
                         <div class="flex items-center gap-2">
@@ -586,7 +667,7 @@ const formatStatus = (status) => {
                     </div>
                 </div>
 
-                <!-- Table section -->
+                <!-- Data table section -->
                 <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col gap-4">
                     <div class="overflow-auto max-h-[calc(100vh-320px)]">
                         <table class="w-full text-left border-collapse bg-white whitespace-nowrap">
@@ -599,136 +680,148 @@ const formatStatus = (status) => {
                                             class="border-slate-300 text-blue-600 h-4 w-4 cursor-pointer"
                                         />
                                     </th>
-                                    <th class=" px-4 py-3">Project Code</th>
-                                    <th class=" px-4 py-3">Project Name</th>
-                                    <th class=" px-4 py-3">Customer</th>
-                                    <th class=" px-4 py-3">Revision</th>
-                                    <th class=" px-4 py-3">Vehicle Model</th>
-                                    <th class=" px-4 py-3">Main Part Number</th>
-                                    <th class=" px-4 py-3">Main Part Name</th>
-                                    <th class=" px-4 py-3">APQP Phase</th>
-                                    <th class=" px-4 py-3">Project Status</th>
-                                    <th class=" px-4 py-3">Kick Off Date</th>
-                                    <th class=" px-4 py-3">Target Proto Date</th>
-                                    <th class=" px-4 py-3">Target PPAP Date</th>
-                                    <th class=" px-4 py-3">Targe SOP Date</th>
-                                    <th class=" px-4 py-3">Confidentiality Level</th>
-                                    <th class=" px-4 py-3">Data Status</th>
-                                    <th class=" px-4 py-3">Remark</th>
+                                    <th class="px-4 py-3">Revision</th>
+                                    <th class="px-4 py-3">Category</th>
+                                    <th class="px-4 py-3">Code</th>
+                                    <th class="px-4 py-3">Name</th>
+                                    <th class="px-4 py-3">Specification</th>
+                                    <th class="px-4 py-3">UoM</th>
+                                    <th class="px-4 py-3">Grade</th>
+                                    <th class="px-4 py-3">Density</th>
+                                    <th class="px-4 py-3">Melt Flow Index</th>
+                                    <th class="px-4 py-3">Color</th>
+                                    <th class="px-4 py-3">Shrinkage Rate</th>
+                                    <th class="px-4 py-3">Gross Weight</th>
+                                    <th class="px-4 py-3">Net Weight</th>
+                                    <th class="px-4 py-3">Sprue Weight</th>
+                                    <th class="px-4 py-3">Has ROHS</th>
+                                    <th class="px-4 py-3">IMDS Number</th>
+                                    <th class="px-4 py-3">MSDS Doc. Path</th>
+                                    <th class="px-4 py-3">Risk Profile</th>
+                                    <th class="px-4 py-3">Status</th>
+                                    <th class="px-4 py-3">Remark</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 text-xs text-slate-600">
                                 <tr
-                                    v-for="project in projects.data"
-                                    :key="project.id"
-                                    @click="openEditDrawer(project)"
+                                    v-for="material in materials.data"
+                                    :key="material.id"
+                                    @click="openEditDrawer(material)"
                                     class="hover:bg-blue-50 transition-colors cursor-pointer"
                                 >
                                     <td class="px-4 py-3 text-center" @click.stop>
                                         <input
                                             type="checkbox"
-                                            :value="project.id"
+                                            :value="material.id"
                                             v-model="selectedIds"
                                             class="border-slate-300 text-blue-600 h-4 w-4 cursor-pointer"
                                         >
                                     </td>
-                                    <td class="px-4 py-3">
-                                        {{ project.code }}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        {{ project.name }}
-                                    </td>
-                                    <td class=" px-4 py-3">{{ project.customer?.name }}</td>
-                                    <td
-                                        class="px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
-                                        @click.stop="
-                                            openHistoryModal(project.id, project.name)
-                                        "
-                                    >
+                                    <td class="px-4 py-3"
+                                            @click.stop="openHistoryModal(material.id, material.code)"
+                                        >
                                         <div class="flex justify-center">
-                                            <span
-                                                class="px-2.5 py-0.5 text-xs text-[10px] text-blue-800 bg-blue-100"
-                                            >
-                                                Rev. {{ project.revision }}
+                                            <span class="px-2.5 py-0.5 text-xs text-[10px] text-blue-800 bg-blue-100">
+                                                Rev. {{ material.revision }}
                                             </span>
                                         </div>
                                     </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.vehicle_model || "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.main_part_number || "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.main_part_name || "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.apqp_phase || "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.status ? formatStatus(project.status) : "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.kick_off_date ? formatTableDate(project.kick_off_date) : "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.target_proto_date ? formatTableDate(project.target_proto_date) : "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.target_ppap_date ? formatTableDate(project.target_ppap_date) : "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.targe_sop_date ? formatTableDate(project.targe_sop_date) : "-" }}
-                                    </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.confidentiality_level }}
-                                    </td>
-                                    <td class=" px-4 py-3 text-center">
+                                    <td class="px-4 py-3">{{ formStatus(material.category) }}</td>
+                                    <td class="px-4 py-3">{{ material.code }}</td>
+                                    <td class="px-4 py-3">{{ material.name }}</td>
+                                    <td class="px-4 py-3">{{ material.specification }}</td>
+                                    <td class="px-4 py-3">{{ material.units?.symbol }}</td>
+                                    <td class="px-4 py-3">{{ formatFieldName(material.grade) }}</td>
+                                    <td class="px-4 py-3">{{ material.density }}</td>
+                                    <td class="px-4 py-3">{{ material.melt_flow_index }}</td>
+                                    <td class="px-4 py-3">{{ material.color }}</td>
+                                    <td class="px-4 py-3">{{ formatFieldName(material.shrinkage_rate) }}</td>
+                                    <td class="px-4 py-3">{{ material.gross_weight }}</td>
+                                    <td class="px-4 py-3">{{ material.net_weight }}</td>
+                                    <td class="px-4 py-3">{{ material.sprue_weight }}</td>
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-center">
                                             <span
                                                 :class="
-                                                    project.is_active
-                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                        : 'bg-slate-100 text-slate-600'
+                                                    material.has_rohs
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-rose-100 text-rose-600'
                                                 "
                                                 class="px-2 py-1 font-bold text-[10px]"
                                             >
                                                 {{
-                                                    project.is_active
-                                                        ? "Active"
-                                                        : "Inactive"
+                                                    material.has_rohs
+                                                        ? "Yes"
+                                                        : "No"
                                                 }}
                                             </span>
                                         </div>
                                     </td>
-                                    <td class=" px-4 py-3">{{ project.remark }}</td>
-                                </tr>
-                                <tr v-if="projects.data.length === 0">
-                                    <td
-                                        colspan="18"
-                                        class="px-4 py-8 text-center text-slate-400 font-medium"
-                                    >
-                                        No projects data found.
+                                    <td class="px-4 py-3">{{ formatFieldName(material.imds_number) }}</td>
+                                    <td class="px-4 py-3">{{ formatFieldName(material.msds_doc_path) }}</td>
+                                    <td class="px-4 py-3">
+                                            <div class="flex justify-center">
+                                                <span
+                                                    class="inline-flex items-center px-2.5 py-1 text-xs text-[10px] border tracking-wider"
+                                                    :class="{
+                                                        'bg-emerald-50 text-emerald-700 border-emerald-200': material.risk_profile === 'low',
+                                                        'bg-amber-50 text-amber-700 border-amber-200': material.risk_profile === 'medium',
+                                                        'bg-rose-50 text-rose-700 border-rose-200': material.risk_profile === 'high'
+                                                    }"
+                                                >
+                                                    <span 
+                                                        class="w-1.5 h-1.5 rounded-full mr-1.5"
+                                                        :class="{
+                                                            'bg-emerald-500': material.risk_profile === 'low',
+                                                            'bg-amber-500': material.risk_profile === 'medium',
+                                                            'bg-rose-500': material.risk_profile === 'high'
+                                                        }"
+                                                    ></span>
+                                                    
+                                                    {{ ucwords(material.risk_profile) }}
+                                                </span>
+                                            </div>
                                     </td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex justify-center">
+                                                <span
+                                                    :class="
+                                                        material.is_active
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : 'bg-slate-100 text-slate-600'
+                                                    "
+                                                    class="px-2 py-1 font-bold text-[10px]"
+                                                >
+                                                    {{
+                                                        material.is_active
+                                                            ? "Active"
+                                                            : "Inactive"
+                                                    }}
+                                                </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-3">{{ material.remark }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination -->
                     <div
-                        v-if="projects.total > 0"
+                        v-if="materials.total > 0"
                         class="px-6 py-4 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4"
                     >
                         <div
                             class="text-xs font-bold text-slate-500 uppercase tracking-wider"
                         >
-                            Showing {{ projects.from ?? 0 }} to
-                            {{ projects.to ?? 0 }} of
-                            {{ projects.total ?? 0 }}
+                            Showing {{ materials.from ?? 0 }} to
+                            {{ materials.to ?? 0 }} of
+                            {{ materials.total ?? 0 }}
                         </div>
 
                         <div class="flex items-center gap-1">
                             <template
-                                v-for="(link, index) in projects.links"
+                                v-for="(link, index) in materials.links"
                                 :key="index"
                             >
                                 <Link
@@ -766,7 +859,7 @@ const formatStatus = (status) => {
         </div>
     </div>
 
-    <!-- Slideover -->
+    <!-- Slideover / Form Drawer-->
     <div
         class="fixed inset-0 z-40 overflow-hidden transition-all duration-300"
         :class="isDrawerOpen ? 'visible opacity-100' : 'invisible opacity-0 delay-300'"
@@ -804,10 +897,10 @@ const formatStatus = (status) => {
                         <div class="bg-slate-900 px-6 py-5 flex items-center justify-between shrink-0">
                             <div>
                                 <h2 class="text-base font-black text-white tracking-tight">
-                                    {{ isEditMode ? 'Edit Project : ' + selectedProject?.name : 'Register New Project' }}
+                                    {{ isEditMode ? 'Edit Material : ' + selectedMaterial?.name : 'Register New Material' }}
                                 </h2>
                                 <p class="text-[10px] text-slate-400 mt-0.5">
-                                    Auditable project form
+                                    Material management form.
                                 </p>
                             </div>
                             <button
@@ -826,7 +919,7 @@ const formatStatus = (status) => {
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Project Code 
+                                            Material Code 
                                             <span class="text-bold text-rose-500">*</span>
                                         </label>
                                         <input
@@ -834,7 +927,7 @@ const formatStatus = (status) => {
                                             v-model="form.code"
                                             maxlength="50"
                                             required
-                                            placeholder="e.g. PRJ-2024-001"
+                                            placeholder="e.g. 7171-1234-50"
                                             :class="[
                                                 'w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all',
                                                 form.errors.code
@@ -852,7 +945,7 @@ const formatStatus = (status) => {
 
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Project Name
+                                            Material Name
                                             <span class="text-rose-500">*</span>
                                         </label>
                                         <input
@@ -860,7 +953,7 @@ const formatStatus = (status) => {
                                             v-model="form.name"
                                             maxlength="150"
                                             required
-                                            placeholder="Enter project name ..."
+                                            placeholder="Enter material name ..."
                                             :class="[
                                                 'w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all',
                                                 form.errors.name
@@ -878,42 +971,69 @@ const formatStatus = (status) => {
 
                                     <div class="col-span-2">
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Customer 
+                                            Specification
+                                            <span class="text-bold text-rose-500">*</span>
+                                        </label>
+                                        <textarea 
+                                            required
+                                            v-model="form.specification"
+                                            placeholder="Write material specification here ..."
+                                            rows="3"
+                                            :class="[
+                                                'w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all',
+                                                form.errors.specification
+                                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
+                                                    : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
+                                            ]"
+                                        ></textarea>
+                                        <p
+                                            v-if="form.errors.specification"
+                                            class="mt-1 text-[10px] font-bold text-rose-500"
+                                        >
+                                            {{ form.errors.specification }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Material Category
                                             <span class="text-bold text-rose-500">*</span>
                                         </label>
                                         <div class="relative">
                                             <div
-                                                v-if="isCustomerDropdownOpen"
-                                                @click="isCustomerDropdownOpen = false"
+                                                v-if="isCategoryDropdownOpen"
+                                                @click="isCategoryDropdownOpen = false"
                                                 class="fixed inset-0 z-0"
                                             ></div>
 
                                             <div
-                                                @click="isCustomerDropdownOpen = !isCustomerDropdownOpen"
-                                                class="relative z-20 w-full pl-3 pr-3 py-2 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                                @click="isCategoryDropdownOpen = !isCategoryDropdownOpen"
+                                                class="relative z-20 w-full pl-3 pr-3 py-2 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                                 :class="[
-                                                    form.errors.customer_id
+                                                    form.errors.category
                                                         ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
-                                                        : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
+                                                        : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
                                                 ]"
                                             >
-                                                <span :class="form.customer_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
-                                                    {{ selectedCustomerName }}
+                                                <span :class="form.category ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                                    {{ selectedCategoryName }}
                                                 </span>
                                                 <svg
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     class="h-4 w-4 text-slate-400 transition-transform duration-200"
-                                                    :class="{'rotate-180 text-blue-500': isCustomerDropdownOpen}"
+                                                    :class="{'rotate-180 text-blue-500': isCategoryDropdownOpen}"
                                                     fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                                 >
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                                 </svg>
                                             </div>
+
                                             <p
-                                                v-if="form.errors.customer_id"
+                                                v-if="form.errors.category"
                                                 class="mt-1 text-[10px] font-bold text-rose-500"
                                             >
-                                                {{ form.errors.customer_id }}
+                                                {{ form.errors.category }}
                                             </p>
 
                                             <Transition
@@ -925,7 +1045,7 @@ const formatStatus = (status) => {
                                                 leave-to-class="transform scale-95 opacity-0"
                                             >
                                                 <div
-                                                    v-if="isCustomerDropdownOpen"
+                                                    v-if="isCategoryDropdownOpen"
                                                     class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                                 >
                                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
@@ -935,10 +1055,10 @@ const formatStatus = (status) => {
                                                             </svg>
                                                             <input
                                                                 type="text"
-                                                                v-model="customerSearch"
+                                                                v-model="categorySearch"
                                                                 @click.stop
                                                                 class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                                                                placeholder="Type to search..."
+                                                                placeholder="Type to search category..."
                                                                 autofocus
                                                             />
                                                         </div>
@@ -946,58 +1066,301 @@ const formatStatus = (status) => {
 
                                                     <div class="max-h-48 overflow-y-auto">
                                                         <div
-                                                            v-for="cust in filteredCustomers"
-                                                            :key="cust.id"
-                                                            @click="selectCustomer(cust.id)"
+                                                            v-for="item in filteredCategories"
+                                                            :key="item.value"
+                                                            @click="selectCategory(item.value)"
                                                             class="px-3 py-2.5 text-xs cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-slate-50 last:border-0"
-                                                            :class="{'bg-blue-50 text-blue-700 font-bold border-l-2 border-l-blue-600': form.customer_id === cust.id}"
+                                                            :class="{'bg-blue-50 text-blue-700 font-bold border-l-2 border-l-blue-600': form.category === item.value}"
                                                         >
-                                                            {{ cust.name }}
+                                                            {{ item.label }}
+                                                        </div>
+
+                                                        <div v-if="filteredCategories.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                                            No category found matching "{{ categorySearch }}"
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Transition>
+                                        </div>        
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Customer Part Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.customer_part_name"
+                                            maxlength="255"
+                                            required
+                                            placeholder="Customer part name ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            UoM <span class="text-bold text-rose-500">*</span>
+                                        </label>
+                                        <div class="relative">
+                                            <div
+                                                v-if="isUnitDropdownOpen"
+                                                @click="isUnitDropdownOpen = false"
+                                                class="fixed inset-0 z-0"
+                                            ></div>
+                                            
+                                            <div
+                                                @click="isUnitDropdownOpen = !isUnitDropdownOpen"
+                                                class="relative z-20 w-full pl-3 pr-3 py-2 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                                :class="[
+                                                    // GANTI dari form.unit_id menjadi form.errors.unit_id
+                                                    form.errors.unit_id
+                                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
+                                                        : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
+                                                ]"
+                                            >
+                                                <span :class="form.unit_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                                    {{ selectedUnitName }}
+                                                </span>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                                                    :class="{'rotate-180 text-blue-500': isUnitDropdownOpen}"
+                                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                                >
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                            <p
+                                                v-if="form.errors.unit_id"
+                                                class="mt-1 text-[10px] font-bold text-rose-500"
+                                            >
+                                                {{ form.errors.unit_id }}
+                                            </p>
+
+                                            <Transition
+                                                enter-active-class="transition duration-100 ease-out"
+                                                enter-from-class="transform scale-95 opacity-0"
+                                                enter-to-class="transform scale-100 opacity-100"
+                                                leave-active-class="transition duration-75 ease-out"
+                                                leave-from-class="transform scale-100 opacity-100"
+                                                leave-to-class="transform scale-95 opacity-0"
+                                            >
+                                                <div
+                                                    v-if="isUnitDropdownOpen"
+                                                    class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                                >
+                                                    <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                                        <div class="relative">
+                                                            <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                            </svg>
+                                                            <input
+                                                                type="text"
+                                                                v-model="unitSearch"
+                                                                @click.stop
+                                                                class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                                                                placeholder="Type to search..."
+                                                                autofocus
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div class="max-h-48 overflow-y-auto">
+                                                        <div
+                                                            v-for="uom in filteredUnits"
+                                                            :key="uom.id"
+                                                            @click="selectUnit(uom.id)"
+                                                            class="px-3 py-2.5 text-xs cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-slate-50 last:border-0"
+                                                            :class="{'bg-blue-50 text-blue-700 font-bold border-l-2 border-l-blue-600': form.unit_id === uom.id}"
+                                                        >
+                                                            {{ uom.symbol }} - {{ uom.name  }}
                                                         </div>
                                                         
-                                                        <div v-if="filteredCustomers.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
-                                                            No customer found matching "{{ customerSearch }}"
+                                                        <div v-if="filteredUnits.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                                            No customer found matching "{{ unitSearch }}"
                                                         </div>
                                                     </div>
                                                 </div>
                                             </Transition>
                                         </div>
                                     </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Grade
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.grade"
+                                            maxlength="150"
+                                            placeholder="Material grade ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Density
+                                        </label>
+                                        <input
+                                            type="number"
+                                            v-model="form.density"
+                                            maxlength="8"
+                                            step="0.0000"
+                                            placeholder="Material density ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-4">
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Vehicle Model
+                                            Melt Flow Index
                                         </label>
                                         <input
-                                            type="text"
-                                            v-model="form.vehicle_model"
-                                            maxlength="100"
-                                            placeholder="e.g. SUV Type-X"
+                                            type="number"
+                                            v-model="form.melt_flow_index"
+                                            maxlength="8"
+                                            step="0.0000"
+                                            placeholder="MFI (g/10 min) - Determining the flow viscosity of resin in a molding machine"
                                             class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
                                         />
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Main Part Number
+                                            Color
                                         </label>
                                         <input
                                             type="text"
-                                            v-model="form.main_part_number"
-                                            maxlength="100"
-                                            placeholder="PN-88291-XX"
+                                            v-model="form.color"
+                                            maxlength="50"
+                                            placeholder="Define material color ..."
                                             class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
                                         />
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Main Part Name
+                                            Shrinkage Rate
                                         </label>
                                         <input
                                             type="text"
-                                            v-model="form.main_part_name"
-                                            maxlength="100"
-                                            placeholder="Component base identifier"
+                                            v-model="form.shrinkage_rate"
+                                            maxlength="50"
+                                            placeholder="Material shrinkage rate (%) for dimensional accuracy in molding ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Gross Weight
+                                        </label>
+                                        <input
+                                            type="number"
+                                            v-model="form.gross_weight"
+                                            maxlength="8"
+                                            step="0.0000"
+                                            @input="sprueCalculate"
+                                            placeholder="Material gross weigt ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Net Wight
+                                        </label>
+                                        <input
+                                            type="number"
+                                            v-model="form.net_weight"
+                                            maxlength="8"
+                                            step="0.0000"
+                                            @input="sprueCalculate"
+                                            placeholder="Material net weight ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Sprue Weight
+                                        </label>
+                                        <input
+                                            type="number"
+                                            v-model="form.sprue_weight"
+                                            maxlength="8"
+                                            step="0.0000"
+                                            readonly
+                                            placeholder="Material sprue weight ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            ROHS Status
+                                        </label>
+                                        <div
+                                            class="flex items-center justify-between p-3 bg-white border border-slate-300"
+                                        >
+                                            <div class="flex flex-col min-w-0 pr-4">
+                                                <span
+                                                    class="text-xs font-bold text-slate-800 uppercase tracking-wider"
+                                                    >ROHS Status</span
+                                                >
+                                                <span
+                                                    class="text-[10px] font-medium text-slate-500 mt-0.5 truncate"
+                                                >
+                                                    {{
+                                                        form.has_rohs
+                                                            ? "ROHS Available."
+                                                            : "ROHS Not Available."
+                                                    }}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    form.has_rohs = !form.has_rohs
+                                                "
+                                                :class="
+                                                    form.has_rohs
+                                                        ? 'bg-emerald-600'
+                                                        : 'bg-slate-400'
+                                                "
+                                                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"
+                                            >
+                                                <span
+                                                    :class="
+                                                        form.has_rohs
+                                                            ? 'translate-x-5'
+                                                            : 'translate-x-0'
+                                                    "
+                                                    class="pointer-events-none inline-block h-5 w-5 transform bg-white shadow-sm transition duration-200"
+                                                >
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            IMDS Number
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.imds_number"
+                                            maxlength="50"
+                                            placeholder="International Material Data System registration number ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            MSDS Doc Path
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.imds_number"
+                                            maxlength="150"
+                                            placeholder="Pathway file PDF Material Safety Data Sheet ..."
                                             class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
                                         />
                                     </div>
@@ -1005,90 +1368,93 @@ const formatStatus = (status) => {
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            APQP Phase
+                                            Risk Profile
                                         </label>
-                                        <input
-                                            type="text"
-                                            v-model="form.apqp_phase"
-                                            maxlength="50"
-                                            placeholder="e.g. Phase 1: Planning"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
+                                        <div class="grid grid-cols-3 gap-3">
+                                            <label 
+                                                class="flex flex-col items-center justify-center p-3 border cursor-pointer transition-all select-none text-center"
+                                                :class="form.risk_profile === 'low' 
+                                                    ? 'border-emerald-500 bg-emerald-50/50 text-emerald-700 ring-2 ring-emerald-500/20 font-bold' 
+                                                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'"
+                                            >
+                                                <input type="radio" v-model="form.risk_profile" value="low" class="sr-only" />
+                                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mb-1"></span>
+                                                <span class="text-xs uppercase tracking-wider">Low</span>
+                                            </label>
+
+                                            <label 
+                                                class="flex flex-col items-center justify-center p-3 border cursor-pointer transition-all select-none text-center"
+                                                :class="form.risk_profile === 'medium' 
+                                                    ? 'border-amber-500 bg-amber-50/50 text-amber-700 ring-2 ring-amber-500/20 font-bold' 
+                                                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'"
+                                            >
+                                                <input type="radio" v-model="form.risk_profile" value="medium" class="sr-only" />
+                                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 mb-1"></span>
+                                                <span class="text-xs uppercase tracking-wider">Medium</span>
+                                            </label>
+
+                                            <label 
+                                                class="flex flex-col items-center justify-center p-3 border cursor-pointer transition-all select-none text-center"
+                                                :class="form.risk_profile === 'high' 
+                                                    ? 'border-rose-500 bg-rose-50/50 text-rose-700 ring-2 ring-rose-500/20 font-bold' 
+                                                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'"
+                                            >
+                                                <input type="radio" v-model="form.risk_profile" value="high" class="sr-only" />
+                                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 mb-1"></span>
+                                                <span class="text-xs uppercase tracking-wider">High</span>
+                                            </label>
+                                        </div>
+                                        
+                                        <p v-if="form.errors.risk_profile" class="mt-1 text-[10px] font-bold text-rose-500">
+                                            {{ form.errors.risk_profile }}
+                                        </p>
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Project Status
+                                            Status
                                         </label>
-                                        <select
-                                            v-model="form.status"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        >
-                                            <option value="">Select Project Status</option>
-                                            <option value="planning">Planning</option>
-                                            <option value="design_dev">Design Development</option>
-                                            <option value="process_dev">Process Development</option>
-                                            <option value="validation">Validation</option>
-                                            <option value="ppap_submitted">PPAP Submitted</option>
-                                            <option value="ppap_approved">PPAP Approved</option>
-                                            <option value="mass_production">Mass Production</option>
-                                            <option value="change_request">Change Request</option>
-                                            <option value="change_request">Discontinued</option>
-                                        </select>
+                                        <div
+                                                class="flex items-center justify-between p-3 bg-white border border-slate-300"
+                                            >
+                                                <div class="flex flex-col min-w-0 pr-4">
+                                                    <span
+                                                        class="text-xs font-bold text-slate-800 uppercase tracking-wider"
+                                                        >Data Status</span
+                                                    >
+                                                    <span
+                                                        class="text-[10px] font-medium text-slate-500 mt-0.5 truncate"
+                                                    >
+                                                        {{
+                                                            form.is_active
+                                                                ? "Project status is currently Active."
+                                                                : "Project status is Disabled."
+                                                        }}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        form.is_active = !form.is_active
+                                                    "
+                                                    :class="
+                                                        form.is_active
+                                                            ? 'bg-emerald-600'
+                                                            : 'bg-slate-400'
+                                                    "
+                                                    class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"
+                                                >
+                                                    <span
+                                                        :class="
+                                                            form.is_active
+                                                                ? 'translate-x-5'
+                                                                : 'translate-x-0'
+                                                        "
+                                                        class="pointer-events-none inline-block h-5 w-5 transform bg-white shadow-sm transition duration-200"
+                                                    >
+                                                    </span>
+                                                </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="grid grid-cols-4 gap-4">
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Kick Off Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            v-model="form.kick_off_date"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Target Proto Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            v-model="form.target_proto_date"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Target APQP Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            v-model="form.target_ppap_date"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Target SOP Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            v-model="form.target_sop_date"
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                        Confidentiality Level
-                                    </label>
-                                    <select v-model="form.confidentiality_level" class="w-full p-2 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer">
-                                        <option value="">Select Level</option>
-                                        <option value="Public">Public</option>
-                                        <option value="Internal">Internal Use</option>
-                                        <option value="Confidential">Confidential</option>
-                                        <option value="Strictly Confidential">Strictly Confidential</option>
-                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-500 mb-1">
@@ -1100,49 +1466,6 @@ const formatStatus = (status) => {
                                         rows="3"
                                         class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
                                     ></textarea>
-                                </div>
-                                <div>
-                                    <div
-                                        class="flex items-center justify-between p-3 bg-white border border-slate-300"
-                                    >
-                                        <div class="flex flex-col min-w-0 pr-4">
-                                            <span
-                                                class="text-xs font-bold text-slate-800 uppercase tracking-wider"
-                                                >Data Status</span
-                                            >
-                                            <span
-                                                class="text-[10px] font-medium text-slate-500 mt-0.5 truncate"
-                                            >
-                                                {{
-                                                    form.is_active
-                                                        ? "Project status is currently Active."
-                                                        : "Project status is Disabled."
-                                                }}
-                                            </span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            @click="
-                                                form.is_active = !form.is_active
-                                            "
-                                            :class="
-                                                form.is_active
-                                                    ? 'bg-emerald-600'
-                                                    : 'bg-slate-400'
-                                            "
-                                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"
-                                        >
-                                            <span
-                                                :class="
-                                                    form.is_active
-                                                        ? 'translate-x-5'
-                                                        : 'translate-x-0'
-                                                "
-                                                class="pointer-events-none inline-block h-5 w-5 transform bg-white shadow-sm transition duration-200"
-                                            >
-                                            </span>
-                                        </button>
-                                    </div>
                                 </div>
                                 <div
                                     v-show="isEditMode"
@@ -1195,7 +1518,7 @@ const formatStatus = (status) => {
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
 
-                                {{ form.processing ? "Saving..." : isEditMode ? "Apply Changes" : "Save Project" }}
+                                {{ form.processing ? "Saving..." : isEditMode ? "Apply Changes" : "Save Material" }}
                             </button>
                         </div>
                     </div>
@@ -1204,7 +1527,7 @@ const formatStatus = (status) => {
         </div>
     </div>
 
-    <!-- Konfirmasi hapus -->
+    <!-- konfirmasi hapus -->
     <Transition
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="opacity-0 scale-95"
@@ -1290,7 +1613,7 @@ const formatStatus = (status) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        UoM Category Revision History : {{ selectedCategoryName }}
+                        Material Revision History : {{ selectedName }}
                     </h3>
                     <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1312,7 +1635,7 @@ const formatStatus = (status) => {
                     </div>
 
                     <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
-                                <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
+                        <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
                                     <div
                                         :class="{
                                             'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
@@ -1382,20 +1705,19 @@ const formatStatus = (status) => {
                                             </table>
                                         </div>
                                     </div>
-
-                                </div>
+                        </div>
                     </div>
 
                 </div>
 
                 <div class="border-t border-slate-100 px-6 py-3.5 bg-white flex justify-end shrink-0">
-                            <button
-                                type="button"
-                                @click="closeHistoryModal"
-                                class="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-200 transition active:scale-95 shadow-sm -lg"
-                            >
-                                Close
-                            </button>
+                    <button
+                        type="button"
+                        @click="closeHistoryModal"
+                        class="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-200 transition active:scale-95 shadow-sm -lg"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         </div>

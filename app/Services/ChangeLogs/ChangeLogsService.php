@@ -24,7 +24,7 @@ class ChangeLogsService
         ]);
     }
 
-    public function getLogsData(int $id, string $table_name): Collection
+    public function getLogsData($id, string $table_name): Collection
     {
         return ChangeLogs::with('creator')
             ->where('item_id', $id)

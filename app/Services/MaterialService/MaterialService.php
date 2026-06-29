@@ -5,23 +5,27 @@ namespace App\Services\MaterialService;
 use App\Models\Material;
 use App\Models\MaterialLogs;
 use App\Repositories\Material\MaterialRepository;
+use App\Services\ChangeLogs\ChangeLogsService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request;
 
 class MaterialService
 {
     protected MaterialRepository $materialRepo;
 
-    public function __construct(MaterialRepository $materialRepo)
-    {
+    public function __construct(
+        MaterialRepository $materialRepo,
+        protected ChangeLogsService $logService
+    ) {
         $this->materialRepo = $materialRepo;
     }
 
-    public function getMaterialList($page, $search = null)
+    public function getMaterialList($filter, $per_page, $search = null)
     {
         try {
-            return $this->materialRepo->getMaterialList($page, $search);
+            return $this->materialRepo->getMaterialList($filter, $per_page, $search = null);
         } catch (\Exception $e) {
             throw $e;
         }
@@ -31,22 +35,56 @@ class MaterialService
     {
         try {
             return DB::transaction(function () use ($data) {
-                $data['created_by'] = Auth::id();
+                $dataInsert = [
+                    'revision'              => 0,
+                    'category'              => trim($data['category']),
+                    'code'                  => trim($data['code']),
+                    'name'                  => trim($data['name']),
+                    'specification'         => trim($data['specification']),
+                    'customer_part_name'    => $data['customer_part_name'] ? trim(strtoupper($data['customer_part_name'])) : null,
+                    'unit_id'               => trim($data['unit_id']),
+                    'grade'                 => trim($data['grade']) ?? null,
+                    'density'               => trim($data['density']) ?? 0,
+                    'melt_flow_index'       => trim($data['melt_flow_index']) ?? 0,
+                    'color'                 => trim($data['color']) ?? null,
+                    'shrinkage_rate'        => trim($data['shrinkage_rate']) ?? null,
+                    'gross_weight'          => trim($data['gross_weight']) ?? 0,
+                    'net_weight'            => trim($data['net_weight']) ?? 0,
+                    'sprue_weight'          => ($data['gross_weight'] >= $data['net_weight']) ? ($data['gross_weight'] - $data['net_weight']) : 0,
+                    'has_rohs'              => $data['has_rohs'] ?? false,
+                    'imds_number'           => trim($data['imds_number']) ?? null,
+                    'msds_doc_path'         => trim($data['msds_doc_path']) ?? null,
+                    'risk_profile'          => trim($data['risk_profile']) ?? 'low',
+                    'is_active'             => $data['is_active'] ?? true,
+                    'remark'                => trim($data['remark']) ?? null,
+                ];
 
-                $material = $this->materialRepo->store($data);
+                $insert = $this->materialRepo->store($dataInsert);
 
-                $this->logEvent($material, 'create', 'Register new material data', null, $material->toArray());
+                $this->logService->store($insert, 'create', 'Register new material data', null, $insert->toArray());
 
-                return $material;
+                activity('save_material')
+                    ->causedBy(Auth::id())
+                    ->performedOn($insert)
+                    ->withProperties([
+                        'input_data' => $insert->toArray(),
+                        'ip' => Request::ip()
+                    ])
+                    ->log('Save success: Successfully saved new material data');
+
+                return $insert;
             });
         } catch (\Exception $e) {
             Log::error('Failed to save new material data');
             activity()
                 ->causedBy(Auth::id())
                 ->withProperties([
+                    'input_data' => $data,
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip()
                 ])
                 ->log('save error: failed to save new material data');
 
@@ -73,31 +111,71 @@ class MaterialService
         }
     }
 
-    public function update(Material $material, array $data, string $reason)
+    public function update(int $id, array $data)
     {
         try {
-            return DB::transaction(function () use ($material, $data, $reason) {
-                $oldData = $material->toArray();
+            return DB::transaction(function () use ($id, $data) {
+                $oldData = $this->materialRepo->getDataById($id);
 
-                $data['updated_by'] = Auth::id();
-                $data['revision'] = $material->revision + 1;
+                if (empty($oldData)) {
+                    throw new \Exception('Failed to update material data, material data not found');
+                }
 
-                $material->update($data);
+                $dataUpdate = [
+                    'revision'              => ($oldData->revision ?? 0) + 1,
+                    'category'              => trim($data['category']),
+                    'code'                  => trim($data['code']),
+                    'name'                  => trim($data['name']),
+                    'specification'         => trim($data['specification']),
+                    'customer_part_name'    => $data['customer_part_name'] ? trim(strtoupper($data['customer_part_name'])) : null,
+                    'unit_id'               => trim($data['unit_id']),
+                    'grade'                 => trim($data['grade']) ?? null,
+                    'density'               => trim($data['density']) ?? 0,
+                    'melt_flow_index'       => trim($data['melt_flow_index']) ?? 0,
+                    'color'                 => trim($data['color']) ?? null,
+                    'shrinkage_rate'        => trim($data['shrinkage_rate']) ?? null,
+                    'gross_weight'          => trim($data['gross_weight']) ?? 0,
+                    'net_weight'            => trim($data['net_weight']) ?? 0,
+                    'sprue_weight'          => ($data['gross_weight'] >= $data['net_weight']) ? ($data['gross_weight'] - $data['net_weight']) : 0,
+                    'has_rohs'              => $data['has_rohs'] ?? false,
+                    'imds_number'           => trim($data['imds_number']) ?? null,
+                    'msds_doc_path'         => trim($data['msds_doc_path']) ?? null,
+                    'risk_profile'          => trim($data['risk_profile']) ?? 'low',
+                    'is_active'             => $data['is_active'] ?? true,
+                    'remark'                => trim($data['remark']) ?? null,
+                ];
 
-                $newData = $material->fresh()->toArray();
+                $this->materialRepo->update($id, $dataUpdate);
 
-                $this->logEvent($material, 'update', $reason, $oldData, $newData);
+                $newData = $this->materialRepo->getDataById($id);
 
-                return $material;
+                $this->logService->store($newData, 'update', $data['reason'] ? trim($data['reason']) : 'Update material data', $oldData->toArray(), $newData->toArray());
+
+                activity('update_material')
+                    ->causedBy(Auth::id())
+                    ->performedOn($newData)
+                    ->withProperties([
+                        'input_id' => $id,
+                        'old_data' => $oldData->toArray(),
+                        'new_data' => $newData->toArray(),
+                        'ip' => Request::ip()
+                    ])
+                    ->log('Update success: Successfully updated material data');
+
+                return true;
             });
         } catch (\Exception $e) {
             Log::error('Failed to update material data');
             activity()
                 ->causedBy(Auth::id())
                 ->withProperties([
+                    'input_id' => $id,
+                    'inpit_data' => $data,
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip()
                 ])
                 ->log('save error: failed to update material data');
 
@@ -105,43 +183,72 @@ class MaterialService
         }
     }
 
-    public function bulkDelete(array $ids, string $reason)
+    public function bulkDelete(array $data)
     {
         try {
-            return DB::transaction(function () use ($ids, $reason) {
-                $materials = Material::whereIn('id', $ids)->get();
-
-                foreach ($materials as $material) {
-                    $this->logEvent($material, 'delete', $reason, $material->toArray(), null);
+            return DB::transaction(function () use ($data) {
+                if (empty($data)) {
+                    throw new \Exception('Delete failed, no material data provided');
                 }
 
-                return Material::whereIn('id', $ids)->delete();
+                $materials = $this->materialRepo->findManyByIds($data['ids']);
+
+                if ($materials->isEmpty()) {
+                    throw new \Exception('No material data found');
+                }
+
+                foreach ($materials as $material) {
+                    $oldData = $this->materialRepo->getDataById($material->id);
+
+                    $this->logService->store($material, 'delete', trim($data['remark']), $oldData->toArray(), null);
+
+                    activity('delete_material')
+                        ->causedBy(Auth::id())
+                        ->performedOn($material)
+                        ->withProperties([])
+                        ->log('Delete success: Successfully delete material data');
+                }
+
+                $this->materialRepo->deleteAll($data['ids']);
+
+                return true;
             });
+
         } catch (\Exception $e) {
             Log::error('Failed to bulk delete material data');
-            activity()
+            activity('delete_material')
                 ->causedBy(Auth::id())
                 ->withProperties([
+                    'input_id' => $data['ids'],
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
                 ])
-                ->log('save error: failed to bulk delete material data');
+                ->log('Delete failed: Failed to delete material data');
 
             throw $e;
         }
     }
 
-    private function logEvent(Material $material, string $eventType, string $reason, ?array $old, ?array $new)
+    public function getLogsData($id)
     {
-        MaterialLogs::create([
-            'material_id'   => $material->id,
-            'user_id'       => Auth::id(),
-            'event_type'    => $eventType,
-            'change_reason' => $reason,
-            'old_data'      => $old,
-            'new_data'      => $new,
-            'revision'      => $material->revision,
-        ]);
+        try {
+            return $this->logService->getLogsData($id, 'materials');
+        } catch (\Exception $e) {
+            activity('get_logs_data')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_id' => $id,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Load failed: Failed to load material history data');
+
+            throw $e;
+        }
     }
 }
