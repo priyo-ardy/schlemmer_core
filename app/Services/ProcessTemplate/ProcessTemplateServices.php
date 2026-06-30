@@ -4,6 +4,7 @@ namespace App\Services\ProcessTemplate;
 
 use App\Models\ProcessHeader;
 use App\Repositories\ProcessTemplate\ProcessTemplateRepository;
+use App\Services\ChangeLogs\ChangeLogsService;
 use App\Services\ProcessRevision\ProcessRevisionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +19,11 @@ class ProcessTemplateServices
     protected $processRepo;
     protected $revisionService;
 
-    public function __construct(ProcessTemplateRepository $processRepo, ProcessRevisionService $revisionService)
-    {
+    public function __construct(
+        ProcessTemplateRepository $processRepo,
+        ProcessRevisionService $revisionService,
+        protected ChangeLogsService $logService
+    ) {
         $this->processRepo = $processRepo;
         $this->revisionService = $revisionService;
     }
@@ -223,6 +227,76 @@ class ProcessTemplateServices
                     'ip' => Request::ip(),
                 ])
                 ->log('Bulk delete failed: Failed to perform bulk delete');
+            throw $e;
+        }
+    }
+
+    public function deleteAll(array $data)
+    {
+        try {
+            return DB::transaction(function () use ($data) {
+                if (empty($data)) {
+                    throw new \Exception('Mass delete failed, no process function data provided');
+                }
+
+                $process = $this->processRepo->findManyByIds($data['ids']);
+
+                if ($process->isEmpty()) {
+                    throw new \Exception('No data found from provided process function data, delete failed');
+                }
+
+                foreach ($process as $prc) {
+                    $oldData = $this->processRepo->getHeaderById($prc->id);
+
+                    $this->logService->store($prc, 'delete', trim($data['remark']), $oldData->toArray(), null);
+                    activity()
+                        ->causedBy(Auth::id())
+                        ->performedOn($prc)
+                        ->withProperties([
+                            'input_id' => $prc->id,
+                            'ip' => Request::ip()
+                        ])
+                        ->log('Delete success: Successfully deleted process functiond data');
+                }
+
+                $this->processRepo->deleteAll($data['ids']);
+
+                return true;
+            });
+        } catch (\Exception $e) {
+            activity('mass_delete_process_function')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_id' => $data['ids'],
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTrace(),
+                    'ip' => Request::ip()
+                ])
+                ->log('Delete failed: failed to perform mass delete action');
+
+            throw $e;
+        }
+    }
+
+    public function getLogsData(int $id)
+    {
+        try {
+            return $this->logService->getLogsData($id, 'process_functions');
+        } catch (\Exception $e) {
+            activity('get_logs_data')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_id' => $id,
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip(),
+                ])
+                ->log('Load failed: Failed to load project history data');
+
             throw $e;
         }
     }

@@ -22,8 +22,14 @@ class ProcessDetailRevision extends Model
         'potential_failure_mode',
         'potential_effect_of_failure',
         'potential_cause_of_failure',
+        'classification',
+        'occurrence',
+        'detection',
+        'rpn',
+        'recommended_action',
+        'severity',
         'controls_prevention',
-        'controls_detection'
+        'controls_detection',
     ];
 
     public function header(): BelongsTo

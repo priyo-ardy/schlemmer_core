@@ -6,9 +6,15 @@ use App\Models\ProcessChangeLogRevision;
 use App\Models\ProcessDetail;
 use App\Models\ProcessHeader;
 use App\Models\ProcessHeaderRevision;
+use Illuminate\Database\Eloquent\Collection;
 
 class ProcessTemplateRepository
 {
+    public function getHeaderById(int $id): ProcessHeader
+    {
+        return ProcessHeader::find($id);
+    }
+
     public function storeHeader(array $headerData): ProcessHeader
     {
         return ProcessHeader::create($headerData);
@@ -17,6 +23,11 @@ class ProcessTemplateRepository
     public function storeDetails(ProcessHeader $processHeader, array $detailsData)
     {
         return $processHeader->details()->createMany($detailsData);
+    }
+
+    public function findManyByIds(array $ids): Collection
+    {
+        return ProcessHeader::whereIn('id', $ids)->get();
     }
 
     public function updateHeader($id, $headerData)

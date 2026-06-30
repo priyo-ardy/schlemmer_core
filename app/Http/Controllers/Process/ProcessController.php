@@ -36,7 +36,7 @@ class ProcessController extends Controller
         return Inertia::render('Process/process-list', [
             'headers' => $headers,
             'filters' => $request->only(['search', 'per_page']),
-            'page_title' => 'Master Data / Process Function Template'
+            'page_title' => 'Master Data / Process Function Templat List'
         ]);
     }
 
@@ -132,12 +132,33 @@ class ProcessController extends Controller
         return redirect()->route('process.index')->with('success', 'Data deleted successfully');
     }
 
-    public function remove(Request $request)
+    public function massDelete(Request $request)
     {
-        $request->validate(['id' => 'required']);
+        try {
+            $validated = [
+                'ids' => 'required|array',
+                'ids.*' => 'integer|exists:process_functions.id',
+                'remark' => 'required|string'
+            ];
 
-        $delete = $this->processService->removeRow($request->id);
+            $this->processService->deleteAll($validated);
 
-        return redirect()->route('process.index')->with('success', 'Data deleted successfully');
+            return redirect()->back()->with('success', 'Successfully deleted process function data');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error', 'Failed to delete process data: ' . $e->getMessage()]);
+        }
+    }
+
+    public function getLog(Request $request, int $id)
+    {
+        try {
+            $logs = $this->processService->getLogsData($id);
+
+            return response()->json($logs);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'bulk_error' => $e->getMessage()
+            ]);
+        }
     }
 }

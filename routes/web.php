@@ -48,7 +48,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/process/logs/detail/{log_id}', [ProcessController::class, 'getChangeLogsDetails'])->name('process.logs_details');
     Route::put('/process/{process}', [ProcessController::class, 'update'])->name('process.update');
     Route::post('/process/delete', [ProcessController::class, 'delete'])->name('process.delete');
-    Route::post('/process/remove', [ProcessController::class, 'remove'])->name('process.remove');
+    Route::post('/process/mass-delete', [ProcessController::class, 'massDelete'])->name('process.mass-delete');
+    Route::get('/process/{logId}/logs', [ProcessController::class, 'getLog'])->name('process.getlog');
 
     // Customer management
     Route::get('/customer', [CustomerController::class, 'index'])->name('customer');
