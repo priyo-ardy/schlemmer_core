@@ -47,6 +47,7 @@ class MaterialService
                     'density'               => trim($data['density']) ?? 0,
                     'melt_flow_index'       => trim($data['melt_flow_index']) ?? 0,
                     'color'                 => trim($data['color']) ?? null,
+                    'drawing_change'        => trim($data['drawing_change']) ?? null,
                     'shrinkage_rate'        => trim($data['shrinkage_rate']) ?? null,
                     'gross_weight'          => trim($data['gross_weight']) ?? 0,
                     'net_weight'            => trim($data['net_weight']) ?? 0,
@@ -133,6 +134,7 @@ class MaterialService
                     'density'               => trim($data['density']) ?? 0,
                     'melt_flow_index'       => trim($data['melt_flow_index']) ?? 0,
                     'color'                 => trim($data['color']) ?? null,
+                    'drawing_change'        => trim($data['drawing_change']) ?? null,
                     'shrinkage_rate'        => trim($data['shrinkage_rate']) ?? null,
                     'gross_weight'          => trim($data['gross_weight']) ?? 0,
                     'net_weight'            => trim($data['net_weight']) ?? 0,
@@ -213,7 +215,6 @@ class MaterialService
 
                 return true;
             });
-
         } catch (\Exception $e) {
             Log::error('Failed to bulk delete material data');
             activity('delete_material')

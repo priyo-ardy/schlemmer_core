@@ -67,6 +67,7 @@ const form = useForm({
     density: 0,
     melt_flow_index: 0,
     color: "",
+    drawing_change: "",
     shrinkage_rate: "",
     gross_weight: 0,
     net_weight: 0,
@@ -146,6 +147,7 @@ const openEditDrawer = (material) => {
     form.density = material.density ?? "";
     form.melt_flow_index = material.melt_flow_index ?? "";
     form.color = material.color ?? "";
+    form.drawing_change = material.drawing_change ?? "";
     form.shrinkage_rate = material.shrinkage_rate ?? "";
     form.gross_weight = material.gross_weight ?? "";
     form.net_weight = material.net_weight ?? "";
@@ -994,7 +996,7 @@ const ucwords = (str) => {
                                         </p>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-3 gap-4">
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                                             Material Category
@@ -1085,21 +1087,6 @@ const ucwords = (str) => {
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
-                                            Customer Part Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            v-model="form.customer_part_name"
-                                            maxlength="255"
-                                            required
-                                            placeholder="Customer part name ..."
-                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
-                                        />
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-3 gap-4">
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
                                             UoM <span class="text-bold text-rose-500">*</span>
                                         </label>
                                         <div class="relative">
@@ -1183,6 +1170,34 @@ const ucwords = (str) => {
                                                 </div>
                                             </Transition>
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Customer Part Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.customer_part_name"
+                                            maxlength="255"
+                                            required
+                                            placeholder="Customer part name ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                            Drawing Change No.
+                                        </label>
+                                        <input
+                                            type="text"
+                                            v-model="form.drawing_change"
+                                            maxlength="255"
+                                            required
+                                            placeholder="Drawing change no ..."
+                                            class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        />
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">

@@ -29,6 +29,7 @@ class Material extends Model
         'density',
         'melt_flow_index',
         'color',
+        'drawing_change',
         'shrinkage_rate',
         'gross_weight',
         'net_weight',
