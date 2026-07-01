@@ -47,26 +47,42 @@ class ProcessController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:150|unique:process_functions,name',
-            'remark' => 'nullable|string',
+        try {
+            $validated = $request->validate([
+                'name' => [
+                    'required',
+                    'string',
+                    'max:150',
+                    // Validasi unik HANYA untuk data yang belum di-soft delete
+                    Rule::unique('process_functions', 'name')->whereNull('deleted_at')
+                ],
+                'remark' => 'nullable|string',
 
-            // Validasi Array Details
-            'processItems' => 'required|array|min:1',
-            'processItems.*.previous_problem' => 'nullable|string|max:255',
-            'processItems.*.requirements' => 'required|string|max:255',
-            'processItems.*.potential_failure_mode' => 'required|string|max:255',
-            'processItems.*.potential_effect_of_failure' => 'required|string|max:255',
-            'processItems.*.potential_cause_of_failure' => 'required|string|max:255',
-            'processItems.*.controls_prevention' => 'required|string|max:255',
-            'processItems.*.controls_detection' => 'required|string|max:255',
-        ]);
+                // Validasi Array Details
+                'processItems'                                  => 'required|array|min:1',
+                'processItems.*.previous_problem'               => 'nullable|string|max:255',
+                'processItems.*.requirements'                   => 'required|string|max:255',
+                'processItems.*.potential_failure_mode'         => 'required|string|max:255',
+                'processItems.*.potential_effect_of_failure'    => 'required|string|max:255',
+                'processItems.*.potential_cause_of_failure'     => 'required|string|max:255',
+                'processItems.*.classification'                 => 'nullable|string|max:255',
+                'processItems.*.occurrence'                     => 'required|integer|max_digits:11',
+                'processItems.*.detection'                      => 'required|integer|max_digits:11',
+                'processItems.*.rpn'                            => 'required|integer|max_digits:11',
+                'processItems.*.severity'                       => 'required|integer|max_digits:11',
+                'processItems.*.recommended_action'             => 'nullable|string|max:255',
+                'processItems.*.controls_prevention'            => 'required|string|max:255',
+                'processItems.*.controls_detection'             => 'required|string|max:255',
+            ]);
 
-        $template_data = $this->processService->storedData($validated);
+            $template_data = $this->processService->storedData($validated);
 
-        return redirect()
-            ->route('process.view', $template_data->id)
-            ->with('success', 'Process function data saved successfully');
+            return redirect()
+                ->route('process.view', $template_data->id)
+                ->with('success', 'PFMEA process function data, stored successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['errors' => 'Failed to save process function data, there was an error, ' . $e->getMessage()]);
+        }
     }
 
     public function view($id)
@@ -82,31 +98,43 @@ class ProcessController extends Controller
 
     public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:150',
-                Rule::unique('process_functions', 'name')->ignore($id),
-            ],
-            'remark' => 'nullable|string',
+        try {
+            $validated = $request->validate([
+                'name' => [
+                    'required',
+                    'string',
+                    'max:150',
+                    Rule::unique('process_functions', 'name')
+                        ->ignore($id)
+                        ->whereNull('deleted_at')
+                ],
+                'remark' => 'nullable|string',
 
-            // Validasi Array Details
-            'processItems' => 'required|array|min:1',
-            'processItems.*.previous_problem' => 'nullable|string|max:255',
-            'processItems.*.requirements' => 'required|string|max:255',
-            'processItems.*.potential_failure_mode' => 'required|string|max:255',
-            'processItems.*.potential_effect_of_failure' => 'required|string|max:255',
-            'processItems.*.potential_cause_of_failure' => 'required|string|max:255',
-            'processItems.*.controls_prevention' => 'required|string|max:255',
-            'processItems.*.controls_detection' => 'required|string|max:255',
-        ]);
+                // Validasi Array Details
+                'processItems'                                  => 'required|array|min:1',
+                'processItems.*.previous_problem'               => 'nullable|string|max:255',
+                'processItems.*.requirements'                   => 'required|string|max:255',
+                'processItems.*.potential_failure_mode'         => 'required|string|max:255',
+                'processItems.*.potential_effect_of_failure'    => 'required|string|max:255',
+                'processItems.*.potential_cause_of_failure'     => 'required|string|max:255',
+                'processItems.*.classification'                 => 'nullable|string|max:255',
+                'processItems.*.occurrence'                     => 'required|integer|max_digits:11',
+                'processItems.*.detection'                      => 'required|integer|max_digits:11',
+                'processItems.*.rpn'                            => 'required|integer|max_digits:11',
+                'processItems.*.severity'                       => 'required|integer|max_digits:11',
+                'processItems.*.recommended_action'             => 'nullable|string|max:255',
+                'processItems.*.controls_prevention'            => 'required|string|max:255',
+                'processItems.*.controls_detection'             => 'required|string|max:255',
+            ]);
 
-        $this->processService->updateData($id, $validated);
+            $this->processService->updateData($id, $validated);
 
-        return redirect()
-            ->route('process.view', $id)
-            ->with('success', 'PMFEA template data updated successfully');
+            return redirect()
+                ->route('process.view', $id)
+                ->with('success', 'PFMEA template data updated successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['errors' => 'Failed to update process function data, there was an error during processing your request, ' . $e->getMessage()]);
+        }
     }
 
     public function getChangeLogs($headerId)
@@ -123,29 +151,22 @@ class ProcessController extends Controller
         return response()->json($details);
     }
 
-    public function delete(Request $request)
-    {
-        $request->validate(['ids' => 'required|array']);
-
-        $delete = $this->processService->bulkDelete($request->ids);
-
-        return redirect()->route('process.index')->with('success', 'Data deleted successfully');
-    }
-
     public function massDelete(Request $request)
     {
         try {
-            $validated = [
+            $validated = $request->validate([
                 'ids' => 'required|array',
-                'ids.*' => 'integer|exists:process_functions.id',
+                'ids.*' => 'integer|exists:process_functions,id',
                 'remark' => 'required|string'
-            ];
+            ]);
 
             $this->processService->deleteAll($validated);
 
             return redirect()->back()->with('success', 'Successfully deleted process function data');
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['error', 'Failed to delete process data: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors([
+                'error' => 'Failed to delete process data: ' . $e->getMessage()
+            ]);
         }
     }
 

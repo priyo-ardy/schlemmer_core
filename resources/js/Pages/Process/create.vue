@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, useForm, router, Link } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+import { Head, useForm, router, Link, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout.vue';
 import { toast } from 'vue3-toastify';
 
@@ -13,6 +13,24 @@ const cancelForm = () => {
     router.get('/process');
 }
 
+const page = usePage();
+
+const errors = computed(() => page.props.errors || {});
+
+watch(
+    errors,
+    (newErrors) => {
+        if(newErrors && newErrors.error){
+            toast.error(newErrors.error);
+        }
+    },
+    {
+        deep: true
+    }
+);
+
+const selectedRowIndex = ref(null);
+
 // Tambah baris pada table detail
 const processItems = ref([
     {
@@ -23,6 +41,7 @@ const processItems = ref([
         severity: '',
         classification: '',
         potential_cause_of_failure: '',
+        occurrence: '',
         controls_prevention: '',
         detection: '',
         rpn: '',
@@ -31,43 +50,32 @@ const processItems = ref([
     }
 ]);
 
+const createBlankItem = () => ({
+    row_key: Math.random().toString(36).substring(2, 9),
+    previous_problem: '',
+    requirements: '',
+    potential_failure_mode: '',
+    potential_effect_of_failure: '',
+    severity: '',
+    classification: '',
+    potential_cause_of_failure: '',
+    occurrence: '',
+    controls_prevention: '',
+    controls_detection: '',
+    detection: '',
+    rpn: 0,
+    recommended_action: 'None'
+});
+
 const form = useForm({
     name: '',
     revision: '',
     remark:'',
-    processItems: [
-        {
-            previous_problem: '',
-            requirements: '',
-            potential_failure_mode: '',
-            potential_effect_of_failure: '',
-            severity: '',
-            classification: '',
-            potential_cause_of_failure: '',
-            controls_prevention: '',
-            detection: '',
-            rpn: '',
-            recommended_action: '',
-            controls_detection: ''
-        }
-    ]
+    processItems: [createBlankItem()]
 });
 
 const addRow = () => {
-    form.processItems.push({
-        previous_problem: '',
-        requirements: '',
-        potential_failure_mode: '',
-        potential_effect_of_failure: '',
-        severity: '',
-        classification: '',
-        potential_cause_of_failure: '',
-        controls_prevention: '',
-        detection: '',
-        rpn: '',
-        recommended_action: '',
-        controls_detection: ''
-    });
+    form.processItems.push(createBlankItem());
 }
 
 const calculateRpn = (item) => {
@@ -81,6 +89,11 @@ const calculateRpn = (item) => {
 const removerRow = (index) => {
     if(form.processItems.length > 1){
         form.processItems.splice(index, 1);
+        if(selectedRowIndex.value === index){
+            selectedRowIndex.value = null;
+        }else if(selectedRowIndex.value > index){
+            selectedRowIndex.value--;
+        }
     }
 }
 
@@ -123,6 +136,26 @@ const validateAndSave = () => {
             form.setError(`processItems.${index}.controls_detection`, 'Required');
             isValid = false;
         }
+
+        if(!item.severity || item.severity === ''){
+            form.setError(`processItems.${index}.severity`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.occurrence || item.occurrence === ''){
+            form.setError(`processItems.${index}.occurrence`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.detection || item.detection === ''){
+            form.setError(`processItems.${index}.detection`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.rpn || item.rpn === ''){
+            form.setError(`processItems.${index}.rpn`, 'Required');
+            isValid = false;
+        }
     });
 
     if(!isValid){
@@ -136,6 +169,41 @@ const validateAndSave = () => {
             toast.error(firstErrorMessage);
         }
     });
+}
+
+// table action
+const onNew = () => {
+  form.processItems.push(createBlankItem());
+  selectedRowIndex.value = form.processItems.length -1;
+}
+
+const onInsert = () => {
+    if (selectedRowIndex.value !== null && selectedRowIndex.value !== undefined) {
+        form.processItems.splice(selectedRowIndex.value, 0, createBlankItem());
+    } else {
+        onNew();
+    }
+}
+
+const onDelete = () => {
+    if (selectedRowIndex.value !== null) {
+        if (form.processItems.length > 1) {
+            form.processItems.splice(selectedRowIndex.value, 1);
+            // Sesuaikan index focus setelah penghapusan
+            if (selectedRowIndex.value >= form.processItems.length) {
+                selectedRowIndex.value = form.processItems.length - 1;
+            }
+        } else {
+            toast.warning("There must be at least one row in the table.");
+        }
+    } else {
+        toast.info("Select or click one of the table rows first to delete it.");
+    }
+}
+
+const onDeleteAll = () => {
+    form.processItems = [createBlankItem()];
+    selectedRowIndex.value = 0;
 }
 
 </script>
@@ -245,11 +313,42 @@ const validateAndSave = () => {
 
             <!-- Buat details --> 
             <div class="w-full bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
-                
+                <!-- table action bar -->
+                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5">
+                    <button 
+                        @click="onNew" 
+                        class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200"
+                    >
+                        New
+                    </button>
+
+                    <button 
+                    @click="onInsert" 
+                    class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200"
+                    >
+                    Insert
+                    </button>
+
+                    <button 
+                    @click="onDelete" 
+                    class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200"
+                    >
+                    Delete
+                    </button>
+
+                    <button 
+                    @click="onDeleteAll" 
+                    class="text-sm text-[12px] text-slate-600 hover:text-red-700 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200"
+                    >
+                    Delete All
+                    </button>
+                </div>
+
+                <!-- datatable -->
                 <div class="overflow-auto max-h-[80vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
                         
-                        <thead class="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[150px]">Previous</th>
@@ -265,12 +364,21 @@ const validateAndSave = () => {
                                 <th class="p-4 y-3 min-w-[100px]">Detection</th>
                                 <th class="p-4 y-3 min-w-[100px]">RPN</th>
                                 <th class="p-4 y-3 min-w-[350px]">Recommended Action(s)</th>
-                                <th class="px-4 py-3 text-center w-24">Action</th>
                             </tr>
                         </thead>
                         
                         <tbody class="divide-y divide-slate-100">
-                            <tr v-for="(item, index) in form.processItems" :key="index" class="hover:bg-slate-50/50 transition-colors">
+                            <tr 
+                                v-for="(item, index) in form.processItems" 
+                                :key="item.row_key" @click="selectedRowIndex = index"
+                                @focusin="selectedRowIndex = index"
+                                :class="[
+                                    'transition-colors duration-150 cursor-pointer',
+                                    selectedRowIndex === index 
+                                        ? 'bg-blue-50/80 hover:bg-blue-50 border-l-4 border-l-blue-500' 
+                                        : 'hover:bg-slate-50/50'
+                                ]"
+                            >
                                 <td class="px-4 py-3 text-center text-xs font-semibold text-slate-600">
                                     <div class="py-2">{{ index + 1 }}.</div>
                                 </td>
@@ -423,21 +531,6 @@ const validateAndSave = () => {
                                     <span v-if="form.errors[`processItems.${index}.recommended_action`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.recommended_action`] }}
                                     </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button type="button" @click="addRow" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-colors shadow-sm">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="removerRow(index)" :disabled="processItems.length === 1" 
-                                            class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                                            </svg>
-                                        </button>
-                                    </div>
                                 </td>
                             </tr>
                         </tbody>

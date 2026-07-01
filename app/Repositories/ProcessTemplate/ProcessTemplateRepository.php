@@ -25,6 +25,11 @@ class ProcessTemplateRepository
         return $processHeader->details()->createMany($detailsData);
     }
 
+    public function getDetailData(int $idHeader): Collection
+    {
+        return ProcessDetail::where('header_id', $idHeader)->get();
+    }
+
     public function findManyByIds(array $ids): Collection
     {
         return ProcessHeader::whereIn('id', $ids)->get();
@@ -76,5 +81,28 @@ class ProcessTemplateRepository
     public function deleteAll($ids)
     {
         return ProcessHeader::whereIn('id', $ids)->delete();
+    }
+
+    public function upsertDetails(array $details)
+    {
+        if (empty($details)) return;
+
+        return ProcessDetail::upsert($details, ['id'], [
+            'order',
+            'previous_problem',
+            'requirements',
+            'potential_failure_mode',
+            'potential_effect_of_failure',
+            'potential_cause_of_failure',
+            'classification',
+            'occurrence',
+            'detection',
+            'rpn',
+            'recommended_action',
+            'severity',
+            'controls_prevention',
+            'controls_detection',
+            'updated_at'
+        ]);
     }
 }

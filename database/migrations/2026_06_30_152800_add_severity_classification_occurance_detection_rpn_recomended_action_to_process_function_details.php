@@ -13,20 +13,20 @@ return new class extends Migration
     {
         Schema::table('process_function_details', function (Blueprint $table) {
             $table->integer('severity')->default(0)->after('potential_cause_of_failure');
-            $table->string('classification')->default(null)->after('potential_cause_of_failure');
+            $table->string('classification')->nullable()->default(null)->after('potential_cause_of_failure');
             $table->integer('occurrence')->default(0)->after('classification');
             $table->integer('detection')->default(0)->after('occurrence');
             $table->integer('rpn')->default(0)->after('detection');
-            $table->string('recommended_action')->default(null)->after('rpn');
+            $table->string('recommended_action')->nullable()->default('None')->after('rpn');
         });
 
         Schema::table('process_revision_details', function (Blueprint $table) {
             $table->integer('severity')->default(0)->after('potential_cause_of_failure');
-            $table->string('classification')->default(null)->after('potential_cause_of_failure');
+            $table->string('classification')->nullable()->default(null)->after('potential_cause_of_failure');
             $table->integer('occurrence')->default(0)->after('classification');
             $table->integer('detection')->default(0)->after('occurrence');
             $table->integer('rpn')->default(0)->after('detection');
-            $table->string('recommended_action')->default(null)->after('rpn');
+            $table->string('recommended_action')->nullable()->default(null)->after('rpn');
         });
     }
 

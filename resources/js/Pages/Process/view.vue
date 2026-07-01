@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { Head, useForm, router, Link } from '@inertiajs/vue3';
+import { Head, useForm, router, Link, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { toast } from 'vue3-toastify';
 import axios from 'axios';
@@ -16,6 +16,23 @@ const props = defineProps({
     show: Boolean,
     logs: Array,
 });
+
+const page = usePage();
+const errors = computed(() => page.props.errors || {});
+
+const selectedRowIndex = ref(null);
+
+watch(
+    errors,
+    (newErrors) => {
+        if(newErrors && newErrors.error){
+            toast.error(newErrors.error);
+        }
+    },
+    {
+        deep: true
+    }
+);
 
 defineEmits(['close']);
 
@@ -98,16 +115,24 @@ const form = useForm({
 
 const addRow = () => {
     form.processItems.push({
+        row_key: Math.random().toString(36).substring(2, 9),
         id: null,
         previous_problem: '',
         requirements: '',
         potential_failure_mode: '',
         potential_effect_of_failure: '',
+        severity: '',
+        classification: '',
         potential_cause_of_failure: '',
+        occurrence: '',
         controls_prevention: '',
-        controls_detection: ''
+        controls_detection: '',
+        detection: '',
+        rpn: 0,
+        recommended_action: 'None'
     });
 };
+
 
 const removerRow = (index) => {
     if (form.processItems.length > 1) {
@@ -162,6 +187,26 @@ const validateAndSave = () => {
         }
         if (!item.controls_detection || item.controls_detection.trim() === '') {
             form.setError(`processItems.${index}.controls_detection`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.severity || item.severity === ''){
+            form.setError(`processItems.${index}.severity`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.occurrence || item.occurrence === ''){
+            form.setError(`processItems.${index}.occurrence`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.detection || item.detection === ''){
+            form.setError(`processItems.${index}.detection`, 'Required');
+            isValid = false;
+        }
+
+        if(!item.rpn || item.rpn === ''){
+            form.setError(`processItems.${index}.rpn`, 'Required');
             isValid = false;
         }
     });
@@ -224,6 +269,66 @@ const nextData = () => {
 const newForm = () => {
     router.get('/process/create');
 }
+
+const calculateRpn = (item) => {
+    const s = Number(item.severity);
+    const o = Number(item.occurrence);
+    const d = Number(item.detection);
+
+    item.rpn = (s && o && d) ? s * o * d : 0;
+}
+
+// table action
+const createBlankItem = () => ({
+    row_key: Math.random().toString(36).substring(2, 9),
+    previous_problem: '',
+    requirements: '',
+    potential_failure_mode: '',
+    potential_effect_of_failure: '',
+    severity: '',
+    classification: '',
+    potential_cause_of_failure: '',
+    occurrence: '',
+    controls_prevention: '',
+    controls_detection: '',
+    detection: '',
+    rpn: 0,
+    recommended_action: 'None'
+});
+
+const onNew = () => {
+  form.processItems.push(createBlankItem());
+  selectedRowIndex.value = form.processItems.length -1;
+}
+
+const onInsert = () => {
+    if (selectedRowIndex.value !== null && selectedRowIndex.value !== undefined) {
+        form.processItems.splice(selectedRowIndex.value, 0, createBlankItem());
+    } else {
+        onNew();
+    }
+}
+
+const onDelete = () => {
+    if (selectedRowIndex.value !== null) {
+        if (form.processItems.length > 1) {
+            form.processItems.splice(selectedRowIndex.value, 1);
+            // Sesuaikan index focus setelah penghapusan
+            if (selectedRowIndex.value >= form.processItems.length) {
+                selectedRowIndex.value = form.processItems.length - 1;
+            }
+        } else {
+            toast.warning("There must be at least one row in the table.");
+        }
+    } else {
+        toast.info("Select or click one of the table rows first to delete it.");
+    }
+}
+
+const onDeleteAll = () => {
+    form.processItems = [createBlankItem()];
+    selectedRowIndex.value = 0;
+}
 </script>
 
 
@@ -238,12 +343,12 @@ const newForm = () => {
                     <p class="text-xs text-slate-500 mt-1">{{ isEditing ? 'Edit' : 'View' }} PMFEA template process function {{ props.header?.name }}.</p>
                 </div>
                 <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3 py-2 shadow-sm">
-                <!-- <div class="flex items-center justify-between rounded-xl bg-white p-3 shadow-sm"> -->
+                <!-- <div class="flex items-center justify-between bg-white p-3 shadow-sm"> -->
                     <div class="flex items-center justify-between w-full">
                         <!-- Toolbar -->
                         <div class="flex items-center gap-3"> 
                             <div class="flex items-center gap-1.5">
-                                <Link href="/process" class="group flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg transition-colors">
+                                <Link href="/process" class="group flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50/50  transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                                     </svg>
@@ -252,23 +357,23 @@ const newForm = () => {
 
                                 <div class="w-px h-6 bg-slate-300 mx-1" v-if="!isEditing"></div>
 
-                                <div class="flex items-center bg-slate-100/80 p-0.5 rounded-lg border border-slate-200/50 shadow-inner" v-if="!isEditing">
-                                    <button @click="firstData" :disabled="allIds.indexOf(header.id) === 0" type="button" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all" title="First">
+                                <div class="flex items-center bg-slate-100/80 p-0.5  border border-slate-200/50 shadow-inner" v-if="!isEditing">
+                                    <button @click="firstData" :disabled="allIds.indexOf(header.id) === 0" type="button" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="First">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                                         </svg>
                                     </button>
-                                    <button type="button" @click="prevData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all" title="Previous">
+                                    <button type="button" @click="prevData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Previous">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                                         </svg>
                                     </button>
-                                    <button type="button" @click="nextData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all" title="Next">
+                                    <button type="button" @click="nextData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Next">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                                         </svg>
                                     </button>
-                                    <button type="button" @click="lastData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-md transition-all" title="Last">
+                                    <button type="button" @click="lastData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Last">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                                         </svg>
@@ -281,7 +386,7 @@ const newForm = () => {
                             <div class="flex items-center gap-1.5">
                                 
                                 <button v-if="isEditing" type="button" @click="validateAndSave" :disabled="form.processing"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-sm transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs  shadow-sm transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                                     <svg v-if="form.processing" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -295,7 +400,7 @@ const newForm = () => {
                                     v-if="!isEditing"
                                     type="button" 
                                     @click="newForm"
-                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-green-600 bg-blue-50 border border-blue-100 rounded-lg transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
+                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-green-600 bg-blue-50 border border-blue-100  transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -306,7 +411,7 @@ const newForm = () => {
                                 <button type="button" 
                                     @click="isEditing ? (isEditing = false, form.reset()) : isEditing = true" 
                                     :class="[
-                                        'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all shadow-sm border',
+                                        'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold  transition-all shadow-sm border',
                                         isEditing 
                                             ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200' 
                                             : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100 hover:border-blue-600'
@@ -323,7 +428,7 @@ const newForm = () => {
                                 <div class="w-px h-6 bg-slate-300 mx-1"></div>
 
                                 <div class="relative group">
-                                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-xs font-bold rounded-lg transition-all shadow-sm">
+                                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-xs font-bold  transition-all shadow-sm">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                                         </svg>
@@ -332,7 +437,7 @@ const newForm = () => {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </button>
-                                    <div class="absolute right-0 top-full mt-1.5 w-40 bg-white border border-slate-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden origin-top-right transform scale-95 group-hover:scale-100">
+                                    <div class="absolute right-0 top-full mt-1.5 w-40 bg-white border border-slate-100 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden origin-top-right transform scale-95 group-hover:scale-100">
                                         <div class="py-1 flex flex-col">
                                             <button type="button" @click="openLogs(props.header.id)" :disabled="loadingLogs" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
@@ -360,7 +465,7 @@ const newForm = () => {
 
                                 <div class="w-px h-4 bg-slate-200 mx-1"></div>
 
-                                <button type="button" @click="deleteSelected(header?.id)" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500 rounded-lg transition-colors" title="Delete Record">
+                                <button type="button" @click="deleteSelected(header?.id)" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500  transition-colors" title="Delete Record">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -374,7 +479,7 @@ const newForm = () => {
             </div>
 
             <!-- Buat header -->
-            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 mb-6">
+            <div class="bg-white  border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
                     <div class="lg:col-span-3">
                         <div class="flex items-center gap-1.5 mb-2">
@@ -394,7 +499,7 @@ const newForm = () => {
                             <input type="text" v-model="form.name" placeholder="Enter process function name..." maxlength="255" autocomplete="off"
                             :disabled="!isEditing"
                             :class="[
-                                'w-full pl-10 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 rounded-xl text-xs font-medium transition-all outline-none',
+                                'w-full pl-10 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none',
                                 form.errors.name 
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
@@ -411,7 +516,7 @@ const newForm = () => {
                             </label>
                         </div>
                         <div class="w-full flex">
-                            <div class="inline-flex items-center justify-center gap-1.5 px-2 py-2 bg-sky-50 border border-sky-200 text-sky-700 rounded-full w-full shadow-sm select-none cursor-not-allowed whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5 px-2 py-2 bg-sky-50 border border-sky-200 text-sky-700  w-full shadow-sm select-none cursor-not-allowed whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                                 </svg>
@@ -430,45 +535,93 @@ const newForm = () => {
                         </div>
                         <textarea v-model="form.remark" rows="2" placeholder="Provide detailed context, e.g., on equipment conditions, key dependencies, environmental factors..." 
                             :disabled="!isEditing"
-                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-xl text-xs font-medium text-slate-700 transition-all outline-none resize-none leading-relaxed"></textarea>
+                            class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium text-slate-700 transition-all outline-none resize-none leading-relaxed"></textarea>
                     </div>
                     
                 </div>
             </div>
 
             <!-- Buat details --> 
-            <div class="w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
-                
-                <div class="overflow-auto min-h-96">
+            <div class="w-full bg-white  border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
+                <!-- table action bar -->
+                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5">
+                    <button 
+                        @click="onNew"
+                        :disabled="!isEditing"
+                        class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                        New
+                    </button>
+
+                    <button 
+                        @click="onInsert" 
+                        :disabled="!isEditing"
+                        class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                    Insert
+                    </button>
+
+                    <button 
+                        @click="onDelete" 
+                        :disabled="!isEditing"
+                        class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                    Delete
+                    </button>
+
+                    <button 
+                        :disabled="!isEditing"
+                        @click="onDeleteAll" 
+                        class="text-sm text-[12px] text-slate-600 hover:text-red-700 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                    Delete All
+                    </button>
+                </div>
+                <div class="overflow-auto max-h-[80vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
                         
-                        <thead class="bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[150px]">Previous</th>
                                 <th class="px-4 py-3 min-w-[350px]">Requirements</th>
                                 <th class="px-4 py-3 min-w-[350px]">Potential Failure Mode</th>
                                 <th class="px-4 py-3 min-w-[350px]">Potential Effect(s)</th>
+                                <th class="px-4 py-3 min-w-[100px]">Severity</th>
+                                <th class="px-4 py-3 min-w-[100px]">Classification</th>
                                 <th class="px-4 py-3 min-w-[350px]">Potential Cause(s)</th>
+                                <th class="px-4 py-3 min-w-[100px]">Occurrence</th>
                                 <th class="px-4 py-3 min-w-[350px]">Controls Prevention</th>
                                 <th class="px-4 py-3 min-w-[350px]">Control Detection</th>
-                                <th class="px-4 py-3 text-center w-24" v-show="isEditing">Action</th>
+                                <th class="p-4 y-3 min-w-[100px]">Detection</th>
+                                <th class="p-4 y-3 min-w-[100px]">RPN</th>
+                                <th class="p-4 y-3 min-w-[350px]">Recommended Action(s)</th>
                             </tr>
                         </thead>
                         
                         <tbody class="divide-y divide-slate-100">
-                            <tr v-for="(item, index) in form.processItems" :key="index" class="hover:bg-slate-50/50 transition-colors">
+                            <tr 
+                                v-for="(item, index) in form.processItems" 
+                                :key="item.row_key" @click="selectedRowIndex = index"
+                                @focusin="selectedRowIndex = index"
+                                :disabled="!isEditing"
+                                :class="[
+                                    'transition-colors duration-150 cursor-pointer',
+                                    selectedRowIndex === index 
+                                        ? 'bg-blue-50/80 hover:bg-blue-50 border-l-4 border-l-blue-500' 
+                                        : 'hover:bg-slate-50/50'
+                                ]"
+                            >
                                 <td class="px-4 py-3 text-center text-xs font-semibold text-slate-600">
                                     <div class="py-2">{{ index + 1 }}.</div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" :disabled="!isEditing" v-model="item.previous_problem" placeholder="Enter previous ..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg text-xs transition-all outline-none">
+                                    <input :disabled="!isEditing" type="text" v-model="item.previous_problem" placeholder="Enter previous ..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs transition-all outline-none">
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.requirements" placeholder="Enter requirements..." required 
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="text" v-model="item.requirements" placeholder="Enter requirements..." required 
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.requirements`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -478,10 +631,9 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_failure_mode" placeholder="Failure mode..." required
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="text" v-model="item.potential_failure_mode" placeholder="Failure mode..." required
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_failure_mode`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -491,10 +643,9 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_effect_of_failure" placeholder="Effects..." required
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="text" v-model="item.potential_effect_of_failure" placeholder="Effects..." required
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_effect_of_failure`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -504,10 +655,34 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_cause_of_failure" placeholder="Causes..." required
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="number" v-model="item.severity" placeholder="Severity..." required
+                                        @input="calculateRpn(item)"
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.severity`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.severity`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.severity`] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input :disabled="!isEditing" type="text" v-model="item.classification" placeholder="Classsification..." required
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.classification`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.classification`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.classification`] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input :disabled="!isEditing" type="text" v-model="item.potential_cause_of_failure" placeholder="Causes..." required
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_cause_of_failure`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -517,10 +692,22 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.controls_prevention" placeholder="Prevention..." required
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="number" v-model="item.occurrence" placeholder="Occurance..." required
+                                        @input="calculateRpn(item)"
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.occurrence`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.occurrence`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.occurrence`] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input :disabled="!isEditing" type="text" v-model="item.controls_prevention" placeholder="Prevention..." required
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.controls_prevention`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -530,10 +717,9 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.controls_detection" placeholder="Detection..." required
-                                        :disabled="!isEditing"
+                                    <input :disabled="!isEditing" type="text" v-model="item.controls_detection" placeholder="Control Detection..." required
                                         :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 rounded-lg text-xs transition-all outline-none',
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.controls_detection`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
@@ -543,19 +729,41 @@ const newForm = () => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button type="button" @click="addRow" class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors shadow-sm" v-show="isEditing">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="removerRow(index)" :disabled="form.processItems.length === 1" 
-                                            class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" v-show="isEditing">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                                            </svg>
-                                        </button>
-                                    </div>
+                                    <input :disabled="!isEditing" type="number" v-model="item.detection" placeholder="Detection..." required
+                                        @input="calculateRpn(item)"
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.detection`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.detection`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.detection`] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input :disabled="!isEditing" type="number" v-model="item.rpn" placeholder="RPN..." required readonly
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.rpn`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.rpn`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.rpn`] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input :disabled="!isEditing" type="text" v-model="item.recommended_action" placeholder="Recommended Action..." required
+                                        :class="[
+                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                            form.errors[`processItems.${index}.recommended_action`] 
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                        ]">
+                                    <span v-if="form.errors[`processItems.${index}.recommended_action`]" class="block mt-1 text-[9px] font-bold text-rose-500">
+                                        {{ form.errors[`processItems.${index}.recommended_action`] }}
+                                    </span>
                                 </td>
                             </tr>
                         </tbody>
@@ -576,7 +784,7 @@ const newForm = () => {
     >
     
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl p-6">
+        <div class="bg-white  w-full max-w-lg shadow-xl p-6">
             <h2 class="text-lg font-black mb-6">Change History Timeline</h2>
             
             <div class="max-h-96 overflow-y-auto pl-2">
@@ -585,10 +793,10 @@ const newForm = () => {
                     
                     <div v-for="log in logs" :key="log.id" class="relative pl-6">
                         <!-- Dot penanda (Garis Timeline) -->
-                        <div class="absolute -left-[9px] top-0 h-4 w-4 rounded-full border-4 border-white bg-blue-600 shadow"></div>
+                        <div class="absolute -left-[9px] top-0 h-4 w-4  border-4 border-white bg-blue-600 shadow"></div>
                         
                         <!-- Content -->
-                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <div class="bg-slate-50 p-3 border border-slate-100">
                             <p @click="openDetail(log)" class="text-xs font-bold text-blue-700 uppercase cursor-pointer hover:underline">
                                 {{ log.action }} (V.{{ log.revision }})
                             </p>
@@ -605,7 +813,7 @@ const newForm = () => {
                 </div>
             </div>
 
-            <button @click="showModal = false" class="mt-6 w-full py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition">
+            <button @click="showModal = false" class="mt-6 w-full py-2 bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition">
                 Close
             </button>
         </div>
@@ -623,7 +831,7 @@ const newForm = () => {
         leave-to-class="opacity-0 translate-y-4"
     >
         <div v-if="showDetailModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
-            <div class="bg-white rounded-2xl w-full shadow-xl p-6 max-h-[80vh] overflow-y-auto">
+            <div class="bg-white  w-full shadow-xl p-6 max-h-[80vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <div>
                         <h2 class="text-lg font-black">Detail Log: {{ selectedLogDetail }}</h2>
@@ -683,16 +891,16 @@ const newForm = () => {
     <!-- Modal konfirmasi -->
     <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
         <div v-if="showConfirmModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 border border-slate-100">
+            <div class="bg-white  w-full max-w-sm shadow-2xl p-6 border border-slate-100">
                 <div class="flex flex-col items-center text-center">
-                    <div class="p-3 bg-rose-50 text-rose-500 rounded-full mb-4">
+                    <div class="p-3 bg-rose-50 text-rose-500  mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </div>
                     <h3 class="text-lg font-black text-slate-900">Confirm Deletion</h3>
                     <p class="text-sm text-slate-500 mt-2 mb-6">Are you sure you want to delete these process function data (<span class="font-bold text-slate-900">{{ header?.name }}</span>)? This action cannot be undone.</p>
                     <div class="flex gap-3 w-full">
-                        <button @click="showConfirmModal = false" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition">Cancel</button>
-                        <button @click="confirmAction(header?.id)" class="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-lg transition">Yes, Delete</button>
+                        <button @click="showConfirmModal = false" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Cancel</button>
+                        <button @click="confirmAction(header?.id)" class="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg transition">Yes, Delete</button>
                     </div>
                 </div>
             </div>

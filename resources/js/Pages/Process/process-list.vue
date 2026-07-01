@@ -113,6 +113,18 @@ const handleSearch = debounce((value) => {
 }, 500);
 
 watch(
+    errors,
+    (newErrors) => {
+        if(newErrors && newErrors.error){
+            toast.error(newErrors.error);
+        }
+    },
+    {
+        deep: true
+    }
+);
+
+watch(
     searchQuery,
     debounce((value) => {
         router.get(
@@ -444,7 +456,6 @@ const copyRow = () => {
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <div class="flex-1 flex flex-col">
@@ -533,7 +544,7 @@ const copyRow = () => {
                     </div>
                 </div>
 
-                <div class="bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-auto">                    
+                <div class="bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-auto">
                     <div class="overflow-auto border-t border-slate-100">
                         <table class="w-full text-left border-collapse bg-white">
                             <thead class="bg-blue-300 text-slate-500 uppercase tracking-wider text-[12px] font-bold">

@@ -2,6 +2,7 @@
 
 namespace App\Services\ProcessTemplate;
 
+use App\Jobs\ProcessFunctionQueueJob;
 use App\Models\ProcessHeader;
 use App\Repositories\ProcessTemplate\ProcessTemplateRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
@@ -46,8 +47,17 @@ class ProcessTemplateServices
                 // Insert ke teble header
                 $processFunction = $this->processRepo->storeHeader($headerData);
 
+
                 $detailsData = collect($data['processItems'])
-                    ->map(function ($item, $index) use ($processFunction) {
+                    ->map(function ($item, $index) {
+                        $severity   = (int) ($item['severity'] ?? 0);
+                        $occurrence = (int) ($item['occurrence'] ?? 0);
+                        $detection  = (int) ($item['detection'] ?? 0);
+
+                        $rpn = ($severity > 0 && $occurrence > 0 && $detection > 0)
+                            ? ($severity * $occurrence * $detection)
+                            : 0;
+
                         return [
                             'order' => $index + 1,
                             'previous_problem' => strtoupper(trim($item['previous_problem'] ?? '')),
@@ -55,6 +65,12 @@ class ProcessTemplateServices
                             'potential_failure_mode' => trim($item['potential_failure_mode']),
                             'potential_effect_of_failure' => trim($item['potential_effect_of_failure']),
                             'potential_cause_of_failure' => trim($item['potential_cause_of_failure']),
+                            'classification' => $item['classification'] ? trim($item['classification']) : '',
+                            'occurrence' => $occurrence,
+                            'detection' => $detection,
+                            'rpn' => $rpn,
+                            'recommended_action' => $item['recommended_action'] ? trim($item['recommended_action']) : 'None',
+                            'severity' => $severity,
                             'controls_prevention' => trim($item['controls_prevention']),
                             'controls_detection' => trim($item['controls_detection']),
                         ];
@@ -70,6 +86,25 @@ class ProcessTemplateServices
                     action: 'CREATE',
                     reason: 'Initial PMFEA'
                 );
+
+                $dataLogs = [
+                    'header' => $processFunction->toArray(),
+                    'details' => $processDetails->toArray()
+                ];
+
+                $this->logService->store($processFunction, 'create', 'Initialize new process function data', null, $dataLogs);
+                activity('save_process_function_header')
+                    ->causedBy(Auth::id())
+                    ->performedOn($processFunction)
+                    ->withProperties([
+                        'header_data' => $processFunction->toArray(),
+                        'detail_data' => $processDetails->toArray(),
+                        'ip' => Request::ip()
+                    ])
+                    ->log('Save success: Successfully saved new process funtion header data');
+
+                ProcessFunctionQueueJob::dispatch('create', [])->afterCommit();
+
                 return $processFunction;
             });
         } catch (\Exception $e) {
@@ -90,51 +125,82 @@ class ProcessTemplateServices
     public function updateData(int $id, array $data)
     {
         try {
-            $idHeader = $id;
-            return DB::transaction(function () use ($data, $idHeader) {
+            return DB::transaction(function () use ($id, $data) {
+                $oldHeaderData = $this->processRepo->getHeaderById($id);
+                $oldDetailData = $this->processRepo->getDetailData($id);
+
+                $nextRevision = ($oldHeaderData->revision ?? 0) + 1;
+
                 $headerData = [
-                    'name' => trim($data['name']),
-                    'revision' => DB::raw('revision + 1'),
-                    'remark' => trim($data['remark']),
+                    'name'       => trim($data['name']),
+                    'revision'   => $nextRevision,
+                    'remark'     => trim($data['remark'] ?? ''),
                     'updated_by' => Auth::id()
                 ];
 
-                $updateHeader = $this->processRepo->updateHeader($idHeader, $headerData);
+                $freshHeader = $this->processRepo->updateHeader($id, $headerData);
 
-                $incomingDetails = collect($data['processItems']);
+                $incomingDetails = collect($data['processItems'] ?? []);
                 $incomingIds = $incomingDetails->pluck('id')->filter()->toArray();
-                $this->processRepo->deleteDetailsNotIn($idHeader, $incomingIds);
+                $this->processRepo->deleteDetailsNotIn($id, $incomingIds);
 
-                $incomingDetails->each(function ($item, $index) use ($idHeader) {
-                    $detailData = [
-                        'header_id' => $idHeader, // Pastikan relasinya diset
-                        'order' => $index + 1,
-                        'previous_problem' => strtoupper(trim($item['previous_problem'] ?? '')),
-                        'requirements' => trim($item['requirements']),
-                        'potential_failure_mode' => trim($item['potential_failure_mode']),
-                        'potential_effect_of_failure' => trim($item['potential_effect_of_failure']),
-                        'potential_cause_of_failure' => trim($item['potential_cause_of_failure']),
-                        'controls_prevention' => trim($item['controls_prevention']),
-                        'controls_detection' => trim($item['controls_detection']),
+                $detailsToSave = $incomingDetails->map(function ($item, $index) use ($id) {
+                    $severity   = (int) ($item['severity'] ?? 0);
+                    $occurrence = (int) ($item['occurrence'] ?? 0);
+                    $detection  = (int) ($item['detection'] ?? 0);
+
+                    $rpn = ($severity > 0 && $occurrence > 0 && $detection > 0)
+                        ? ($severity * $occurrence * $detection)
+                        : 0;
+
+                    return [
+                        'id'                          => $item['id'] ?? null, // Jadi acuan MySQL untuk INSERT atau UPDATE
+                        'header_id'                   => $id,
+                        'order'                       => $index + 1,
+                        'uuid'                        => $item['uuid'] ?? (string) Str::uuid7(),
+                        'previous_problem'            => strtoupper(trim($item['previous_problem'] ?? '')),
+                        'requirements'                => trim($item['requirements'] ?? ''),
+                        'potential_failure_mode'      => trim($item['potential_failure_mode'] ?? ''),
+                        'potential_effect_of_failure' => trim($item['potential_effect_of_failure'] ?? ''),
+                        'potential_cause_of_failure'  => trim($item['potential_cause_of_failure'] ?? ''),
+                        'classification'              => !empty($item['classification']) ? trim($item['classification']) : '',
+                        'occurrence'                  => $occurrence,
+                        'detection'                   => $detection,
+                        'rpn'                         => $rpn,
+                        'recommended_action'          => !empty($item['recommended_action']) ? trim($item['recommended_action']) : 'None',
+                        'severity'                    => $severity,
+                        'controls_prevention'         => trim($item['controls_prevention'] ?? ''),
+                        'controls_detection'          => trim($item['controls_detection'] ?? ''),
+                        'created_at'                  => now(), // Wajib diisi manual di level array PHP jika memakai upsert
+                        'updated_at'                  => now(),
                     ];
+                })->toArray();
 
-                    if (!empty($item['id'])) {
-                        $this->processRepo->updateDetail($item['id'], $detailData);
-                    } else {
-                        $detailData['uuid'] = Str::uuid7();
-                        $this->processRepo->createDetail($detailData);
-                    }
-                });
+                if (!empty($detailsToSave)) {
+                    $this->processRepo->upsertDetails($detailsToSave);
+                }
 
-                // Proses revision
-                $freshHeader = ProcessHeader::find($idHeader);
+                $freshDetail = $this->processRepo->getDetailData($id);
+
                 $this->revisionService->createSnapShot(
                     header: $freshHeader,
                     action: 'UPDATE',
                     reason: !empty($data['remark']) ? trim($data['remark']) : null
                 );
 
-                return $updateHeader;
+                $oldData = [
+                    'header' => $oldHeaderData->toArray(),
+                    'detail' => $oldDetailData->toArray()
+                ];
+
+                $newData = [
+                    'header' => $freshHeader->toArray(),
+                    'detail' => $freshDetail->toArray(),
+                ];
+
+                $this->logService->store($freshHeader, 'update', $data['remark'] ?? '', $oldData, $newData);
+
+                return $freshHeader;
             });
         } catch (\Exception $e) {
             Log::error('Failed to save Process Function: ' . $e->getMessage());
@@ -142,9 +208,12 @@ class ProcessTemplateServices
                 ->causedBy(Auth::id())
                 ->withProperties([
                     'error_message' => $e->getMessage(),
-                    'input_data' => $data,
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
+                    'input_data'    => $data,
+                    'message'       => $e->getMessage(),
+                    'file'          => $e->getFile(),
+                    'line'          => $e->getLine(),
+                    'trace'         => $e->getTraceAsString(),
+                    'ip'            => request()->ip()
                 ])
                 ->log('Save failed: ' . $e->getMessage());
             throw $e;
@@ -191,46 +260,6 @@ class ProcessTemplateServices
         }
     }
 
-    public function bulkDelete($ids)
-    {
-        try {
-            return $this->processRepo->deleteAll($ids);
-        } catch (\Exception $e) {
-            Log::error('Failed to delete process data');
-            activity()
-                ->causedBy(Auth::id())
-                ->withProperties([
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString(),
-                    'ip' => Request::ip(),
-                ])
-                ->log('Bulk delete failed: Failed to perform bulk delete');
-            throw $e;
-        }
-    }
-
-    public function removeRow($id)
-    {
-        try {
-            return ProcessHeader::where('id', $id)->delete();
-        } catch (\Exception $e) {
-            Log::error('Failed to delete process data');
-            activity()
-                ->causedBy(Auth::id())
-                ->withProperties([
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString(),
-                    'ip' => Request::ip(),
-                ])
-                ->log('Bulk delete failed: Failed to perform bulk delete');
-            throw $e;
-        }
-    }
-
     public function deleteAll(array $data)
     {
         try {
@@ -246,9 +275,7 @@ class ProcessTemplateServices
                 }
 
                 foreach ($process as $prc) {
-                    $oldData = $this->processRepo->getHeaderById($prc->id);
-
-                    $this->logService->store($prc, 'delete', trim($data['remark']), $oldData->toArray(), null);
+                    $this->logService->store($prc, 'delete', trim($data['remark']), $prc->toArray(), null);
                     activity()
                         ->causedBy(Auth::id())
                         ->performedOn($prc)
@@ -261,6 +288,9 @@ class ProcessTemplateServices
 
                 $this->processRepo->deleteAll($data['ids']);
 
+                // ini buat proses ngapus proses di table pfmea kalo datanya mau didelete
+                ProcessFunctionQueueJob::dispatch('delete', [])->afterCommit();
+
                 return true;
             });
         } catch (\Exception $e) {
@@ -271,7 +301,7 @@ class ProcessTemplateServices
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
+                    'trace' => $e->getTraceAsString(),
                     'ip' => Request::ip()
                 ])
                 ->log('Delete failed: failed to perform mass delete action');
