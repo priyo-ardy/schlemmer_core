@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Process;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProcessHeader;
+use App\Models\User;
 use App\Services\ProcessTemplate\ProcessTemplateServices;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -42,7 +43,9 @@ class ProcessController extends Controller
 
     public function create()
     {
-        return Inertia::render('Process/create');
+        return Inertia::render('Process/create', [
+            'responsibility' => User::orderBy('name', 'asc')->get()
+        ]);
     }
 
     public function store(Request $request)
@@ -73,6 +76,13 @@ class ProcessController extends Controller
                 'processItems.*.recommended_action'             => 'nullable|string|max:255',
                 'processItems.*.controls_prevention'            => 'required|string|max:255',
                 'processItems.*.controls_detection'             => 'required|string|max:255',
+                'processItems.*.responsibility'                 => 'nullable|integer',
+                'processItems.*.target_completion_date'         => 'nullable|date',
+                'processItems.*.action_taken_completion_date'   => 'nullable|date',
+                'processItems.*.result_severity'                => 'nullable|integer',
+                'processItems.*.result_occurrence'              => 'nullable|integer',
+                'processItems.*.result_detection'               => 'nullable|integer',
+                'processItems.*.result_rpn'                     => 'nullable|integer',
             ]);
 
             $template_data = $this->processService->storedData($validated);
@@ -92,7 +102,8 @@ class ProcessController extends Controller
 
         return Inertia::render('Process/view', [
             'header' => $header,
-            'allIds' => $allIds
+            'allIds' => $allIds,
+            'responsibility' => User::orderBy('name', 'asc')->get()
         ]);
     }
 
@@ -125,6 +136,16 @@ class ProcessController extends Controller
                 'processItems.*.recommended_action'             => 'nullable|string|max:255',
                 'processItems.*.controls_prevention'            => 'required|string|max:255',
                 'processItems.*.controls_detection'             => 'required|string|max:255',
+                'processItems.*.recommended_action'             => 'nullable|string|max:255',
+                'processItems.*.controls_prevention'            => 'required|string|max:255',
+                'processItems.*.controls_detection'             => 'required|string|max:255',
+                'processItems.*.responsibility'                 => 'nullable|integer',
+                'processItems.*.target_completion_date'         => 'nullable|date',
+                'processItems.*.action_taken_completion_date'   => 'nullable|date',
+                'processItems.*.result_severity'                => 'nullable|integer',
+                'processItems.*.result_occurrence'              => 'nullable|integer',
+                'processItems.*.result_detection'               => 'nullable|integer',
+                'processItems.*.result_rpn'                     => 'nullable|integer',
             ]);
 
             $this->processService->updateData($id, $validated);

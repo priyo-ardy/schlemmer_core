@@ -7,6 +7,7 @@ import { toast } from 'vue3-toastify';
 defineOptions({layout:AuthenticatedLayout, inheritAttrs: false});
 const props = defineProps({
     users: Array,
+    responsibility: Array
 });
 
 const cancelForm = () => {
@@ -38,15 +39,22 @@ const processItems = ref([
         requirements: '',
         potential_failure_mode: '',
         potential_effect_of_failure: '',
-        severity: '',
+        severity: 0,
         classification: '',
         potential_cause_of_failure: '',
-        occurrence: '',
+        occurrence: 0,
         controls_prevention: '',
-        detection: '',
-        rpn: '',
-        recommended_action: '',
-        controls_detection: ''
+        detection: 0,
+        rpn: 0,
+        recommended_action: 'None',
+        controls_detection: '',
+        responsibility: '', 
+        target_completion_date: '', 
+        action_taken_completion_date: '', 
+        result_severity: 0, 
+        result_occurrence: 0, 
+        result_detection: 0, 
+        result_rpn: 0
     }
 ]);
 
@@ -64,7 +72,14 @@ const createBlankItem = () => ({
     controls_detection: '',
     detection: '',
     rpn: 0,
-    recommended_action: 'None'
+    recommended_action: 'None',
+    responsibility: '', 
+    target_completion_date: '', 
+    action_taken_completion_date: '', 
+    result_severity: 0, 
+    result_occurrence: 0, 
+    result_detection: 0, 
+    result_rpn: 0 
 });
 
 const form = useForm({
@@ -84,6 +99,14 @@ const calculateRpn = (item) => {
     const d = Number(item.detection);
 
     item.rpn = (s && o && d) ? s * o * d : 0;
+}
+
+const calculateResultRpn = (item) => {
+    const s = Number(item.result_severity);
+    const o = Number(item.result_occurrence);
+    const d = Number(item.result_detection);
+
+    item.result_rpn = (s && o && d) ? s * o * d : 0;
 }
 
 const removerRow = (index) => {
@@ -206,6 +229,31 @@ const onDeleteAll = () => {
     selectedRowIndex.value = 0;
 }
 
+// Select2 responsibility
+// Dropdown responsibility
+const isUserDropDownOpen = ref(false);
+const dropdownStyle = ref({});
+const userSearch = ref("");
+
+const filteredUsers = computed(() => {
+    if(!userSearch.value) return props.responsibility;
+    const lowerSearch = userSearch.value.toLowerCase();
+    return props.responsibility.filter(c => 
+        c.name.toLowerCase().includes(lowerSearch)
+    );
+});
+
+const selectedUserName = computed(() => {
+    if(!form.responsibility) return "Select Responsibility";
+    const user = props.responsibility.find(c => c.id === form.responsibility);
+    return user ? user.name : "Select Responsibility";
+});
+
+const selectUser = (id) => {
+    form.responsibility = id;
+    isUserDropDownOpen.value = false;
+    userSearch.value = "";
+}
 </script>
 
 <template>
@@ -364,6 +412,13 @@ const onDeleteAll = () => {
                                 <th class="p-4 y-3 min-w-[100px]">Detection</th>
                                 <th class="p-4 y-3 min-w-[100px]">RPN</th>
                                 <th class="p-4 y-3 min-w-[350px]">Recommended Action(s)</th>
+                                <th class="p-4 y-3 min-w-[350px]">Responsibility</th>
+                                <th class="p-4 y-3 min-w-[200px]">Target Completion Date</th>
+                                <th class="p-4 y-3 min-w-[200px]">Action Taken Completion Date</th>
+                                <th class="p-4 y-3 min-w-[100px]">Result Severity</th>
+                                <th class="p-4 y-3 min-w-[100px]">Result Occurrence</th>
+                                <th class="p-4 y-3 min-w-[100px]">Result Detection</th>
+                                <th class="p-4 y-3 min-w-[100px]">Result RPN</th>
                             </tr>
                         </thead>
                         
@@ -531,6 +586,144 @@ const onDeleteAll = () => {
                                     <span v-if="form.errors[`processItems.${index}.recommended_action`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.recommended_action`] }}
                                     </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="relative">
+                                        <div
+                                            v-if="isUserDropDownOpen"
+                                            @click="isUserDropDownOpen = false"
+                                            class="fixed inset-0 z-0"
+                                        ></div>
+
+                                        <div
+                                            @click="(e) => {
+                                                isUserDropDownOpen = !isUserDropDownOpen;
+                                                if (isUserDropDownOpen) {
+                                                    // Menghitung posisi tombol agar dropdown terpasang dengan pas secara fixed
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    dropdownStyle = {
+                                                        top: rect.bottom + 'px',
+                                                        left: rect.left + 'px',
+                                                        width: rect.width + 'px'
+                                                    };
+                                                }
+                                            }"
+                                            class="relative z-20 w-full pl-3 pr-3 py-2 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                            :class="[
+                                                form.errors.responsibility
+                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
+                                                : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800', 
+                                            ]"
+                                        >
+                                            <span :class="form.responsibility ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                                {{ selectedUserName }}
+                                            </span>
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                                                :class="{'rotate-180 text-blue-500': isCustomerDropdownOpen}"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                        <p
+                                            v-if="form.errors.responsibility"
+                                            class="mt-1 text-[10px] font-bold text-rose-500"
+                                        >
+                                            {{ form.errors.responsibility }}
+                                        </p>
+
+                                        <Teleport to="body">
+                                            <!-- Backdrop/Overlay klik luar untuk menutup dropdown -->
+                                            <div
+                                                v-if="isUserDropDownOpen"
+                                                @click="isUserDropDownOpen = false"
+                                                class="fixed inset-0 z-40"
+                                            ></div>
+
+                                            <Transition
+                                                enter-active-class="transition duration-100 ease-out"
+                                                enter-from-class="transform scale-95 opacity-0"
+                                                enter-to-class="transform scale-100 opacity-100"
+                                                leave-active-class="transition duration-75 ease-out"
+                                                leave-from-class="transform scale-100 opacity-100"
+                                                leave-to-class="transform scale-95 opacity-0"
+                                            >
+                                                <!-- Dropdown Panel menggunakan posisi 'fixed' dengan koordinat dinamis -->
+                                                <div
+                                                    v-if="isUserDropDownOpen"
+                                                    :style="dropdownStyle"
+                                                    class="fixed z-50 bg-white border border-slate-200 shadow-xl overflow-hidden mt-1"
+                                                >
+                                                    <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                                        <div class="relative">
+                                                            <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                            </svg>
+                                                            <input
+                                                                type="text"
+                                                                v-model="userSearch"
+                                                                @click.stop
+                                                                class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                                                                placeholder="Type to search..."
+                                                                autofocus
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="max-h-48 overflow-y-auto">
+                                                        <div
+                                                            v-for="user in filteredUsers"
+                                                            :key="user.id"
+                                                            @click="selectUser(user.id)"
+                                                            class="px-3 py-2.5 text-xs cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors border-b border-slate-50 last:border-0"
+                                                            :class="{'bg-blue-50 text-blue-700 font-bold border-l-2 border-l-blue-600': form.responsibility === user.id}"
+                                                        >
+                                                            {{ user.name }}
+                                                        </div>
+                                                        
+                                                        <div v-if="filteredUsers.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                                            No customer found matching "{{ userSearch }}"
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Transition>
+                                        </Teleport>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input
+                                        type="date"
+                                        v-model="form.target_completion_date"
+                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                    >
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input
+                                        type="date"
+                                        v-model="form.action_taken_completion_date"
+                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                    >
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="number" v-model="item.result_severity" placeholder="Severity..."
+                                        @input="calculateResultRpn(item)"
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="number" v-model="item.result_occurrence" placeholder="Severity..."
+                                        @input="calculateResultRpn(item)"
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="number" v-model="item.result_detection" placeholder="Severity..."
+                                        @input="calculateResultRpn(item)"
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="number" v-model="item.result_rpn" placeholder="Severity..." readonly
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
                                 </td>
                             </tr>
                         </tbody>

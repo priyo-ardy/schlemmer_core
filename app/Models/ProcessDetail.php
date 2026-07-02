@@ -33,6 +33,13 @@ class ProcessDetail extends Model
         'severity',
         'controls_prevention',
         'controls_detection',
+        'responsibility',
+        'target_completion_date',
+        'action_taken_completion_date',
+        'result_severity',
+        'result_occurrence',
+        'result_detection',
+        'result_rpn',
         'created_by',
         'updated_by',
     ];

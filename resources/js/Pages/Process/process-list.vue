@@ -39,6 +39,8 @@ const deleteSelected = () => {
     showConfirmModal.value = true;
 };
 
+const errors = computed(() => page.props.errors || {});
+
 const confirmAction = () => {
     deleteForm.clearErrors();
 

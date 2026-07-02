@@ -58,21 +58,42 @@ class ProcessTemplateServices
                             ? ($severity * $occurrence * $detection)
                             : 0;
 
+                        $result_severity   = (int) ($item['result_severity'] ?? 0);
+                        $result_occurrence = (int) ($item['result_occurrence'] ?? 0);
+                        $result_detection  = (int) ($item['result_detection'] ?? 0);
+
+                        $result_rpn = ($result_severity > 0 && $result_occurrence > 0 && $result_detection > 0)
+                            ? ($result_severity * $result_occurrence * $result_detection)
+                            : 0;
+
                         return [
-                            'order' => $index + 1,
-                            'previous_problem' => strtoupper(trim($item['previous_problem'] ?? '')),
-                            'requirements' => trim($item['requirements']),
-                            'potential_failure_mode' => trim($item['potential_failure_mode']),
-                            'potential_effect_of_failure' => trim($item['potential_effect_of_failure']),
-                            'potential_cause_of_failure' => trim($item['potential_cause_of_failure']),
-                            'classification' => $item['classification'] ? trim($item['classification']) : '',
-                            'occurrence' => $occurrence,
-                            'detection' => $detection,
-                            'rpn' => $rpn,
-                            'recommended_action' => $item['recommended_action'] ? trim($item['recommended_action']) : 'None',
-                            'severity' => $severity,
-                            'controls_prevention' => trim($item['controls_prevention']),
-                            'controls_detection' => trim($item['controls_detection']),
+                            'order'                        => $index + 1,
+                            'uuid'                         => $item['uuid'] ?? (string) Str::uuid7(),
+                            'previous_problem'             => strtoupper(trim($item['previous_problem'] ?? '')),
+                            'requirements'                 => trim($item['requirements'] ?? ''),
+                            'potential_failure_mode'       => trim($item['potential_failure_mode'] ?? ''),
+                            'potential_effect_of_failure'  => trim($item['potential_effect_of_failure'] ?? ''),
+                            'potential_cause_of_failure'   => trim($item['potential_cause_of_failure'] ?? ''),
+                            'classification'               => !empty($item['classification']) ? trim($item['classification']) : '',
+                            'occurrence'                   => $occurrence,
+                            'detection'                    => $detection,
+                            'rpn'                          => $rpn,
+                            'recommended_action'           => !empty($item['recommended_action']) ? trim($item['recommended_action']) : 'None',
+                            'severity'                     => $severity,
+
+                            // FIX: Pindahkan ?? '' ke dalam fungsi trim agar aman dari error undefined/null
+                            'controls_prevention'          => trim($item['controls_prevention'] ?? ''),
+                            'controls_detection'           => trim($item['controls_detection'] ?? ''),
+
+                            'responsibility'               => $item['responsibility'] ?? null,
+                            'target_completion_date'       => $item['target_completion_date'] ?? null,
+                            'action_taken_completion_date' => $item['action_taken_completion_date'] ?? null,
+                            'result_severity'              => $result_severity,
+                            'result_occurrence'            => $result_occurrence,
+                            'result_detection'             => $result_detection,
+                            'result_rpn'                   => $result_rpn,
+                            'updated_at'                   => now(),
+                            'updated_by'                   => Auth::id()
                         ];
                     })
                     ->toArray();
@@ -153,26 +174,43 @@ class ProcessTemplateServices
                         ? ($severity * $occurrence * $detection)
                         : 0;
 
+                    $result_severity   = (int) ($item['result_severity'] ?? 0);
+                    $result_occurrence = (int) ($item['result_occurrence'] ?? 0);
+                    $result_detection  = (int) ($item['result_detection'] ?? 0);
+
+                    $result_rpn = ($result_severity > 0 && $result_occurrence > 0 && $result_detection > 0)
+                        ? ($result_severity * $result_occurrence * $result_detection)
+                        : 0;
                     return [
-                        'id'                          => $item['id'] ?? null, // Jadi acuan MySQL untuk INSERT atau UPDATE
-                        'header_id'                   => $id,
-                        'order'                       => $index + 1,
-                        'uuid'                        => $item['uuid'] ?? (string) Str::uuid7(),
-                        'previous_problem'            => strtoupper(trim($item['previous_problem'] ?? '')),
-                        'requirements'                => trim($item['requirements'] ?? ''),
-                        'potential_failure_mode'      => trim($item['potential_failure_mode'] ?? ''),
-                        'potential_effect_of_failure' => trim($item['potential_effect_of_failure'] ?? ''),
-                        'potential_cause_of_failure'  => trim($item['potential_cause_of_failure'] ?? ''),
-                        'classification'              => !empty($item['classification']) ? trim($item['classification']) : '',
-                        'occurrence'                  => $occurrence,
-                        'detection'                   => $detection,
-                        'rpn'                         => $rpn,
-                        'recommended_action'          => !empty($item['recommended_action']) ? trim($item['recommended_action']) : 'None',
-                        'severity'                    => $severity,
-                        'controls_prevention'         => trim($item['controls_prevention'] ?? ''),
-                        'controls_detection'          => trim($item['controls_detection'] ?? ''),
-                        'created_at'                  => now(), // Wajib diisi manual di level array PHP jika memakai upsert
-                        'updated_at'                  => now(),
+                        'id'                           => $item['id'] ?? null, // Jadi acuan MySQL untuk INSERT atau UPDATE
+                        'header_id'                    => $id,
+                        'order'                        => $index + 1,
+                        'uuid'                         => $item['uuid'] ?? (string) Str::uuid7(),
+                        'previous_problem'             => strtoupper(trim($item['previous_problem'] ?? '')),
+                        'requirements'                 => trim($item['requirements'] ?? ''),
+                        'potential_failure_mode'       => trim($item['potential_failure_mode'] ?? ''),
+                        'potential_effect_of_failure'  => trim($item['potential_effect_of_failure'] ?? ''),
+                        'potential_cause_of_failure'   => trim($item['potential_cause_of_failure'] ?? ''),
+                        'classification'               => !empty($item['classification']) ? trim($item['classification']) : '',
+                        'occurrence'                   => $occurrence,
+                        'detection'                    => $detection,
+                        'rpn'                          => $rpn,
+                        'recommended_action'           => !empty($item['recommended_action']) ? trim($item['recommended_action']) : 'None',
+                        'severity'                     => $severity,
+
+                        // FIX: Pindahkan ?? '' ke dalam fungsi trim agar aman dari error undefined/null
+                        'controls_prevention'          => trim($item['controls_prevention'] ?? ''),
+                        'controls_detection'           => trim($item['controls_detection'] ?? ''),
+
+                        'responsibility'               => $item['responsibility'] ?? null,
+                        'target_completion_date'       => $item['target_completion_date'] ?? null,
+                        'action_taken_completion_date' => $item['action_taken_completion_date'] ?? null,
+                        'result_severity'              => $result_severity,
+                        'result_occurrence'            => $result_occurrence,
+                        'result_detection'             => $result_detection,
+                        'result_rpn'                   => $result_rpn,
+                        'updated_at'                   => now(),
+                        'updated_by'                   => Auth::id()
                     ];
                 })->toArray();
 
@@ -199,6 +237,9 @@ class ProcessTemplateServices
                 ];
 
                 $this->logService->store($freshHeader, 'update', $data['remark'] ?? '', $oldData, $newData);
+
+                // Buat persiapan nanti pas udah ada tabel transaksi pfmea nya
+                ProcessFunctionQueueJob::dispatch('update', [])->afterCommit();
 
                 return $freshHeader;
             });
