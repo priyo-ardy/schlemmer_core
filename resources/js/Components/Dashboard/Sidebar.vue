@@ -15,8 +15,12 @@ const isMaterialOpen = ref(currentPath.value.startsWith("/materials"));
 const isProjectOpen = ref(currentPath.value.startsWith("/projects"));
 const isUnitOpen = ref(currentPath.value.startsWith("/units") || currentPath.value.startsWith("/unit_category"));
 const isCustomerOpen = ref(currentPath.value.startsWith("/customer"));
+const isPfmeaOpen = ref(currentPath.value.startsWith("/pfmea"));
+const isApqpOpen = ref(currentPath.value.startsWith("/apqp"));
 
 const toggleUserManagement = () => { if (!isCollapsed.value) isUserManagementOpen.value = !isUserManagementOpen.value; };
+const togglePfmeaList = () => { if (!isCollapsed.value) isPfmeaOpen.value = !isPfmeaOpen.value; };
+const toggleApqp = () => { if (!isCollapsed.value) isApqpOpen.value = !isApqpOpen.value; };
 const toggleProcessList = () => { if (!isCollapsed.value) isProcessOpen.value = !isProcessOpen.value; };
 const toggleProjects = () => { if (!isCollapsed.value) isProjectOpen.value = !isProjectOpen.value; };
 const toggleUnits = () => { if (!isCollapsed.value) isUnitOpen.value = !isUnitOpen.value; };
@@ -54,6 +58,41 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
             </div>
 
             <div class="space-y-1">
+                <span v-show="!isCollapsed" class="block px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 whitespace-nowrap">
+                    Transaction
+                </span>
+                <div>
+                    <button @click="togglePfmeaList" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span v-show="!isCollapsed">PFMEA</span>
+                        </div>
+                        <svg v-show="!isCollapsed" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform duration-200" :class="isPfmeaOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div v-show="isPfmeaOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-slate-800 space-y-1">
+                        <Link href="/pfmea" class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath.startsWith('/pfmea') ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
+                            <span>PFMEA List</span>
+                        </Link>
+                    </div>
+                </div>
+                <div>
+                    <button @click="toggleApqp" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span v-show="!isCollapsed">APQP</span>
+                        </div>
+                        <svg v-show="!isCollapsed" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 transition-transform duration-200" :class="isApqpOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
+
                 <span v-show="!isCollapsed" class="block px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 whitespace-nowrap">
                     Master Data
                 </span>

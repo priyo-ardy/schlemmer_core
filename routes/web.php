@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLog\ActivityLogController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
+use App\Http\Controllers\Pfmea\PfmeaController;
 use App\Http\Controllers\Process\ProcessController;
 use App\Http\Controllers\Project\ProjectController;
 use App\Http\Controllers\RecycleBin\RecycleBinController;
@@ -37,6 +38,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard/Dashboard');
     })->name('dashboard');
+
+    // Transaction
+    Route::get('/pfmea', [PfmeaController::class, 'index'])->name('pfmea');
+    Route::get('/pfmea/create', [PfmeaController::class, 'create'])->name('pfmea.create');
 
     // Process Management
 
