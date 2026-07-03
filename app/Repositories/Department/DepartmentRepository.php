@@ -1,0 +1,13 @@
+<?php
+
+namespace App\Repositories\Department;
+
+use App\Models\Department;
+
+class DepartmentRepository
+{
+    public function getAllData(): Department
+    {
+        return Department::orderBy('code', 'asc')->get();
+    }
+}
