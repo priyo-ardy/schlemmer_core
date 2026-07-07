@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pfmea;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\DepartmentResource;
 use App\Services\Department\DepartmentService;
 use App\Services\MaterialService\MaterialService;
 use App\Services\PFMEA\PfmeaService;
@@ -32,8 +33,8 @@ class PfmeaController extends Controller
     {
         return Inertia::render('Pfmea/Create', [
             'users' => $this->userService->getAllUsers(),
-            'materials' => $this->materialService->getMaterialList('all', 10, null),
-            'departments' => $this->deptService->getAllData(),
+            // 'materials' => $this->materialService->getMaterialList('all', 10, null),
+            'departments' => DepartmentResource::collection($this->deptService->getAllData()),
             'page_title' => 'Create PFMEA Document'
         ]);
     }

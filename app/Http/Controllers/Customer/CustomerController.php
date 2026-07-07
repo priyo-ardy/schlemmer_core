@@ -100,4 +100,16 @@ class CustomerController extends Controller
             ]);
         }
     }
+
+    function searchCustomerDropDown(Request $request)
+    {
+        $search = $request->query('search');
+
+        $customers = $this->customerService->searchCustomer($search);
+
+        return response()->json([
+            'data'     => $customers->items(),
+            'has_more' => $customers->hasMorePages(),
+        ]);
+    }
 }

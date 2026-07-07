@@ -124,6 +124,10 @@ const openCreateDrawer = () => {
     isDrawerOpen.value = true;
 }
 
+const openNewPage = () => {
+    router.visit('/projects/create');
+}
+
 const openEditDrawer = (project) => {
     selectedProject.value = project;
     form.clearErrors();
@@ -419,7 +423,7 @@ const formatStatus = (status) => {
                         <div class="flex items-center gap-1.5">
                             <!-- Button New -->
                             <button
-                                @click="openCreateDrawer"
+                                @click="openNewPage"
                                 type="button"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
                             >

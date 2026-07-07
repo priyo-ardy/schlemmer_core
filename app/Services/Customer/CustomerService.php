@@ -282,4 +282,9 @@ class CustomerService
     {
         return Customer::select('id', 'code', 'name')->orderBy('code', 'asc')->get();
     }
+
+    public function searchCustomer($search)
+    {
+        return $this->customerRepo->search($search);
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Customer;
 
+use App\Http\Resources\Customer\CustomerResource;
 use App\Models\Customer;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -69,5 +70,18 @@ class CustomerRepository
     public function deleteAll(array $ids)
     {
         return Customer::whereIn('id', $ids)->delete();
+    }
+
+    public function search($search)
+    {
+        $customers = Customer::query()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('alias', 'LIKE', "%{$search}%");
+            })
+            ->where('is_active', 1)
+            ->paginate(10);
+
+        return CustomerResource::collection($customers);
     }
 }

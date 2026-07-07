@@ -2,10 +2,12 @@
 
 namespace App\Services\MaterialService;
 
+use App\Http\Resources\Material\MaterialResource;
 use App\Models\Material;
 use App\Models\MaterialLogs;
 use App\Repositories\Material\MaterialRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -251,5 +253,18 @@ class MaterialService
 
             throw $e;
         }
+    }
+
+    public function searchMaterial($search)
+    {
+        $materials = Material::query()
+            ->when($search, function ($query, $search) {
+                return $query->where('code', 'LIKE', "%{$search}%")
+                    ->orWhere('name', 'LIKE', "%{$search}%");
+            })
+            ->where('is_active', 1)
+            ->paginate(10);
+
+        return MaterialResource::collection($materials);
     }
 }

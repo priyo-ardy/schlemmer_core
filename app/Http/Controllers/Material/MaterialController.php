@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Material;
 
 use App\Http\Controllers\Controller;
+use App\Models\Material;
 use App\Services\MaterialService\MaterialService;
 use App\Services\Units\UnitService;
 use Illuminate\Http\Request;
@@ -139,5 +140,23 @@ class MaterialController extends Controller
                 'bulk_error' => $e->getMessage()
             ]);
         }
+    }
+
+    public function searchMaterialDropDown(Request $request)
+    {
+        $search = $request->query('search');
+
+        $materials = $this->materialService->searchMaterial($search);
+
+        return response()->json([
+            'data'     => $materials->items(),
+            'has_more' => $materials->hasMorePages(),
+        ]);
+    }
+
+    public function listMaterial()
+    {
+        $materials = Material::orderBy('code', 'asc')->get();
+        return response()->json($materials);
     }
 }

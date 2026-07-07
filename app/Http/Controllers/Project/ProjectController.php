@@ -29,6 +29,13 @@ class ProjectController extends Controller
         ]);
     }
 
+    public function create(Request $request)
+    {
+        return Inertia::render('Project/Create', [
+            'page_title' => 'Master Data / Project Management / List of Project / Create'
+        ]);
+    }
+
     public function store(Request $request)
     {
         try {
