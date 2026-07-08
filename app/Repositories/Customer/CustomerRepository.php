@@ -84,4 +84,18 @@ class CustomerRepository
 
         return CustomerResource::collection($customers);
     }
+
+    public function getLists($search)
+    {
+        $customers = Customer::query()
+            ->when($search, function ($query, $search) {
+                $query->where('code', 'LIKE', "%{$search}%")
+                    ->orWhere('name', 'LIKE', "%{$search}%")
+                    ->orWhere('alias', 'LIKE', "%{$search}%");
+            })
+            ->where('is_active', 1)
+            ->paginate(100);
+
+        return $customers;
+    }
 }

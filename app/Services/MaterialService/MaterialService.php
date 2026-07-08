@@ -263,8 +263,8 @@ class MaterialService
                     ->orWhere('name', 'LIKE', "%{$search}%");
             })
             ->where('is_active', 1)
-            ->paginate(10);
+            ->paginate(5000);
 
-        return MaterialResource::collection($materials);
+        return $materials;
     }
 }

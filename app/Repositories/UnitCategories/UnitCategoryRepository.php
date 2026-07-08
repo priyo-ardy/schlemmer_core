@@ -42,4 +42,17 @@ class UnitCategoryRepository
     {
         return UnitCategory::whereIn('id', $ids)->delete();
     }
+
+    public function getLists($search)
+    {
+        $categories = UnitCategory::query()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            })
+            ->where('is_active', 1)
+            ->paginate(100);
+
+        return $categories;
+    }
 }

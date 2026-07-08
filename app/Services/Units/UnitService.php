@@ -232,4 +232,9 @@ class UnitService
             throw $e;
         }
     }
+
+    public function getLists($search)
+    {
+        return $this->unitRepo->getLists($search);
+    }
 }

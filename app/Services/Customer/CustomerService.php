@@ -287,4 +287,9 @@ class CustomerService
     {
         return $this->customerRepo->search($search);
     }
+
+    public function getLists($search)
+    {
+        return $this->customerRepo->getLists($search);
+    }
 }

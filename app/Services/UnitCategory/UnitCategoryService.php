@@ -181,4 +181,9 @@ class UnitCategoryService
             throw $e;
         }
     }
+
+    public function getList($search)
+    {
+        return $this->categoryRepo->getLists($search);
+    }
 }

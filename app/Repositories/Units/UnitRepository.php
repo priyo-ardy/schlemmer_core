@@ -59,4 +59,16 @@ class UnitRepository
     {
         return Unit::whereIn('id', $ids)->get();
     }
+
+    public function getLists($search)
+    {
+        $units = Unit::query()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'LIKE', "%{$search}}")
+                    ->orWhere('symbol', 'LIKE', "%{$search}}");
+            })
+            ->paginate(2000);
+
+        return $units;
+    }
 }
