@@ -60,8 +60,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('pfmea_details');
         Schema::dropIfExists('pfmea_core_teams');
         Schema::dropIfExists('pfmea');
+        Schema::enableForeignKeyConstraints();
     }
 };

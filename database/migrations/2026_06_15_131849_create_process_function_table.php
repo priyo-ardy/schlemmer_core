@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('process_function', function (Blueprint $table) {
+        Schema::create('process_functions', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('name', 150);
@@ -27,7 +27,7 @@ return new class extends Migration
 
         Schema::create('process_function_details', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('header_id')->constrained('process_function')->cascadeOnDelete();
+            $table->foreignId('header_id')->constrained('process_functions')->cascadeOnDelete();
             $table->integer('order')->default(1);
             $table->text('requirements')->nullable();
             $table->text('potential_failure_mode')->nullable();
@@ -49,7 +49,7 @@ return new class extends Migration
     {
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('process_function_details');
-        Schema::dropIfExists('process_function');
+        Schema::dropIfExists('process_functions');
         Schema::enableForeignKeyConstraints();
     }
 };

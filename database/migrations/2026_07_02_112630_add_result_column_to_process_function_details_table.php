@@ -37,15 +37,36 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::disableForeignKeyConstraints();
-
         Schema::table('process_function_details', function (Blueprint $table) {
-            $table->dropColumn(['responsibility', 'target_completion_date', 'action_taken_completion_date', 'result_severity', 'result_occurrence', 'result_detection', 'result_rpn']);
-        });
-        Schema::table('process_revision_details', function (Blueprint $table) {
-            $table->dropColumn(['responsibility', 'target_completion_date', 'action_taken_completion_date', 'result_severity', 'result_occurrence', 'result_detection', 'result_rpn']);
+            // 1. Hapus foreign key-nya dulu (gunakan array berisi nama kolom)
+            $table->dropForeign(['responsibility']);
+
+            // 2. Baru hapus kolom-kolomnya
+            $table->dropColumn([
+                'responsibility',
+                'target_completion_date',
+                'action_taken_completion_date',
+                'result_severity',
+                'result_occurrence',
+                'result_detection',
+                'result_rpn'
+            ]);
         });
 
-        Schema::enableForeignKeyConstraints();
+        Schema::table('process_revision_details', function (Blueprint $table) {
+            // 1. Hapus foreign key-nya dulu
+            $table->dropForeign(['responsibility']);
+
+            // 2. Baru hapus kolom-kolomnya
+            $table->dropColumn([
+                'responsibility',
+                'target_completion_date',
+                'action_taken_completion_date',
+                'result_severity',
+                'result_occurrence',
+                'result_detection',
+                'result_rpn'
+            ]);
+        });
     }
 };

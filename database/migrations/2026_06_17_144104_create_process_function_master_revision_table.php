@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('process_revision_header', function (Blueprint $table) {
+        Schema::create('process_revision_headers', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->foreignId('header_id')->constrained('process_function')->cascadeOnDelete();
+            $table->foreignId('header_id')->constrained('process_functions')->cascadeOnDelete();
             $table->unsignedInteger('revision');
             $table->string('name', 150);
             $table->text('remark')->nullable();
@@ -27,7 +27,7 @@ return new class extends Migration
         Schema::create('process_revision_details', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('revision_header_id')->constrained('process_revision_header')->cascadeOnDelete();
+            $table->foreignId('revision_header_id')->constrained('process_revision_headers')->cascadeOnDelete();
             $table->uuid('detail_uuid');
             $table->unsignedInteger('order');
             $table->string('previous_problem')->nullable();
@@ -48,7 +48,7 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('header_id')
-                ->constrained('process_function')
+                ->constrained('process_functions')
                 ->cascadeOnDelete();
 
             $table->unsignedInteger('revision');
@@ -80,7 +80,7 @@ return new class extends Migration
         Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('process_revision_logs');
         Schema::dropIfExists('process_revision_details');
-        Schema::dropIfExists('process_revision_header');
+        Schema::dropIfExists('process_revision_headers');
         Schema::enableForeignKeyConstraints();
     }
 };

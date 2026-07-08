@@ -11,7 +11,7 @@ class ProcessHeaderRevision extends Model
 {
     use HasFactory, HasActivityLogs;
 
-    protected $table = 'process_revision_header';
+    protected $table = 'process_revision_headers';
 
     protected $fillable = [
         'uuid',
