@@ -288,8 +288,13 @@ class CustomerService
         return $this->customerRepo->search($search);
     }
 
-    public function getLists($search)
+    public function getList()
     {
-        return $this->customerRepo->getLists($search);
+        return $this->customerRepo->getLists();
+    }
+
+    public function getDataByUuid($uuid)
+    {
+        return $this->customerRepo->getDataByUuid($uuid);
     }
 }

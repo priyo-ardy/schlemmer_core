@@ -42,12 +42,12 @@ class ProjectController extends Controller
             $validated = $request->validate([
                 'code' => 'required|string|max:50|unique:projects,code|regex:/^[a-zA-Z0-9\-\/]+$/',
                 'name' => 'required|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'customer_id' => 'required|exists:customers,id',
+                'customer_id' => 'required|exists:customers,uuid',
                 'vehicle_model' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'main_part_number' => 'nullable|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'main_part_name' => 'nullable|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'apqp_phase' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'status' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'status' => 'nullable|string|max:50',
                 'kick_off_date' => 'nullable|date',
                 'target_proto_date' => 'nullable|date',
                 'target_ppap_date' => 'nullable|date',
@@ -56,16 +56,33 @@ class ProjectController extends Controller
                 'revision' => 'nullable|integer|min:0',
                 'is_active' => 'nullable|boolean',
                 'remark' => 'nullable|string|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'details' => 'required|array|min:1',
+                'details.*.material_id' => 'required|string',
+                'details.*' => 'distinct:strict',
             ]);
 
-            $this->projectService->store($validated);
+            $insert = $this->projectService->store($validated);
 
-            return redirect()->back()->with('success', 'Successfully saved new project data');
+            // return redirect()->back()->with('success', 'Successfully saved new project data');
+            return to_route('projects.view', ['id' => $insert->id])
+                ->with('success', 'Successfully saved new project data');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors([
                 'errors' => $e->getMessage()
             ]);
         }
+    }
+
+    public function view(Request $request, $id)
+    {
+        $project = $this->projectService->getDataById($id);
+        $details = $this->projectService->getDetails($id);
+
+        return Inertia::render('Project/View', [
+            'header' => $project,
+            'details' => $details,
+            'page_title' => 'Master Data / Project Management / List of Project / View / ' . $project->code
+        ]);
     }
 
     public function update(Request $request, int $id)

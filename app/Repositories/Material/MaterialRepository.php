@@ -60,27 +60,28 @@ class MaterialRepository
         }
 
         if ($search) {
-            $query
-                ->where('revision', 'like', "%{$search}%")
-                ->orWhere('category', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%")
-                ->orWhere('name', 'like', "%{$search}%")
-                ->orWhere('specification', 'like', "%{$search}%")
-                ->orWhere('customer_part_name', 'like', "%{$search}%")
-                ->orWhere('unit_id', 'like', "%{$search}%")
-                ->orWhere('grade', 'like', "%{$search}%")
-                ->orWhere('density', 'like', "%{$search}%")
-                ->orWhere('melt_flow_index', 'like', "%{$search}%")
-                ->orWhere('color', 'like', "%{$search}%")
-                ->orWhere('shrinkage_rate', 'like', "%{$search}%")
-                ->orWhere('gross_weight', 'like', "%{$search}%")
-                ->orWhere('net_weight', 'like', "%{$search}%")
-                ->orWhere('sprue_weight', 'like', "%{$search}%")
-                ->orWhere('has_rohs', 'like', "%{$search}%")
-                ->orWhere('imds_number', 'like', "%{$search}%")
-                ->orWhere('msds_doc_path', 'like', "%{$search}%")
-                ->orWhere('risk_profile', 'like', "%{$search}%")
-                ->orWhere('remark', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('revision', 'LIKE', "%{$search}%")
+                    ->orWhere('category', 'LIKE', "%{$search}%")
+                    ->orWhere('code', 'LIKE', "%{$search}%")
+                    ->orWhere('name', 'LIKE', "%{$search}%")
+                    ->orWhere('specification', 'LIKE', "%{$search}%")
+                    ->orWhere('customer_part_name', 'LIKE', "%{$search}%")
+                    ->orWhere('unit_id', 'LIKE', "%{$search}%")
+                    ->orWhere('grade', 'LIKE', "%{$search}%")
+                    ->orWhere('density', 'LIKE', "%{$search}%")
+                    ->orWhere('melt_flow_index', 'LIKE', "%{$search}%")
+                    ->orWhere('color', 'LIKE', "%{$search}%")
+                    ->orWhere('shrinkage_rate', 'LIKE', "%{$search}%")
+                    ->orWhere('gross_weight', 'LIKE', "%{$search}%")
+                    ->orWhere('net_weight', 'LIKE', "%{$search}%")
+                    ->orWhere('sprue_weight', 'LIKE', "%{$search}%")
+                    ->orWhere('has_rohs', 'LIKE', "%{$search}%")
+                    ->orWhere('imds_number', 'LIKE', "%{$search}%")
+                    ->orWhere('msds_doc_path', 'LIKE', "%{$search}%")
+                    ->orWhere('risk_profile', 'LIKE', "%{$search}%")
+                    ->orWhere('remark', 'LIKE', "%{$search}%");
+            });
         }
 
         return $query->paginate($per_page);
@@ -89,5 +90,26 @@ class MaterialRepository
     public function deleteAll(array $ids)
     {
         return Material::whereIn('id', $ids)->delete();
+    }
+
+    public function searchMaterial($search)
+    {
+        $materials = Material::query()
+            ->where('is_active', 1)
+            ->when($search, function ($query, $search) {
+                return $query->where(function ($q) use ($search) {
+                    $q->where('code', 'LIKE', "%{$search}%")
+                        ->orWhere('name', 'LIKE', "%{$search}%");
+                });
+            })
+            ->orderBy('code', 'asc')
+            ->paginate(10);
+
+        return $materials;
+    }
+
+    public function getAllData()
+    {
+        return Material::orderBy('code', 'asc')->get();
     }
 }

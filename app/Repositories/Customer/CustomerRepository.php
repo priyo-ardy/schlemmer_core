@@ -85,17 +85,15 @@ class CustomerRepository
         return CustomerResource::collection($customers);
     }
 
-    public function getLists($search)
+    public function getLists()
     {
-        $customers = Customer::query()
-            ->when($search, function ($query, $search) {
-                $query->where('code', 'LIKE', "%{$search}%")
-                    ->orWhere('name', 'LIKE', "%{$search}%")
-                    ->orWhere('alias', 'LIKE', "%{$search}%");
-            })
-            ->where('is_active', 1)
-            ->paginate(100);
+        $customers = Customer::orderBy('code', 'asc')->get();
 
         return $customers;
+    }
+
+    public function getDataByUuid($uuid)
+    {
+        return Customer::where('uuid', $uuid)->first();
     }
 }

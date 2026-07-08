@@ -1,146 +1,83 @@
 [
     {
-        "id": 1,
         "uuid": "019efcb9-169a-70f9-a288-7770c2dba798",
         "revision": 1,
         "code": "UNG-00001",
         "name": "LENGTH",
         "description": "Dimensi linear",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:00:48.000000Z",
-        "updated_at": "2026-06-25T04:27:25.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 2,
         "uuid": "019efcba-d9fc-73d4-a481-2e13bb5c4ab1",
         "revision": 2,
         "code": "UNG-00002",
         "name": "ANGLE",
         "description": "Besaran sudut",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:02:44.000000Z",
-        "updated_at": "2026-06-25T04:27:29.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 3,
         "uuid": "019efcbb-09f5-7383-b93b-89d3e29c4801",
         "revision": 1,
         "code": "UNG-00003",
         "name": "FORCE",
         "description": "Gaya dan momen putar",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:02:56.000000Z",
-        "updated_at": "2026-06-25T04:27:34.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 4,
         "uuid": "019efcbb-2550-72a6-b1fb-e2b6bb7f2002",
         "revision": 1,
         "code": "UNG-00004",
         "name": "PRESSURE",
         "description": "Tekanan fluida",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:03:03.000000Z",
-        "updated_at": "2026-06-25T04:27:38.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 5,
         "uuid": "019efcbb-3f52-72c0-972d-e3fa90f0a882",
         "revision": 1,
         "code": "UNG-00005",
         "name": "TEMPERATURE",
         "description": "Suhu",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:03:10.000000Z",
-        "updated_at": "2026-06-25T04:27:43.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 6,
         "uuid": "019efcbb-5e67-72b9-8b73-92475966c2b7",
         "revision": 1,
         "code": "UNG-00006",
         "name": "ROUGHNESS",
         "description": "Parameter Ra, Rz",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:03:18.000000Z",
-        "updated_at": "2026-06-25T04:27:48.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 7,
         "uuid": "019efcbb-7b2b-711d-9070-d8f878d3d5d0",
         "revision": 1,
         "code": "UNG-00007",
         "name": "PERCENTAGE",
         "description": "Nilai persentase",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:03:25.000000Z",
-        "updated_at": "2026-06-25T04:27:53.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 8,
         "uuid": "019efcbb-9a13-736b-812b-4568d8faa25c",
         "revision": 1,
         "code": "UNG-00008",
         "name": "RATIO",
         "description": "Perbandingan tak satuan",
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T03:03:33.000000Z",
-        "updated_at": "2026-06-25T04:27:57.000000Z",
-        "deleted_at": null
+        "is_active": 1
     },
     {
-        "id": 9,
         "uuid": "019f11c4-8b9c-72fd-89b1-31495fd71ad0",
         "revision": 1,
         "code": "UNG-00009",
         "name": "QUANTITY",
         "description": null,
         "sort_order": 1,
-        "is_active": 1,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-29T05:05:20.000000Z",
-        "updated_at": "2026-06-29T05:05:35.000000Z",
-        "deleted_at": null
+        "is_active": 1
     }
 ]

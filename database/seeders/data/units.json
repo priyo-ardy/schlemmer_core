@@ -1,6 +1,5 @@
 [
     {
-        "id": 1,
         "uuid": "019efd8c-e7fa-720c-9214-e783268a1462",
         "revision": 0,
         "category_id": 1,
@@ -12,16 +11,9 @@
         "conversion_factor": "0.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 3,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:52:10.000000Z",
-        "updated_at": "2026-06-25T07:34:21.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 2,
         "uuid": "019efd8f-4d9e-726f-9ac7-11f9054a80e9",
         "revision": 0,
         "category_id": 1,
@@ -33,16 +25,9 @@
         "conversion_factor": "10.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 2,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:54:47.000000Z",
-        "updated_at": "2026-06-25T06:54:47.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 3,
         "uuid": "019efd90-9487-7185-883b-bc8df97341c2",
         "revision": 0,
         "category_id": 1,
@@ -54,16 +39,9 @@
         "conversion_factor": "0.0010000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 3,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:56:11.000000Z",
-        "updated_at": "2026-06-25T06:56:11.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 4,
         "uuid": "019efd91-1d35-7073-bda9-e68d39d512db",
         "revision": 0,
         "category_id": 1,
@@ -75,16 +53,9 @@
         "conversion_factor": "25.4000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 4,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:56:46.000000Z",
-        "updated_at": "2026-06-25T06:56:46.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 5,
         "uuid": "019efd91-7e71-72e4-af4c-e15117607f46",
         "revision": 0,
         "category_id": 1,
@@ -96,16 +67,9 @@
         "conversion_factor": "1000.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 4,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:57:11.000000Z",
-        "updated_at": "2026-06-25T06:57:11.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 6,
         "uuid": "019efd92-2df6-7036-94ab-6e673d023da0",
         "revision": 0,
         "category_id": 2,
@@ -117,16 +81,9 @@
         "conversion_factor": "0.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 2,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:57:56.000000Z",
-        "updated_at": "2026-06-25T06:57:56.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 7,
         "uuid": "019efd92-a858-70d3-bc91-7d748e31a09d",
         "revision": 0,
         "category_id": 2,
@@ -138,16 +95,9 @@
         "conversion_factor": "57.2958000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 4,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:58:27.000000Z",
-        "updated_at": "2026-06-25T06:58:27.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 8,
         "uuid": "019efd93-2e26-7162-8bbf-4069b8c8000b",
         "revision": 0,
         "category_id": 2,
@@ -159,16 +109,9 @@
         "conversion_factor": "0.0166670000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 1,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:59:01.000000Z",
-        "updated_at": "2026-06-25T06:59:01.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 9,
         "uuid": "019efd93-9a70-723a-a2a0-eb0ab1084aac",
         "revision": 0,
         "category_id": 3,
@@ -180,16 +123,9 @@
         "conversion_factor": "0.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 2,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:59:29.000000Z",
-        "updated_at": "2026-06-25T06:59:29.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 10,
         "uuid": "019efd94-0942-70b1-92e1-9ae5085d575e",
         "revision": 0,
         "category_id": 3,
@@ -201,16 +137,9 @@
         "conversion_factor": "9.8070000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 3,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T06:59:57.000000Z",
-        "updated_at": "2026-06-25T06:59:57.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 11,
         "uuid": "019efd94-7a0e-730e-b4b7-b79fca437619",
         "revision": 0,
         "category_id": 3,
@@ -222,16 +151,9 @@
         "conversion_factor": "1.3558000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 4,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T07:00:26.000000Z",
-        "updated_at": "2026-06-25T07:00:26.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 13,
         "uuid": "019efd95-3d46-73e9-93de-29e022c46964",
         "revision": 0,
         "category_id": 4,
@@ -243,16 +165,9 @@
         "conversion_factor": "0.0000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 3,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T07:01:16.000000Z",
-        "updated_at": "2026-06-25T07:01:16.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 14,
         "uuid": "019efd95-91fd-72b7-b95d-7011386ac728",
         "revision": 0,
         "category_id": 4,
@@ -264,16 +179,9 @@
         "conversion_factor": "0.1000000000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 2,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T07:01:38.000000Z",
-        "updated_at": "2026-06-25T07:01:38.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 15,
         "uuid": "019efd95-fa45-71e0-b207-6713ff088ef8",
         "revision": 0,
         "category_id": 4,
@@ -285,16 +193,9 @@
         "conversion_factor": "0.0980670000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 6,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T07:02:05.000000Z",
-        "updated_at": "2026-06-25T07:02:05.000000Z",
-        "deleted_at": null
+        "remark": null
     },
     {
-        "id": 16,
         "uuid": "019efd96-76f8-7095-8407-ea69334648ff",
         "revision": 0,
         "category_id": 4,
@@ -306,12 +207,6 @@
         "conversion_factor": "0.0068950000",
         "conversion_offset": "0.0000000000",
         "decimal_places": 6,
-        "remark": null,
-        "created_by": 1,
-        "updated_by": 1,
-        "deleted_by": null,
-        "created_at": "2026-06-25T07:02:37.000000Z",
-        "updated_at": "2026-06-25T07:02:37.000000Z",
-        "deleted_at": null
+        "remark": null
     }
 ]

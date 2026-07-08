@@ -1,8 +1,8 @@
 [
     {
-        "id": "019ef74d-3435-724d-9fca-a52014013c10",
+        "uuid": "019ef74d-3435-724d-9fca-a52014013c10",
         "revision": 0,
-        "code": "CUST-00005",
+        "code": "CUST-00001",
         "name": "PT. Autocomp Systems Indonesia",
         "alias": "PASI",
         "tax_number": null,
@@ -17,9 +17,9 @@
         "remark": null
     },
     {
-        "id": "019ef74d-776c-7139-87b7-f3d5a16f0779",
+        "uuid": "019ef74d-776c-7139-87b7-f3d5a16f0779",
         "revision": 1,
-        "code": "CUST-00006",
+        "code": "CUST-00002",
         "name": "PT. Sumi Indo Wiring Systems Indonesia",
         "alias": "SIWS",
         "tax_number": null,
@@ -34,9 +34,9 @@
         "remark": "Typo pada penulisan nama customer"
     },
     {
-        "id": "019ef74d-b322-72b3-b3f6-59b349826ac9",
+        "uuid": "019ef74d-b322-72b3-b3f6-59b349826ac9",
         "revision": 0,
-        "code": "CUST-00007",
+        "code": "CUST-00003",
         "name": "PT. Misawa Trading Indonesia",
         "alias": "MISAWA",
         "tax_number": null,
@@ -51,9 +51,9 @@
         "remark": null
     },
     {
-        "id": "019ef74e-6032-7008-957e-0cb093179312",
+        "uuid": "019ef74e-6032-7008-957e-0cb093179312",
         "revision": 0,
-        "code": "CUST-00008",
+        "code": "CUST-00004",
         "name": "Sumitomo Electric Asia Pacific Pte. Ltd.",
         "alias": "SEAPS",
         "tax_number": null,
@@ -68,9 +68,9 @@
         "remark": null
     },
     {
-        "id": "019ef74e-b29b-7124-975a-28e73af5046d",
+        "uuid": "019ef74e-b29b-7124-975a-28e73af5046d",
         "revision": 0,
-        "code": "CUST-00009",
+        "code": "CUST-00005",
         "name": "Ningbo Schlemmer Automotive Parts Co., Ltd.",
         "alias": "NBS",
         "tax_number": null,
@@ -85,9 +85,9 @@
         "remark": null
     },
     {
-        "id": "019ef74e-f419-7083-a166-9e3cc9daf6dd",
+        "uuid": "019ef74e-f419-7083-a166-9e3cc9daf6dd",
         "revision": 0,
-        "code": "CUST-00010",
+        "code": "CUST-00006",
         "name": "Schlemmer Japan Co., Ltd.",
         "alias": "SJP",
         "tax_number": null,

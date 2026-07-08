@@ -27,10 +27,15 @@ class MaterialService
     public function getMaterialList($filter, $per_page, $search = null)
     {
         try {
-            return $this->materialRepo->getMaterialList($filter, $per_page, $search = null);
+            return $this->materialRepo->getMaterialList($filter, $per_page, $search);
         } catch (\Exception $e) {
             throw $e;
         }
+    }
+
+    public function getDataByUuid($uuid)
+    {
+        return Material::where('uuid', $uuid)->first();
     }
 
     public function store(array $data)
@@ -255,16 +260,13 @@ class MaterialService
         }
     }
 
+    public function getAllData()
+    {
+        return $this->materialRepo->getAllData();
+    }
+
     public function searchMaterial($search)
     {
-        $materials = Material::query()
-            ->when($search, function ($query, $search) {
-                return $query->where('code', 'LIKE', "%{$search}%")
-                    ->orWhere('name', 'LIKE', "%{$search}%");
-            })
-            ->where('is_active', 1)
-            ->paginate(5000);
-
-        return $materials;
+        return $this->materialRepo->searchMaterial($search);
     }
 }

@@ -33,7 +33,8 @@ const createBlankItem = () => ({
     material_id: '',
     specification: '',
     customer_part_name: '',
-    selected_material: null
+    selected_material: null,
+    errors: { material_id: null } // Tambahkan inisialisasi object error internal
 });
 
 // Main Form
@@ -338,7 +339,14 @@ const toggleMaterialDropdown = async (index) => {
             await fetchMaterials(true);
         }
         await nextTick();
-        searchMaterialInput.value?.focus();
+        
+        // FIX BUG: Karena di dalam v-for, ref berupa array. Kita ambil sesuai index baris yang dibuka.
+        if (searchMaterialInput.value && searchMaterialInput.value[index]) {
+            searchMaterialInput.value[index].focus();
+        } else if (searchMaterialInput.value && typeof searchMaterialInput.value.focus === 'function') {
+            // Fallback jika Vue membacanya sebagai single element pada kondisi tertentu
+            searchMaterialInput.value.focus();
+        }
     }
 };
 
@@ -348,10 +356,9 @@ const selectMaterial = (mat, index) => {
         item.material_id = mat.id;
         item.selected_material = mat;
         
-        // CORE LOGIC UPDATE: Otomatis isi kolom spesifikasi disebelahnya
-        // Menangani jika field di DB bernama 'specification' atau 'spec'
         item.specification = mat.specification || mat.spec || '';
         item.customer_part_name = mat.customer_part_name || '';
+        if (item.errors) item.errors.material_id = null; // Reset error saat dipilih ulang
     }
     openedRowIndex.value = null;
     materialSearch.value = "";
@@ -398,7 +405,8 @@ const clearMaterial = (index) => {
         item.material_id = null;
         item.selected_material = null;
         item.specification = '';
-        item.customer_part_name = ''; // Kosongkan spesifikasi jika material di-clear
+        item.customer_part_name = '';
+        if (item.errors) item.errors.material_id = null;
     }
     highlightedMaterialIndex.value = -1;
     materialSearch.value = "";
@@ -441,6 +449,54 @@ const validateAndSave = () => {
         isValid = false;
     }
 
+    if(!form.customer_id){
+        form.setError('customer_id', 'Customer is required');
+        isValid = false;
+    }
+
+    if(!form.confidentiality_level){
+        form.setError('confidentiality_level', 'This field is required');
+        isValid = false;
+    }
+
+    // Validasi details
+    if (!form.details || form.details.length === 0) {
+        toast.error("Detail data cannot be empty. Please add at least one material.");
+        return;
+    }
+
+    const seenMaterialIds = new Set();
+    let hasDuplicate = false;
+    let hasEmptyMaterial = false;
+
+    form.details.forEach((item, index) => {
+        // Pastikan kontainer object errors internal siap digunakan
+        if (!item.errors) item.errors = {};
+        item.errors.material_id = null;
+
+        if (!item.material_id) {
+            item.errors.material_id = "Material is required";
+            hasEmptyMaterial = true;
+            isValid = false;
+        } else {
+            if (seenMaterialIds.has(item.material_id)) {
+                // Sesuai Rekuest: Menampilkan teks keterangan spesifik di baris duplikat
+                item.errors.material_id = "This part no. is duplicate";
+                hasDuplicate = true;
+                isValid = false;
+            } else {
+                seenMaterialIds.add(item.material_id);
+            }
+        }
+    });
+
+    if (hasEmptyMaterial) {
+        toast.error("Please select a material for all rows.");
+    }
+    if (hasDuplicate) {
+        toast.error("Duplicate materials found in the details table.");
+    }
+
     if(!isValid) return;
 
     form.post("/projects", {
@@ -457,6 +513,105 @@ const validateAndSave = () => {
 
 const cancelForm = () => {
     router.visit('/projects');
+};
+
+// Dropdown Confidentiality Level
+const isConfidentialityLevelDropdownOpen = ref(false);
+const ConfidentialityLevelSearch = ref("");
+const searchConfidentialityInput = ref(null);
+
+const confidentCategory = [
+    { value: 'public', label: 'Public' },
+    { value: 'internal', label: 'Internal' },
+    { value: 'confidential', label: 'Confidential' },
+    { value: 'strictly_confidential', label: 'Strictly Confidential' },
+];
+
+const selectedConfidentialityName = computed(() => {
+    if(!form.confidentiality_level) return "Select Confidentiality Level ...";
+    const match = confidentCategory.find(c => c.value === form.confidentiality_level);
+    return match ? match.label : "Select Confidentiality Level ...";
+});
+
+const filteredConfidentialityLevel = computed(() => {
+    if(!ConfidentialityLevelSearch.value) return confidentCategory;
+    const lowerSearch = ConfidentialityLevelSearch.value.toLowerCase();
+    return confidentCategory.filter(c => 
+        c.label.toLowerCase().includes(lowerSearch) || 
+        c.value.toLowerCase().includes(lowerSearch)
+    );
+});
+
+const selectConfidentialityLevel = (value) => {
+    form.confidentiality_level = value;
+    isConfidentialityLevelDropdownOpen.value = false;
+    ConfidentialityLevelSearch.value = "";
+}
+
+const toggleConfidentialityDropdown = async () => {
+    isConfidentialityLevelDropdownOpen.value = !isConfidentialityLevelDropdownOpen.value;
+    if(isConfidentialityLevelDropdownOpen.value) {
+        isProjectStatusDropdownOpen.value = false;
+        await nextTick();
+        searchConfidentialityInput.value?.focus();
+    }
+}
+
+const clearConfidentiality = () => {
+    form.confidentiality_level = "";
+    ConfidentialityLevelSearch.value = "";
+};
+
+// Dropdown Project Status
+const isProjectStatusDropdownOpen = ref(false);
+const projectStatusSearch = ref("");
+const searchProjectStatusInput = ref(null);
+
+const statusCategory = [
+    { value: 'planning', label: 'Planning' },
+    { value: 'design_dev', label: 'Design Development' },
+    { value: 'process_dev', label: 'Process Development' },
+    { value: 'validation', label: 'Validation' },
+    { value: 'ppap_submitted', label: 'PPAP Submitted' },
+    { value: 'ppap_approved', label: 'PPAP Approved' },
+    { value: 'mass_production', label: 'Mass Production' },
+    { value: 'change_request', label: 'Change Request' },
+    { value: 'discontinued', label: 'Discontinued' },
+];
+
+const selectedProjectStatusName = computed(() => {
+    if(!form.status) return "Select Project Status ...";
+    const match = statusCategory.find(s => s.value === form.status);
+    return match ? match.label : "Select Project Status ...";
+});
+
+const filteredProjectStatus = computed(() => {
+    if(!projectStatusSearch.value) return statusCategory;
+    const lowerSearch = projectStatusSearch.value.toLowerCase();
+    return statusCategory.filter(s => 
+        s.label.toLowerCase().includes(lowerSearch) || 
+        s.value.toLowerCase().includes(lowerSearch)
+    );
+});
+
+const selectProjectStatus = (value) => {
+    form.status = value;
+    isProjectStatusDropdownOpen.value = false;
+    projectStatusSearch.value = "";
+}
+
+const toggleProjectStatusDropdown = async () => {
+    isProjectStatusDropdownOpen.value = !isProjectStatusDropdownOpen.value;
+    if(isProjectStatusDropdownOpen.value) {
+        isConfidentialityLevelDropdownOpen.value = false;
+        await nextTick();
+        searchProjectStatusInput.value?.focus();
+    }
+}
+
+const clearProjectStatus = () => {
+    form.status = "";
+    projectStatusSearch.value = "";
 };
 </script>
 
@@ -592,21 +747,87 @@ const cancelForm = () => {
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">APQP Phase</label>
                             <input type="text" v-model="form.apqp_phase" maxlength="50" placeholder="e.g. Phase 1: Planning" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
+                        
+                        <!-- Dropdown Project Status -->
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Project Status</label>
-                            <select v-model="form.status" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800">
-                                <option value="">Select Project Status</option>
-                                <option value="planning">Planning</option>
-                                <option value="design_dev">Design Development</option>
-                                <option value="process_dev">Process Development</option>
-                                <option value="validation">Validation</option>
-                                <option value="ppap_submitted">PPAP Submitted</option>
-                                <option value="ppap_approved">PPAP Approved</option>
-                                <option value="mass_production">Mass Production</option>
-                                <option value="change_request">Change Request</option>
-                                <option value="change_request">Discontinued</option>
-                            </select>
+                            <div class="relative">
+                                <div
+                                    v-if="isProjectStatusDropdownOpen"
+                                    @click="isProjectStatusDropdownOpen = false"
+                                    class="fixed inset-0 z-0"
+                                ></div>
+
+                                <div
+                                    @click="toggleProjectStatusDropdown"
+                                    class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all border-slate-300 text-slate-800"
+                                >
+                                    <span :class="form.status ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                        {{ selectedProjectStatusName }}
+                                    </span>
+                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                        <svg v-if="form.status" @click.stop="clearProjectStatus" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                                            :class="{'rotate-180 text-blue-500': isProjectStatusDropdownOpen}"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <Transition
+                                    enter-active-class="transition duration-100 ease-out"
+                                    enter-from-class="transform scale-95 opacity-0"
+                                    enter-to-class="transform scale-100 opacity-100"
+                                    leave-active-class="transition duration-75 ease-out"
+                                    leave-from-class="transform scale-100 opacity-100"
+                                    leave-to-class="transform scale-95 opacity-0"
+                                >
+                                    <div
+                                        v-if="isProjectStatusDropdownOpen"
+                                        class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    >
+                                        <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                            <div class="relative">
+                                                <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                                <input
+                                                    ref="searchProjectStatusInput"
+                                                    type="text"
+                                                    v-model="projectStatusSearch"
+                                                    @click.stop
+                                                    class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 bg-white"
+                                                    placeholder="Type to search status..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div class="max-h-48 overflow-y-auto">
+                                            <div
+                                                v-for="item in filteredProjectStatus"
+                                                :key="item.value"
+                                                @click="selectProjectStatus(item.value)"
+                                                class="px-3 py-2.5 text-xs cursor-pointer border-b border-slate-50 last:border-0"
+                                                :class="[
+                                                    form.status === item.value ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+                                                ]"
+                                            >
+                                                {{ item.label }}
+                                            </div>
+
+                                            <div v-if="filteredProjectStatus.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                                No status found matching "{{ projectStatusSearch }}"
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Transition>
+                            </div>
                         </div>
+
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Kick Off Date</label>
                             <input type="date" v-model="form.kick_off_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
@@ -623,24 +844,105 @@ const cancelForm = () => {
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Target SOP Date</label>
                             <input type="date" v-model="form.target_sop_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
+                        
+                        <!-- Dropdown Confidentiality Level -->
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Confidentiality Level</label>
-                            <select v-model="form.confidentiality_level" class="w-full p-2 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
-                                <option value="">Select Level</option>
-                                <option value="Public">Public</option>
-                                <option value="Internal">Internal Use</option>
-                                <option value="Confidential">Confidential</option>
-                                <option value="Strictly Confidential">Strictly Confidential</option>
-                            </select>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">
+                                Confidentiality Level <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div
+                                    v-if="isConfidentialityLevelDropdownOpen"
+                                    @click="isConfidentialityLevelDropdownOpen = false"
+                                    class="fixed inset-0 z-0"
+                                ></div>
+
+                                <div
+                                    @click="toggleConfidentialityDropdown"
+                                    class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                    :class="[
+                                        form.errors.confidentiality_level
+                                            ? 'border-rose-500 text-rose-600'
+                                            : 'border-slate-300 text-slate-800'
+                                    ]"
+                                >
+                                    <span :class="form.confidentiality_level ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                        {{ selectedConfidentialityName }}
+                                    </span>
+                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                        <svg v-if="form.confidentiality_level" @click.stop="clearConfidentiality" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                                            :class="{'rotate-180 text-blue-500': isConfidentialityLevelDropdownOpen}"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        >
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <p v-if="form.errors.confidentiality_level" class="mt-1 text-[10px] font-bold text-rose-500">
+                                    {{ form.errors.confidentiality_level }}
+                                </p>
+
+                                <Transition
+                                    enter-active-class="transition duration-100 ease-out"
+                                    enter-from-class="transform scale-95 opacity-0"
+                                    enter-to-class="transform scale-100 opacity-100"
+                                    leave-active-class="transition duration-75 ease-out"
+                                    leave-from-class="transform scale-100 opacity-100"
+                                    leave-to-class="transform scale-95 opacity-0"
+                                >
+                                    <div
+                                        v-if="isConfidentialityLevelDropdownOpen"
+                                        class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    >
+                                        <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                            <div class="relative">
+                                                <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                                <input
+                                                    ref="searchConfidentialityInput"
+                                                    type="text"
+                                                    v-model="ConfidentialityLevelSearch"
+                                                    @click.stop
+                                                    class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 bg-white"
+                                                    placeholder="Type to search confidentiality level..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div class="max-h-48 overflow-y-auto">
+                                            <div
+                                                v-for="item in filteredConfidentialityLevel"
+                                                :key="item.value"
+                                                @click="selectConfidentialityLevel(item.value)"
+                                                class="px-3 py-2.5 text-xs cursor-pointer border-b border-slate-50 last:border-0"
+                                                :class="[
+                                                    form.confidentiality_level === item.value ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
+                                                ]"
+                                            >
+                                                {{ item.label }}
+                                            </div>
+
+                                            <div v-if="filteredConfidentialityLevel.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                                No category found matching "{{ ConfidentialityLevelSearch }}"
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Transition>
+                            </div>   
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Project Status</label>
-                            <div class="flex items-center justify-between p-3 bg-white border border-slate-300">
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Data Status</label>
+                            <div class="flex items-center justify-between p-2 bg-white border border-slate-300 min-h-[38px] transition-all">
                                 <div class="flex flex-col min-w-0 pr-4">
-                                    <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Data Status</span>
-                                    <span class="text-[10px] font-medium text-slate-500 mt-0.5 truncate">{{ form.is_active ? "Project status is currently Active." : "Project status is Disabled." }}</span>
-                               </div>
-                                <button type="button" @click="form.is_active = !form.is_active" :class="form.is_active ? 'bg-emerald-600' : 'bg-slate-400'" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"><span :class="form.is_active ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none inline-block h-5 w-5 transform bg-white shadow-sm transition duration-200"></span></button>
+                                    <span class="text-[10px] font-black text-slate-700 uppercase tracking-wider">Status</span>
+                                    <span class="text-[9px] font-semibold text-slate-400 mt-0.5 truncate">{{ form.is_active ? "Active" : "Disabled" }}</span>
+                                </div>
+                                <button type="button" @click="form.is_active = !form.is_active" :class="form.is_active ? 'bg-emerald-600' : 'bg-slate-300'" class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"><span :class="form.is_active ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200"></span></button>
                             </div>
                         </div>
                         <div class="col-span-2">
@@ -682,11 +984,16 @@ const cancelForm = () => {
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="relative">
+                                        <!-- Penambahan Style Kondisional Dinamis: Jika baris dideteksi duplikat atau error, border/bg langsung disulap merah -->
                                         <div
                                             :id="`material-trigger-${index}`"
                                             @click="toggleMaterialDropdown(index)"
                                             class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
-                                            :class="[item.errors?.material_id ? 'border-rose-500 focus:border-rose-500 text-rose-600' : 'border-slate-300 focus:border-blue-500 text-slate-800']"
+                                            :class="[
+                                                item.errors?.material_id 
+                                                    ? 'border-rose-500 focus:border-rose-500 bg-rose-50 text-rose-600' 
+                                                    : 'border-slate-300 focus:border-blue-500 text-slate-800'
+                                            ]"
                                         >
                                             <span :class="item.material_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
                                                 {{ getSelectedMaterialName(item) }}
@@ -702,6 +1009,7 @@ const cancelForm = () => {
                                             </div>
                                         </div>
 
+                                        <!-- Menampilkan teks keterangan spesifik error "This part no. is duplicate" di baris bersangkutan -->
                                         <p v-if="item.errors?.material_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ item.errors.material_id }}</p>
 
                                         <Teleport to="body">

@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\ActivityLog\ActivityLogController;
+use App\Http\Controllers\api\v1\Customer\CustomerApiController;
+use App\Http\Controllers\api\v1\Material\MaterialApiController;
+use App\Http\Controllers\api\v1\UnitCategory\UnitCategoryApiController;
+use App\Http\Controllers\api\v1\Units\UnitApiController as UnitsUnitApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
@@ -68,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
     // Project management
     Route::get('/projects', [ProjectController::class, 'index'])->name('project.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('project.create');
+    Route::get('/projects/view/{id}', [ProjectController::class, 'view'])->name('projects.view');
     Route::post('/projects', [ProjectController::class, 'store'])->name('project.store');
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('project.update');
     Route::post('/projects/mass-delete', [ProjectController::class, 'massDelete'])->name('project.mass-delete');
@@ -113,4 +118,22 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/recycle-bin/restore', [RecycleBinController::class, 'restore'])->name('recycle-bin.restore');
 
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
+});
+
+
+// Route buat API
+Route::prefix('api/v1')->middleware('auth')->group(function () {
+
+    // API Buat dropdown
+    Route::get('/units_category', [UnitCategoryApiController::class, 'list']);
+    Route::get('/units_category/list', [UnitCategoryApiController::class, 'list']);
+
+    Route::get('/units', [UnitsUnitApiController::class, 'list']);
+    Route::get('/units/list', [UnitsUnitApiController::class, 'list']);
+
+    Route::get('/customers', [CustomerApiController::class, 'dropdown']);
+    Route::get('/customers/list', [CustomerApiController::class, 'list']);
+
+    Route::get('/materials', [MaterialApiController::class, 'dropdown']);
+    Route::get('/materials/list', [MaterialApiController::class, 'list']);
 });

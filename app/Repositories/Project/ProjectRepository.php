@@ -3,6 +3,7 @@
 namespace App\Repositories\Project;
 
 use App\Models\Project;
+use App\Models\ProjectMaterial;
 use Illuminate\Database\Eloquent\Collection;
 
 class ProjectRepository
@@ -39,6 +40,16 @@ class ProjectRepository
         return $query->paginate($page);
     }
 
+    public function getDataById($id): ?Project
+    {
+        return Project::find($id);
+    }
+
+    public function getDetails($id): Collection
+    {
+        return ProjectMaterial::where('project_id', $id)->get();
+    }
+
     public function findById(int $id): ?Project
     {
         return Project::find($id);
@@ -68,5 +79,10 @@ class ProjectRepository
     public function deleteAll(array $ids)
     {
         return Project::whereIn('id', $ids)->delete();
+    }
+
+    public function saveDetails(Project $project, array $data): Collection
+    {
+        return $project->details()->createMany($data);
     }
 }
