@@ -1,11 +1,12 @@
-FROM docker.io/library/php:8.5-fpm
+FROM docker.io/library/php:8.4-fpm
 
-# Install dependency
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
+    curl \
     unzip \
     zip \
-    curl \
+    default-mysql-client \
     libzip-dev \
     libicu-dev \
     libpng-dev \
@@ -13,32 +14,28 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Konfigurasi GD
+# Configure GD
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg
 
-# Install PHP Extension
-RUN docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    mysqli \
-    mbstring \
-    intl \
-    zip \
-    gd \
-    exif \
+# Install PHP extensions
+RUN docker-php-ext-install -j$(nproc) \
     bcmath \
-    opcache
+    exif \
+    gd \
+    intl \
+    mbstring \
+    mysqli \
+    pdo_mysql \
+    zip
 
-# Composer
+# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Set working directory
 WORKDIR /var/www/html
 
 CMD ["php-fpm"]
