@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Project;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
 use App\Services\Customer\CustomerService;
 use App\Services\Project\ProjectService;
 use Illuminate\Http\Request;
@@ -77,10 +78,12 @@ class ProjectController extends Controller
     {
         $project = $this->projectService->getDataById($id);
         $details = $this->projectService->getDetails($id);
+        $allIds = Project::orderBy('id')->pluck('id');
 
         return Inertia::render('Project/View', [
             'header' => $project,
             'details' => $details,
+            'allIds' => $allIds,
             'page_title' => 'Master Data / Project Management / List of Project / View / ' . $project->code
         ]);
     }
