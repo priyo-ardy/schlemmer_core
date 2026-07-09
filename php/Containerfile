@@ -1,16 +1,10 @@
 FROM docker.io/library/php:8.4-fpm
 
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install system package
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
     unzip \
     zip \
-    wget \
-    ca-certificates \
-    default-mysql-client \
+    curl \
     libzip-dev \
     libicu-dev \
     libpng-dev \
@@ -18,15 +12,15 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure GD
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg
 
-# Install PHP Extension
-RUN docker-php-ext-install -j$(nproc) \
+RUN docker-php-ext-install \
+    pdo \
     pdo_mysql \
     mysqli \
     mbstring \
@@ -34,12 +28,10 @@ RUN docker-php-ext-install -j$(nproc) \
     zip \
     gd \
     exif \
-    bcmath
+    bcmath \
+    opcache
 
-# Install Composer
-RUN curl -fsSL https://getcomposer.org/installer -o composer-setup.php \
-    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
-    && rm composer-setup.php
+COPY --from=docker.io/library/composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 

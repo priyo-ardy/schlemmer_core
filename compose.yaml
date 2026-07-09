@@ -4,46 +4,68 @@ services:
     build:
       context: .
       dockerfile: php/Containerfile
-    container_name: pfmea-php
+
+    container_name: namaapp-php
+
     restart: unless-stopped
+
     working_dir: /var/www/html
+
     volumes:
       - ./:/var/www/html
       - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
       - ./php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
+
     environment:
       TZ: Asia/Jakarta
+
     depends_on:
       - redis
+
     networks:
-      - pfmea-network
+      - namaapp-network
+
 
   nginx:
     image: docker.io/library/nginx:stable-alpine
-    container_name: pfmea-nginx
+
+    container_name: namaapp-nginx
+
     restart: unless-stopped
+
     depends_on:
       - php
+
     ports:
-      - "8007:80"
+      - "8007:80" #sesuaikan portnya
+
     volumes:
       - ./:/var/www/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
     networks:
-      - pfmea-network
+      - namaapp-network
+
 
   redis:
     image: docker.io/library/redis:7-alpine
-    container_name: pfmea-redis
+
+    container_name: namaapp-redis
+
     restart: unless-stopped
+
     command: redis-server --appendonly yes
+
     volumes:
       - redis-data:/data
+
     networks:
-      - pfmea-network
+      - namaapp-network
+
 
 networks:
-  pfmea-network:
+  namaapp-network:
+
 
 volumes:
   redis-data:
