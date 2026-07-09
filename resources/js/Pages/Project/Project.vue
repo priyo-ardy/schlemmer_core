@@ -153,6 +153,10 @@ const openEditDrawer = (project) => {
     isDrawerOpen.value = true;
 }
 
+const openViewPage = (project) => {
+    router.visit(`/projects/view/${project.id}`);
+}
+
 // Proses simpan atau update
 const submitForm = () => {
     form.clearErrors();
@@ -625,7 +629,7 @@ const formatStatus = (status) => {
                                 <tr
                                     v-for="project in projects.data"
                                     :key="project.id"
-                                    @click="openEditDrawer(project)"
+                                    @click="openViewPage(project)"
                                     class="hover:bg-blue-50 transition-colors cursor-pointer"
                                 >
                                     <td class="px-4 py-3 text-center" @click.stop>
