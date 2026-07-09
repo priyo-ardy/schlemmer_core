@@ -8,7 +8,13 @@ services:
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
-      - ./app:/var/www/html:Z
+      - ./app:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro
+      - ./php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
+    environment:
+      TZ: Asia/Jakarta
+    depends_on:
+      - redis
     networks:
       - pfmea-network
 
@@ -20,11 +26,9 @@ services:
       - php
     ports:
       - "8007:80"
-      # - "443:443"
     volumes:
-      - ./app:/var/www/html:Z
-      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro,Z
-      - ./php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro,Z
+      - ./app:/var/www/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - pfmea-network
 
@@ -34,13 +38,12 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
-      - redis-data:/data:Z
+      - redis-data:/data
     networks:
       - pfmea-network
 
 networks:
   pfmea-network:
-    driver: bridge
 
 volumes:
   redis-data:

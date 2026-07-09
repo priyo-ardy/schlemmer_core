@@ -1,11 +1,15 @@
 FROM docker.io/library/php:8.4-fpm
 
-# Install system dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system package
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     unzip \
     zip \
+    wget \
+    ca-certificates \
     default-mysql-client \
     libzip-dev \
     libicu-dev \
@@ -21,21 +25,22 @@ RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg
 
-# Install PHP extensions
+# Install PHP Extension
 RUN docker-php-ext-install -j$(nproc) \
-    bcmath \
-    exif \
-    gd \
-    intl \
-    mbstring \
-    mysqli \
     pdo_mysql \
-    zip
+    mysqli \
+    mbstring \
+    intl \
+    zip \
+    gd \
+    exif \
+    bcmath
 
 # Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN curl -fsSL https://getcomposer.org/installer -o composer-setup.php \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && rm composer-setup.php
 
-# Set working directory
 WORKDIR /var/www/html
 
 CMD ["php-fpm"]
