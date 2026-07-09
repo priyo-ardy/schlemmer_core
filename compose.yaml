@@ -1,0 +1,46 @@
+services:
+
+  php:
+    build:
+      context: .
+      dockerfile: php/Containerfile
+    container_name: pfmea-php
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./app:/var/www/html:Z
+    networks:
+      - pfmea-network
+
+  nginx:
+    image: docker.io/library/nginx:stable-alpine
+    container_name: pfmea-nginx
+    restart: unless-stopped
+    depends_on:
+      - php
+    ports:
+      - "8007:80"
+      # - "443:443"
+    volumes:
+      - ./app:/var/www/html:Z
+      - ./php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro,Z
+      - ./php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro,Z
+    networks:
+      - pfmea-network
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: pfmea-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data:Z
+    networks:
+      - pfmea-network
+
+networks:
+  pfmea-network:
+    driver: bridge
+
+volumes:
+  redis-data:
