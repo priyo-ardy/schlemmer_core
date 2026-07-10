@@ -84,7 +84,7 @@ class MaterialRepository
             });
         }
 
-        return $query->paginate($per_page);
+        return $query->paginate($per_page)->withQueryString();
     }
 
     public function deleteAll(array $ids)

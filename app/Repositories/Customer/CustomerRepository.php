@@ -34,7 +34,7 @@ class CustomerRepository
             });
         }
 
-        return $query->paginate($page);
+        return $query->paginate($page)->withQueryString();
     }
 
     public function findById(int $id): ?Customer

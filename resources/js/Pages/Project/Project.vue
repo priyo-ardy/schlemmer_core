@@ -667,7 +667,7 @@ const formatStatus = (status) => {
                 </div>
 
                 <!-- Table section -->
-                <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col gap-4">
+                <div class="bg-white border border-slate-200/80 shadow-sm mb-6 flex flex-col gap-4">
                     <div class="overflow-auto max-h-[calc(100vh-320px)]">
                         <table class="w-full text-left border-collapse bg-white whitespace-nowrap">
                             <thead class="bg-blue-300 text-slate-700 uppercase tracking-wider text-[11px] font-bold border-b border-slate-200 sticky top-0 z-10">

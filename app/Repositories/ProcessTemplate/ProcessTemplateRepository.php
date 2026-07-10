@@ -112,4 +112,23 @@ class ProcessTemplateRepository
             'updated_at'
         ]);
     }
+
+    public function getAllData($filter, $page, $search = null)
+    {
+        $query = ProcessHeader::orderBy('code', 'asc');
+
+        if ($filter && $filter !== 'all') {
+            $query->where('is_active', $filter === 'enable' ? 1 : 0);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('revision', 'like', "%{$search}%")
+                    ->orWhere('remark', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->paginate($page)->withQueryString();
+    }
 }
