@@ -15,7 +15,6 @@ const props =  defineProps({
         type: Object,
         default: () => {}
     },
-    details: Array
 
 });
 const page = usePage();
@@ -46,7 +45,7 @@ const firstData = () => {
         toast.info('You are in the first data');
         return;
     }
-    router.get(`/projects/${firstId}`);
+    router.get(`/projects/view/${firstId}`);
 };
 
 const lastData = () => {
@@ -56,13 +55,13 @@ const lastData = () => {
         toast.info('You are in the last data');
         return;
     }
-    router.get(`/projects/${lastId}`);
+    router.get(`/projects/view/${lastId}`);
 };
 
 const prevData = () => {
     const currentIndex = props.allIds.indexOf(props.header.id);
     if (currentIndex > 0) {
-        router.get(`/projects/${props.allIds[currentIndex - 1]}`);
+        router.get(`/projects/view/${props.allIds[currentIndex - 1]}`);
     }
     else{
         toast.info('You are in the first data');
@@ -73,7 +72,7 @@ const prevData = () => {
 const nextData = () => {
     const currentIndex = props.allIds.indexOf(props.header.id);
     if (currentIndex < props.allIds.length - 1) {
-        router.get(`/projects/${props.allIds[currentIndex + 1]}`);
+        router.get(`/projects/view/${props.allIds[currentIndex + 1]}`);
     }else{
         toast.info('You are in the last data');
         return;
@@ -86,7 +85,6 @@ const newForm = () => {
 // End of navigation
 
 // Dropdown customer
-// Dropdown customer
 const isCustomerOpen = ref(false);
 const customerSearch = ref('');
 const highlightedCustomerIndex = ref(-1);
@@ -95,10 +93,12 @@ const customerPage = ref(1);
 const isCustomerLoading = ref(false);
 const searchCustomerInput = ref(null);
 const optionsCustomerList = ref(null);
-const activeSelectedCustomer = ref(null);
+// FIX: Mengambil objek data customer hasil eager load dari database backend
+const activeSelectedCustomer = ref(props.header?.customer || null);
 const hasMore = ref(true);
 
 const isProcessing = computed(() => form.processing || false);
+
 
 const selectedCustomerName = computed(() => {
     if(!form.customer_id) return "Select customer ...";
@@ -257,14 +257,13 @@ const onDeleteAll = () => {
 
 
 // Dropdown material
-// Dropdown material (Floating + Teleport)
 const openedRowIndex = ref(null);
 const materialSearch = ref('');
 const highlightedMaterialIndex = ref(-1);
 const materialDropDown = ref([]);
 const materialPage = ref(1);
 const isMaterialLoading = ref(false);
-const searchMaterialInput = ref(null);
+const searchMaterialInput = ref({});
 const optionsMaterialList = ref(null);
 const hasMaterialMore = ref(true);
 
@@ -360,12 +359,8 @@ const toggleMaterialDropdown = async (index) => {
         }
         await nextTick();
         
-        // FIX BUG: Karena di dalam v-for, ref berupa array. Kita ambil sesuai index baris yang dibuka.
         if (searchMaterialInput.value && searchMaterialInput.value[index]) {
             searchMaterialInput.value[index].focus();
-        } else if (searchMaterialInput.value && typeof searchMaterialInput.value.focus === 'function') {
-            // Fallback jika Vue membacanya sebagai single element pada kondisi tertentu
-            searchMaterialInput.value.focus();
         }
     }
 };
@@ -378,7 +373,7 @@ const selectMaterial = (mat, index) => {
         
         item.specification = mat.specification || mat.spec || '';
         item.customer_part_name = mat.customer_part_name || '';
-        if (item.errors) item.errors.material_id = null; // Reset error saat dipilih ulang
+        if (item.errors) item.errors.material_id = null;
     }
     openedRowIndex.value = null;
     materialSearch.value = "";
@@ -507,27 +502,164 @@ const createBlankItem = () => ({
     specification: '',
     customer_part_name: '',
     selected_material: null,
-    errors: { material_id: null } // Tambahkan inisialisasi object error internal
+    errors: { material_id: null }
 });
+
+// Form logic stubs for layout consistency
+const validateAndSave = () => {
+    form.clearErrors();
+    let isValid = true;
+
+    if(!form.code){
+        form.setError('code', 'This field is required');
+        isValid = false;
+    }else if(form.code.length > 50){
+        form.setError('code', 'Project code cannot exceed 50 character');
+        isValid = false;
+    }
+
+    if(!form.name){
+        form.setError('name', 'This field is required');
+        isValid = false;
+    }else if(form.name.length > 150){
+        form.setError('name', 'Project name cannot exceed 150 character');
+        isValid = false;
+    }
+
+    if(!form.customer_id){
+        form.setError('customer_id', 'Customer is required');
+        isValid = false;
+    }
+
+    if(!form.confidentiality_level){
+        form.setError('confidentiality_level', 'This field is required');
+        isValid = false;
+    }
+
+    if(!form.reason){
+        form.setError('reason', 'Please fill the change reason')
+        isValid = false;
+    }
+
+    if (!form.details || form.details.length === 0) {
+        toast.error("Detail data cannot be empty. Please add at least one material.");
+        return;
+    }
+
+    const seenMaterialIds = new Set();
+    let hasDuplicate = false;
+    let hasEmptyMaterial = false;
+
+    form.details.forEach((item, index) => {
+        if (!item.errors) item.errors = {};
+        item.errors.material_id = null;
+
+        if (!item.material_id) {
+            item.errors.material_id = "Material is required";
+            hasEmptyMaterial = true;
+            isValid = false;
+        } else {
+            if (seenMaterialIds.has(item.material_id)) {
+                // Sesuai Rekuest: Menampilkan teks keterangan spesifik di baris duplikat
+                item.errors.material_id = "This part no. is duplicate";
+                hasDuplicate = true;
+                isValid = false;
+            } else {
+                seenMaterialIds.add(item.material_id);
+            }
+        }
+    });
+
+    if (hasEmptyMaterial) {
+        toast.error("Please select a material for all rows.");
+    }
+    if (hasDuplicate) {
+        toast.error("Duplicate materials found in the details table.");
+    }
+
+    if(!isValid) return;
+
+    form.put(`/projects/${form.id}`, {
+        onSuccess: () => { isEditing.value = false; toast.success("Saved successfully"); }
+    }); 
+};
+const openLogs = (id) => { console.log(id); };
+
+// Action delete
+const deleteForm =useForm({
+    id: null,
+    reason: ""
+});
+const showConfirmModal = ref(false);
+
+const deleteSelected = (id) => { 
+    deleteForm.id = id;
+    deleteForm.reason = ""; 
+    deleteForm.clearErrors();
+    showConfirmModal.value = true;    
+};
+
+const confirmAction = (id) => {
+    deleteForm.clearErrors();
+    let isValid = true;
+
+    if(!deleteForm.reason){
+        deleteForm.setError('reason', 'Please fill the deletion reason');
+        isValid = false;
+    }
+
+    if(!isValid){
+        return;
+    }
+
+    deleteForm.post('/projects/delete', {
+        preserveScroll: true,
+        onSuccess: () => {
+            showConfirmModal.value = false;
+            deleteForm.reset();
+        }
+    });
+}
+// End of action delete
+
+
+
 // Main Form
 const form = useForm({
-    code: "",
-    name: "",
-    customer_id: "",
-    vehicle_model: "",
-    main_part_number: "",
-    main_part_name: "",
-    apqp_phase: "",
-    status: "",
-    kick_off_date: "",
-    target_proto_date: "",
-    target_ppap_date: "",
-    target_sop_date: "",
-    confidentiality_level: "",
-    revision: "",
-    is_active: true,
-    remark: "",
-    details:[createBlankItem()]
+    id: props.header?.id,
+    code: props.header?.code,
+    name: props.header?.name || "",
+    customer_id: props.header?.customer_id,
+    vehicle_model: props.header?.vehicle_model || '',
+    main_part_number: props.header?.main_part_number || '',
+    main_part_name: props.header?.main_part_name || '',
+    apqp_phase: props.header?.apqp_phase || '',
+    status: props.header?.status || '',
+    
+    // FIX: Parsing ISO string timestamp database ke YYYY-MM-DD menggunakan dayjs agar muncul di input HTML
+    kick_off_date: props.header?.kick_off_date ? dayjs(props.header.kick_off_date).format('YYYY-MM-DD') : '',
+    target_proto_date: props.header?.target_proto_date ? dayjs(props.header.target_proto_date).format('YYYY-MM-DD') : '',
+    target_ppap_date: props.header?.target_ppap_date ? dayjs(props.header.target_ppap_date).format('YYYY-MM-DD') : '',
+    target_sop_date: props.header?.target_sop_date ? dayjs(props.header.target_sop_date).format('YYYY-MM-DD') : '',
+    
+    confidentiality_level: props.header?.confidentiality_level || '',
+    revision: props.header?.revision || '',
+    is_active: props.header?.is_active !== undefined ? props.header.is_active : true ,
+    remark: props.header?.remark || '',
+    reason: '',
+    // FIX: Mengganti key array ke 'details' agar sinkron dengan baris v-for table & fungsi toolbar bawaan lu
+    details: props.header?.details?.length > 0
+        ? props.header.details.map(item => ({
+            row_key: Math.random().toString(36).substring(2, 9),
+            id: item.id,
+            project_id: item.project_id,
+            material_id: item.material_id,
+            specification: item.specification || (item.material?.specification || item.material?.spec || ''),
+            customer_part_name: item.customer_part_name || (item.material?.customer_part_name || ''),
+            selected_material: item.material || null,
+            errors: { material_id: null }
+        }))
+        : [createBlankItem()]
 });
 
 
@@ -588,7 +720,7 @@ const clearProjectStatus = () => {
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <!-- page heading title -->
                 <div>
-                    <h1 class="text-2xl font-black text-slate-900 tracking-tight">{{ isEditing ? 'Edit' : 'View' }} Project Details | {{ props.header?.code }}</h1>
+                    <h1 class="text-2xl font-black text-slate-900 tracking-tight">{{ isEditing ? 'Edit' : 'View' }} Project Details | {{ props.header?.code }} (Rev. {{ props.header?.revision }})</h1>
                     <p class="text-xs text-slate-500 mt-1">{{ isEditing ? 'Edit' : 'View' }} project details {{ props.header?.code }}.</p>
                 </div>
 
@@ -617,12 +749,12 @@ const clearProjectStatus = () => {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                                         </svg>
                                     </button>
-                                    <button type="button" @click="nextData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Next">
+                                    <button type="button" @click="nextData" :disabled="allIds.indexOf(header.id) === allIds.length - 1" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Next">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                                         </svg>
                                     </button>
-                                    <button type="button" @click="lastData" :disabled="allIds.indexOf(header.id) === 0" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Last">
+                                    <button type="button" @click="lastData" :disabled="allIds.indexOf(header.id) === allIds.length - 1" class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm  transition-all" title="Last">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                                         </svg>
@@ -714,7 +846,7 @@ const clearProjectStatus = () => {
 
                                 <div class="w-px h-4 bg-slate-200 mx-1"></div>
 
-                                <button type="button" @click="deleteSelected(header?.id)" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500  transition-colors" title="Delete Record">
+                                <button type="button" @click="deleteSelected(props.header?.id)" class="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500  transition-colors" title="Delete Record">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -736,6 +868,7 @@ const clearProjectStatus = () => {
                                 type="text"
                                 v-model="form.code"
                                 maxlength="50"
+                                :readonly="!isEditing"
                                 required
                                 placeholder="e.g. PRJ-2024-001"
                                 :class="[
@@ -751,6 +884,7 @@ const clearProjectStatus = () => {
                                 type="text"
                                 v-model="form.name"
                                 maxlength="150"
+                                :readonly="!isEditing"
                                 required
                                 placeholder="Enter project name ..."
                                 :class="[
@@ -765,12 +899,12 @@ const clearProjectStatus = () => {
                             <div class="relative">
                                 <div v-if="isCustomerOpen" @click="isCustomerOpen = false" class="fixed inset-0 z-0"></div>
                                 <div
-                                    @click="toggleCustomerDropdown"
+                                    @click="isEditing && toggleCustomerDropdown()"
                                     class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                     :class="[form.errors.customer_id ? 'border-rose-500 text-rose-600' : 'border-slate-300 text-slate-800']"
                                 >
                                     <span :class="form.customer_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">{{ selectedCustomerName }}</span>
-                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                    <div class="flex items-center space-x-1.5 relative z-30" v-if="isEditing">
                                         <svg v-if="form.customer_id" @click.stop="clearCustomer" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -802,19 +936,19 @@ const clearProjectStatus = () => {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Vehicle Model</label>
-                            <input type="text" v-model="form.vehicle_model" maxlength="100" placeholder="e.g. SUV Type-X" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="text" v-model="form.vehicle_model" :readonly="!isEditing" maxlength="100" placeholder="e.g. SUV Type-X" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Main Part Number</label>
-                            <input type="text" v-model="form.main_part_number" maxlength="100" placeholder="PN-88291-XX" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="text" v-model="form.main_part_number" :readonly="!isEditing" maxlength="100" placeholder="PN-88291-XX" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Main Part Name</label>
-                            <input type="text" v-model="form.main_part_name" maxlength="100" placeholder="Component base identifier" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="text" v-model="form.main_part_name" :readonly="!isEditing" maxlength="100" placeholder="Component base identifier" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">APQP Phase</label>
-                            <input type="text" v-model="form.apqp_phase" maxlength="50" placeholder="e.g. Phase 1: Planning" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="text" v-model="form.apqp_phase" :readonly="!isEditing" maxlength="50" placeholder="e.g. Phase 1: Planning" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         
                         <!-- Dropdown Project Status -->
@@ -828,13 +962,13 @@ const clearProjectStatus = () => {
                                 ></div>
 
                                 <div
-                                    @click="toggleProjectStatusDropdown"
+                                    @click="isEditing && toggleProjectStatusDropdown()"
                                     class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all border-slate-300 text-slate-800"
                                 >
                                     <span :class="form.status ? 'text-slate-800 font-semibold' : 'text-slate-400'">
                                         {{ selectedProjectStatusName }}
                                     </span>
-                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                    <div class="flex items-center space-x-1.5 relative z-30" v-if="isEditing">
                                         <svg v-if="form.status" @click.stop="clearProjectStatus" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -899,19 +1033,19 @@ const clearProjectStatus = () => {
 
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Kick Off Date</label>
-                            <input type="date" v-model="form.kick_off_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="date" v-model="form.kick_off_date" :readonly="!isEditing" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Target Proto Date</label>
-                            <input type="date" v-model="form.target_proto_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="date" v-model="form.target_proto_date" :readonly="!isEditing" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Target APQP Date</label>
-                            <input type="date" v-model="form.target_ppap_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="date" v-model="form.target_ppap_date" :readonly="!isEditing" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Target SOP Date</label>
-                            <input type="date" v-model="form.target_sop_date" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="date" v-model="form.target_sop_date" :readonly="!isEditing" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         
                         <!-- Dropdown Confidentiality Level -->
@@ -927,7 +1061,7 @@ const clearProjectStatus = () => {
                                 ></div>
 
                                 <div
-                                    @click="toggleConfidentialityDropdown"
+                                    @click="isEditing && toggleConfidentialityDropdown()"
                                     class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                     :class="[
                                         form.errors.confidentiality_level
@@ -938,7 +1072,7 @@ const clearProjectStatus = () => {
                                     <span :class="form.confidentiality_level ? 'text-slate-800 font-semibold' : 'text-slate-400'">
                                         {{ selectedConfidentialityName }}
                                     </span>
-                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                    <div class="flex items-center space-x-1.5 relative z-30" v-if="isEditing">
                                         <svg v-if="form.confidentiality_level" @click.stop="clearConfidentiality" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -1011,12 +1145,29 @@ const clearProjectStatus = () => {
                                     <span class="text-[10px] font-black text-slate-700 uppercase tracking-wider">Status</span>
                                     <span class="text-[9px] font-semibold text-slate-400 mt-0.5 truncate">{{ form.is_active ? "Active" : "Disabled" }}</span>
                                 </div>
-                                <button type="button" @click="form.is_active = !form.is_active" :class="form.is_active ? 'bg-emerald-600' : 'bg-slate-300'" class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95"><span :class="form.is_active ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200"></span></button>
+                                <button type="button" :disabled="!isEditing" @click="form.is_active = !form.is_active" :class="form.is_active ? 'bg-emerald-600' : 'bg-slate-300'" class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out active:scale-95 disabled:opacity-60"><span :class="form.is_active ? 'translate-x-5' : 'translate-x-0'" class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200"></span></button>
                             </div>
                         </div>
                         <div class="col-span-2">
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">Remark (optional)</label>
-                            <textarea v-model="form.remark" placeholder="Write additional information here ..." rows="3" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800"></textarea>
+                            <textarea 
+                                v-model="form.remark" 
+                                :readonly="!isEditing" 
+                                placeholder="Write additional information here ..." 
+                                rows="3" 
+                                class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800"></textarea>
+                        </div>
+                        <div class="col-span-4"">
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">Change Reason <span class="text-bold text-rose-500">*</span></label>
+                            <textarea 
+                                v-model="form.reason"
+                                :readonly="!isEditing" 
+                                placeholder="Write additional information here ..."
+                                rows="3" 
+                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                        :class="[form.errors.reason ? 'border-rose-500 text-rose-600' : 'border-slate-300 text-slate-800']"
+                            ></textarea>
+                            <p v-if="form.errors.reason" class="mt-1 text-[10px] font-bold text-rose-500">{{ form.errors.reason }}</p>
                         </div>
                     </div>
                 </div>
@@ -1024,7 +1175,7 @@ const clearProjectStatus = () => {
 
             <!-- Form detail -->
             <div class="w-full bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
-                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5">
+                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5" v-if="isEditing">
                     <button @click="onNew" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">New</button>
                     <button @click="onInsert" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">Insert</button>
                     <button @click="OnDelete" class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">Delete</button>
@@ -1033,7 +1184,7 @@ const clearProjectStatus = () => {
 
                 <div class="overflow-auto max-h-[80vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
-                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-30 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[350px]">Material</th>
@@ -1054,11 +1205,10 @@ const clearProjectStatus = () => {
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="relative">
-                                        <!-- Penambahan Style Kondisional Dinamis: Jika baris dideteksi duplikat atau error, border/bg langsung disulap merah -->
                                         <div
                                             :id="`material-trigger-${index}`"
-                                            @click="toggleMaterialDropdown(index)"
-                                            class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                            @click="isEditing && toggleMaterialDropdown(index)"
+                                            class="relative z-10 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                             :class="[
                                                 item.errors?.material_id 
                                                     ? 'border-rose-500 focus:border-rose-500 bg-rose-50 text-rose-600' 
@@ -1069,7 +1219,7 @@ const clearProjectStatus = () => {
                                                 {{ getSelectedMaterialName(item) }}
                                             </span>
 
-                                            <div class="flex items-center space-x-1.5 relative z-30">
+                                            <div class="flex items-center space-x-1.5 relative z-30" v-if="isEditing">
                                                 <svg v-if="item.material_id" @click.stop="clearMaterial(index)" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
@@ -1079,7 +1229,6 @@ const clearProjectStatus = () => {
                                             </div>
                                         </div>
 
-                                        <!-- Menampilkan teks keterangan spesifik error "This part no. is duplicate" di baris bersangkutan -->
                                         <p v-if="item.errors?.material_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ item.errors.material_id }}</p>
 
                                         <Teleport to="body">
@@ -1103,7 +1252,7 @@ const clearProjectStatus = () => {
                                                         <div class="relative">
                                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                                             <input
-                                                                ref="searchMaterialInput"
+                                                                :ref="el => { if(el) searchMaterialInput[index] = el }"
                                                                 type="text"
                                                                 v-model="materialSearch"
                                                                 @input="handleMaterialSearch"
@@ -1152,4 +1301,68 @@ const clearProjectStatus = () => {
             </div>
         </div>
     </div>
+
+    <!-- konfirmasi hapus -->
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+    >
+        <div
+            v-if="showConfirmModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        >
+            <div class="bg-white w-full max-w-lg border border-slate-200 shadow-2xl p-6">
+                <div class="flex flex-col text-left">
+                    <h3 class="text-lg font-black text-slate-900 mb-1">
+                        Confirm Deletion
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">
+                        Are you sure you want to delete this project 
+                        <span class="font-bold text-slate-900">
+                            {{ props.header?.code }}
+                        </span>? <br>This action cannot be undone.
+                    </p>
+
+                    <div class="mb-6">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                            Reason for deletion <span class="text-bold text-rose-500">*</span>
+                        </label>
+                       <textarea
+                            v-model="deleteForm.reason" 
+                            rows="3"
+                            class="w-full p-3 text-xs bg-slate-50 border focus:outline-none focus:ring-2 transition-all resize-none"
+                            :class="deleteForm.errors.reason 
+                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20 text-rose-900' 
+                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 text-slate-700'"
+                            placeholder="Describe why this data is being deleted..."
+                            @input="deleteForm.clearErrors('reason')"
+                        ></textarea>
+
+                        <p v-if="deleteForm.errors.reason" class="mt-1 text-[10px] font-bold text-rose-500">
+                            {{ deleteForm.errors.reason }}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-3 w-full">
+                        <button
+                            @click="cancelConfirmAction"
+                            class="flex-1 px-4 py-2 bg-slate-300 hover:bg-slate-400 text-slate-700 font-bold text-xs transition-all"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            @click="confirmAction"
+                            class="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-800 text-white font-bold text-xs transition-all"
+                        >
+                            Yes, Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Transition>
 </template>

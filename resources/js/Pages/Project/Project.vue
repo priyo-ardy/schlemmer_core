@@ -315,41 +315,113 @@ const closeHistoryModal = () => {
 
 // Isi perubahan
 const getChangedFields = (log) => {
-    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
+    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by', 'project_id'];
     const changes = [];
-    
-    if (log.event_name === 'update' && log.before && log.after) {
-        Object.keys(log.after).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.before[key] !== log.after[key]) {
+
+    // Helper untuk bikin nama field jadi rapi (misal: main_part_number -> Main Part Number)
+    const formatFieldName = (str) => {
+        return str.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    const beforeData = log.before || {};
+    const afterData = log.after || {};
+
+    const beforeHeader = beforeData.header || null;
+    const afterHeader = afterData.header || null;
+    const beforeDetails = beforeData.details || [];
+    const afterDetails = afterData.details || [];
+
+    // ==========================================
+    // 1. LOGIC UNTUK HEADER (PROJECT INFO)
+    // ==========================================
+    if (log.event_name === 'update' && beforeHeader && afterHeader) {
+        Object.keys(afterHeader).forEach(key => {
+            if (!ignoredKeys.includes(key) && beforeHeader[key] !== afterHeader[key]) {
                 changes.push({
-                    field: key,
-                    before: log.before[key],
-                    after: log.after[key]
+                    category: 'Header', // Tambah kategori buat penanda di UI (opsional)
+                    field: formatFieldName(key),
+                    before: beforeHeader[key] ?? '-',
+                    after: afterHeader[key] ?? '-'
                 });
             }
         });
-    } else if (log.event_name === 'delete' && log.before) {
-        Object.keys(log.before).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.before[key] !== null) {
+    } else if (log.event_name === 'create' && afterHeader) {
+        Object.keys(afterHeader).forEach(key => {
+            if (!ignoredKeys.includes(key) && afterHeader[key] !== null && afterHeader[key] !== '') {
                 changes.push({
-                    field: key,
-                    before: log.before[key],
-                    after: null
+                    category: 'Header',
+                    field: formatFieldName(key),
+                    before: '-',
+                    after: afterHeader[key]
                 });
             }
         });
-    } else if (log.event_name === 'create' && log.after) {
-        Object.keys(log.after).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.after[key] !== null) {
+    } else if (log.event_name === 'delete' && beforeHeader) {
+        Object.keys(beforeHeader).forEach(key => {
+            if (!ignoredKeys.includes(key) && beforeHeader[key] !== null) {
                 changes.push({
-                    field: key,
-                    before: null,
-                    after: log.after[key]
+                    category: 'Header',
+                    field: formatFieldName(key),
+                    before: beforeHeader[key],
+                    after: 'DELETED'
                 });
             }
         });
     }
-    
+
+    // ==========================================
+    // 2. LOGIC UNTUK DETAIL (MATERIAL LIST)
+    // ==========================================
+    if (log.event_name === 'update') {
+        // Cari Material yang DIHAPUS
+        beforeDetails.forEach(bItem => {
+            const isStillExist = afterDetails.some(aItem => aItem.material_id == bItem.material_id);
+            if (!isStillExist) {
+                changes.push({
+                    category: 'Detail',
+                    field: 'Material List',
+                    // ✅ FIX: Langsung tembak bItem.material_code
+                    before: bItem.material_code && bItem.material_code !== '-' ? `[${bItem.material_code}]` : `Material ID: ${bItem.material_id}`,
+                    after: 'REMOVED'
+                });
+            }
+        });
+
+        // Cari Material yang DITAMBAH
+        afterDetails.forEach(aItem => {
+            const isNew = !beforeDetails.some(bItem => bItem.material_id == aItem.material_id);
+            if (isNew) {
+                changes.push({
+                    category: 'Detail',
+                    field: 'Material List',
+                    before: '-',
+                    // ✅ FIX: Langsung tembak aItem.material_code
+                    after: aItem.material_code && aItem.material_code !== '-' ? `[${aItem.material_code}]` : `Material ID: ${aItem.material_id}`
+                });
+            }
+        });
+    } else if (log.event_name === 'create') {
+        afterDetails.forEach(aItem => {
+            changes.push({
+                category: 'Detail',
+                field: 'Material List',
+                before: '-',
+                // ✅ FIX: Langsung tembak aItem.material_code
+                after: aItem.material_code && aItem.material_code !== '-' ? `[${aItem.material_code}]` : `Material ID: ${aItem.material_id}`
+            });
+        });
+    } else if (log.event_name === 'delete') {
+        beforeDetails.forEach(bItem => {
+            changes.push({
+                category: 'Detail',
+                field: 'Material List',
+                // ✅ FIX: Langsung tembak bItem.material_code
+                before: bItem.material_code && bItem.material_code !== '-' ? `[${bItem.material_code}]` : `Material ID: ${bItem.material_id}`,
+                after: 'DELETED'
+            });
+        });
+    }
+
     return changes;
 };
 
@@ -1291,7 +1363,7 @@ const formatStatus = (status) => {
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
         >
             <div
-                class="bg-white w-full max-w-3xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+                class="bg-white w-full max-w-5xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
             >
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
                     <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">

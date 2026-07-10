@@ -76,6 +76,17 @@ class ProjectRepository
         return Project::whereIn('id', $ids)->get();
     }
 
+    public function deleteData($id): ?Project
+    {
+        $project = Project::find($id);
+
+        if ($project) {
+            $project->delete();
+        }
+
+        return $project;
+    }
+
     public function deleteAll(array $ids)
     {
         return Project::whereIn('id', $ids)->delete();
@@ -84,5 +95,23 @@ class ProjectRepository
     public function saveDetails(Project $project, array $data): Collection
     {
         return $project->details()->createMany($data);
+    }
+
+    public function deleteDetailsNotIn($idHeader, array $keptIds)
+    {
+        return ProjectMaterial::where('project_id', $idHeader)
+            ->whereNotIn('id', $keptIds)
+            ->delete();
+    }
+
+    public function upsertDetails(array $details)
+    {
+        if (empty($details)) return;
+
+        return ProjectMaterial::upsert(
+            $details,
+            ['uuid'],
+            ['material_id', 'updated_by', 'updated_at']
+        );
     }
 }

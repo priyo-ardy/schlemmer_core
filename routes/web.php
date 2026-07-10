@@ -75,6 +75,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/view/{id}', [ProjectController::class, 'view'])->name('projects.view');
     Route::post('/projects', [ProjectController::class, 'store'])->name('project.store');
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('project.update');
+    Route::post('/projects/delete', [ProjectController::class, 'delete'])->name('project.delete');
     Route::post('/projects/mass-delete', [ProjectController::class, 'massDelete'])->name('project.mass-delete');
     Route::get('/projects/{project}/logs', [ProjectController::class, 'getLog'])->name('project.mass-delete');
 

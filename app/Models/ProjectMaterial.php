@@ -28,6 +28,11 @@ class ProjectMaterial extends Model
         return $this->belongsTo(Project::class, 'project_id');
     }
 
+    public function material(): BelongsTo
+    {
+        return $this->belongsTo(Material::class, 'material_id');
+    }
+
     protected static function booted()
     {
         static::creating(function (ProjectMaterial $model) {

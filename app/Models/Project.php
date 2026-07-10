@@ -42,10 +42,10 @@ class Project extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'kick_off_date' => 'date',
-        'target_proto_date' => 'date',
-        'target_ppap_date' => 'date',
-        'target_sop_date' => 'date',
+        'kick_off_date' => 'date:Y-m-d',
+        'target_proto_date' => 'date:Y-m-d',
+        'target_ppap_date' => 'date:Y-m-d',
+        'target_sop_date' => 'date:Y-m-d',
     ];
 
     public function customer(): BelongsTo

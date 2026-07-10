@@ -8,6 +8,7 @@ use App\Services\Customer\CustomerService;
 use App\Services\Project\ProjectService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -45,9 +46,9 @@ class ProjectController extends Controller
                 'name' => 'required|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'customer_id' => 'required|exists:customers,uuid',
                 'vehicle_model' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'main_part_number' => 'nullable|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'main_part_name' => 'nullable|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'apqp_phase' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_number' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_name' => 'nullable|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'apqp_phase' => 'nullable|string|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'status' => 'nullable|string|max:50',
                 'kick_off_date' => 'nullable|date',
                 'target_proto_date' => 'nullable|date',
@@ -64,12 +65,13 @@ class ProjectController extends Controller
 
             $insert = $this->projectService->store($validated);
 
-            // return redirect()->back()->with('success', 'Successfully saved new project data');
             return to_route('projects.view', ['id' => $insert->id])
                 ->with('success', 'Successfully saved new project data');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return redirect()->back()->withErrors([
-                'errors' => $e->getMessage()
+                'error' => $e->getMessage()
             ]);
         }
     }
@@ -77,12 +79,11 @@ class ProjectController extends Controller
     public function view(Request $request, $id)
     {
         $project = $this->projectService->getDataById($id);
-        $details = $this->projectService->getDetails($id);
+        $project->load(['customer', 'details.material']);
         $allIds = Project::orderBy('id')->pluck('id');
 
         return Inertia::render('Project/View', [
             'header' => $project,
-            'details' => $details,
             'allIds' => $allIds,
             'page_title' => 'Master Data / Project Management / List of Project / View / ' . $project->code
         ]);
@@ -97,15 +98,15 @@ class ProjectController extends Controller
                     'string',
                     'max:50',
                     'regex:/^[a-zA-Z0-9\-\/]+$/',
-                    Rule::unique('units', 'code')->ignore($id),
+                    Rule::unique('projects', 'code')->ignore($id), // FIX: pastikan nama tabel benar (misal: projects)
                 ],
                 'name' => 'required|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
                 'customer_id' => 'required|exists:customers,id',
                 'vehicle_model' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'main_part_number' => 'nullable|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'main_part_name' => 'nullable|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'apqp_phase' => 'nullable|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'status' => 'nullable|string',
+                'main_part_number' => 'nullable|string|max:100|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'main_part_name' => 'nullable|string|max:150|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'apqp_phase' => 'nullable|string|max:50|regex:/^[a-zA-Z0-9\-\/\s]+$/',
+                'status' => 'nullable|string|max:50',
                 'kick_off_date' => 'nullable|date',
                 'target_proto_date' => 'nullable|date',
                 'target_ppap_date' => 'nullable|date',
@@ -114,15 +115,43 @@ class ProjectController extends Controller
                 'revision' => 'nullable|integer|min:0',
                 'is_active' => 'nullable|boolean',
                 'remark' => 'nullable|string|regex:/^[a-zA-Z0-9\-\/\s]+$/',
-                'reason' => 'required|string|regex:/^[a-zA-Z0-9\-\/\s]+$/'
+                'reason' => 'required|string',
+
+                'details' => 'required|array|min:1',
+                'details.*.id' => 'nullable',
+                'details.*.uuid' => 'nullable',
+                'details.*.material_id' => 'required',
+                'details.*' => 'distinct:strict',
             ]);
 
             $this->projectService->update($id, $validated);
 
             return redirect()->back()->with('success', 'Successfully updated project data');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return redirect()->back()->withErrors([
-                'errors' => $e->getMessage()
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function delete(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'id' => 'required|exists:projects,id',
+                'reason' => 'required'
+            ]);
+
+            $this->projectService->deleteData($validated);
+
+            return redirect()->to('/projects')->with('success', 'Successfuly delete project data');
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'error' => $e->getMessage()
             ]);
         }
     }

@@ -618,7 +618,7 @@ const clearProjectStatus = () => {
 <template>
     <Head title="Create New Project"/>
     <div class="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-800">
-        <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto p-6">
+        <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-2xl font-black text-slate-900 tracking-tight">
@@ -859,7 +859,7 @@ const clearProjectStatus = () => {
 
                                 <div
                                     @click="toggleConfidentialityDropdown"
-                                    class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                    class="relative z-[9999] w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                     :class="[
                                         form.errors.confidentiality_level
                                             ? 'border-rose-500 text-rose-600'
@@ -869,7 +869,7 @@ const clearProjectStatus = () => {
                                     <span :class="form.confidentiality_level ? 'text-slate-800 font-semibold' : 'text-slate-400'">
                                         {{ selectedConfidentialityName }}
                                     </span>
-                                    <div class="flex items-center space-x-1.5 relative z-30">
+                                    <div class="flex items-center space-x-1.5 relative z-[9999]999]">
                                         <svg v-if="form.confidentiality_level" @click.stop="clearConfidentiality" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
@@ -898,7 +898,7 @@ const clearProjectStatus = () => {
                                 >
                                     <div
                                         v-if="isConfidentialityLevelDropdownOpen"
-                                        class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                        class="absolute z-[9999] w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                     >
                                         <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                             <div class="relative">
@@ -963,7 +963,7 @@ const clearProjectStatus = () => {
 
                 <div class="overflow-auto max-h-[80vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
-                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-30 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[350px]">Material</th>
