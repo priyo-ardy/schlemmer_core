@@ -16,7 +16,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             DepartmentSeeder::class,
             UnitCategoriesSeeder::class,
+            SysCounterSeeder::class,
             UnitSeeder::class,
+
             MaterialSeeder::class,
             CustomerSeeder::class
         ]);

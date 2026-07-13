@@ -62,13 +62,19 @@ class UnitRepository
 
     public function getLists($search)
     {
-        $units = Unit::query()
+        return Unit::query()
+            ->with('category')
+            ->where('is_active', 1)
             ->when($search, function ($query, $search) {
-                $query->where('name', 'LIKE', "%{$search}}")
-                    ->orWhere('symbol', 'LIKE', "%{$search}}");
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                        ->orWhere('symbol', 'LIKE', "%{$search}%")
+                        ->orWhereHas('category', function ($q) use ($search) {
+                            $q->where('name', 'LIKE', "%{$search}%");
+                        });
+                });
             })
-            ->paginate(2000);
-
-        return $units;
+            ->paginate(10)
+            ->withQueryString();
     }
 }
