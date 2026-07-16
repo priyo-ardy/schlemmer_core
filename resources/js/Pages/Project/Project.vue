@@ -49,7 +49,7 @@ const deleteForm =useForm({
 const props = defineProps({
     projects:{
         type: Object,
-        default: () => ({ data:[], links:[], per_page: 10}),
+        default: () => ({ data:[], links:[], per_page: 25}),
     },
     customers: Array
 });
@@ -458,6 +458,40 @@ const selectCustomer = (id) => {
     customerSearch.value = ""; // Reset search tiap habis milih
 };
 
+const getProjectStatus = (status) => {
+    return projectColors[status] ?? 'bg-gray-100 text-gray-800';
+}
+
+const getProjectStatusName = (status) => {
+    return projectLabels[status] ?? '-';
+}
+
+const projectLabels = {
+    planning: 'Planning',
+    development: 'Development',
+    design_dev: 'Design Development',
+    process_dev: 'Process Development',
+    validation: 'Valdiation',
+    ppap_submitted: 'PPAP Submitted',
+    ppap_approved: 'PPAP Approved',
+    mass_production: 'Mass Production',
+    change_request: 'Change Request',
+    discontinued: 'Discontinued',
+};
+
+const projectColors = {
+    planning: 'bg-slate-100 text-slate-800',
+    development: 'bg-sky-100 text-sky-800',
+    design_dev: 'bg-blue-100 text-blue-800',
+    process_dev: 'bg-indigo-100 text-indigo-800',
+    validation: 'bg-amber-100 text-amber-800',
+    ppap_submitted: 'bg-orange-100 text-orange-800',
+    ppap_approved: 'bg-green-100 text-green-800',
+    mass_production: 'bg-emerald-100 text-emerald-800',
+    change_request: 'bg-violet-100 text-violet-800',
+    discontinued: 'bg-red-100 text-red-800',
+};
+
 const formatStatus = (status) => {
     // Kalau kosong/null/string kosong, langsung balikin "-"
     if (!status) return "-";
@@ -473,6 +507,35 @@ const formatStatus = (status) => {
 
     return formatted;
 };
+
+// Confidentiality status badge
+const statusColors = {
+    public :'bg-green-100 text-green-800',
+    internal :'bg-indigo-100 text-indigo-800',
+    confidential :'bg-orange-100 text-orange-800',
+    strictly_confidential :'bg-red-100 text-red-800',
+};
+
+const getStatusBadgeClass = (status) => {
+    return statusColors[status] ?? 'bg-gray-100 text-gray-800';
+};
+
+const statusLabels = {
+    public : 'Public',
+    internal : 'Internal',
+    confidential : 'Confidential',
+    strictly_confidential : 'Strictly Confidential'
+};
+
+const statusLabelName =(status)=> {
+    return statusLabels[status] ?? "-";
+}
+
+
+
+// const formatStatus = (status) => {
+//     return statusLabels[status] ?? status;
+// };
 </script>
 
 <template>
@@ -668,7 +731,7 @@ const formatStatus = (status) => {
 
                 <!-- Table section -->
                 <div class="bg-white border border-slate-200/80 shadow-sm mb-6 flex flex-col gap-4">
-                    <div class="overflow-auto max-h-[calc(100vh-320px)]">
+                    <div class="overflow-auto max-h-[calc(100vh-10px)]">
                         <table class="w-full text-left border-collapse bg-white whitespace-nowrap">
                             <thead class="bg-blue-300 text-slate-700 uppercase tracking-wider text-[11px] font-bold border-b border-slate-200 sticky top-0 z-10">
                                 <tr>
@@ -712,7 +775,7 @@ const formatStatus = (status) => {
                                             class="border-slate-300 text-blue-600 h-4 w-4 cursor-pointer"
                                         >
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-4 py-3 font-black text-slate-900 tracking-tight">
                                         {{ project.code }}
                                     </td>
                                     <td class="px-4 py-3">
@@ -727,7 +790,7 @@ const formatStatus = (status) => {
                                     >
                                         <div class="flex justify-center">
                                             <span
-                                                class="px-2.5 py-0.5 text-xs text-[10px] text-blue-800 bg-blue-100"
+                                                class="px-2.5 py-0.5 text-[10px] font-bold text-blue-900 bg-blue-100 tracking-tight"
                                             >
                                                 Rev. {{ project.revision }}
                                             </span>
@@ -745,8 +808,13 @@ const formatStatus = (status) => {
                                     <td class=" px-4 py-3">
                                         {{ project.apqp_phase || "-" }}
                                     </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.status ? formatStatus(project.status) : "-" }}
+                                    <td class=" px-4 py-3 text-center">
+                                        <span
+                                            :class="getProjectStatus(project.status)"
+                                            class="inline-flex items-center px-2.5 py-1 text-xs text-[10px] font-semibold"
+                                        >
+                                            {{ getProjectStatusName(project.status) }}
+                                        </span>
                                     </td>
                                     <td class=" px-4 py-3">
                                         {{ project.kick_off_date ? formatTableDate(project.kick_off_date) : "-" }}
@@ -760,8 +828,13 @@ const formatStatus = (status) => {
                                     <td class=" px-4 py-3">
                                         {{ project.targe_sop_date ? formatTableDate(project.targe_sop_date) : "-" }}
                                     </td>
-                                    <td class=" px-4 py-3">
-                                        {{ project.confidentiality_level }}
+                                    <td class=" px-4 py-3 text-center">
+                                        <span
+                                            :class="getStatusBadgeClass(project.confidentiality_level)"
+                                            class="inline-flex items-center px-2.5 py-1 text-xs text-[10px] font-semibold"
+                                        >
+                                            {{ statusLabelName(project.confidentiality_level) }}
+                                        </span>
                                     </td>
                                     <td class=" px-4 py-3 text-center">
                                         <div class="flex justify-center">

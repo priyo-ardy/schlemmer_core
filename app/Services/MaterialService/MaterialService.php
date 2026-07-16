@@ -269,4 +269,19 @@ class MaterialService
     {
         return $this->materialRepo->searchMaterial($search);
     }
+
+    public function getListByProject($search, $project_id)
+    {
+        try {
+            $materials = $this->materialRepo->getListByProject($search, $project_id);
+
+            if (!$materials) {
+                throw new \Exception("Material not found for this project");
+            }
+
+            return $materials;
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
 }

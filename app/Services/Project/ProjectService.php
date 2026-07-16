@@ -153,10 +153,15 @@ class ProjectService
                 $oldData->load('details.material');
                 $nextRevision = ($oldData->revision ?? 0) + 1;
 
+                $customer = $this->customerService->getDataByUuid($data['customer_id']);
+                if (!$customer) {
+                    throw new \Exception("Customer not found in submitted data");
+                }
+
                 $updateData = [
                     'code'                  => strtoupper(trim($data['code'])),
                     'name'                  => trim($data['name']),
-                    'customer_id'           => trim($data['customer_id']),
+                    'customer_id'           => $customer->id,
                     'vehicle_model'         => $data['vehicle_model'] ? trim($data['vehicle_model']) : null,
                     'main_part_number'      => $data['main_part_number'] ? trim($data['main_part_number']) : null,
                     'main_part_name'        => $data['main_part_name'] ? trim($data['main_part_name']) : null,
@@ -424,5 +429,10 @@ class ProjectService
 
             throw $e;
         }
+    }
+
+    public function searchProject($search)
+    {
+        return $this->projectRepo->searchProject($search);
     }
 }

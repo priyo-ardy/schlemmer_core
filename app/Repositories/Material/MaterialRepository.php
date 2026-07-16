@@ -3,6 +3,7 @@
 namespace App\Repositories\Material;
 
 use App\Models\Material;
+use App\Models\ProjectMaterial;
 use Illuminate\Database\Eloquent\Collection;
 
 class MaterialRepository
@@ -111,5 +112,29 @@ class MaterialRepository
     public function getAllData()
     {
         return Material::orderBy('code', 'asc')->get();
+    }
+
+    public function getListByProject(?string $search, int $project_id)
+    {
+        return ProjectMaterial::query()
+            ->select([
+                'project_materials.id',
+                'project_materials.project_id',
+                'project_materials.material_id',
+            ])
+            ->join('materials', 'materials.id', '=', 'project_materials.material_id')
+            ->with([
+                'material:id,code,name,specification,drawing_change',
+            ])
+            ->where('project_materials.project_id', $project_id)
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('materials.code', 'like', "%{$search}%")
+                        ->orWhere('materials.name', 'like', "%{$search}%")
+                        ->orWhere('materials.specification', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('materials.code')
+            ->paginate(10);
     }
 }

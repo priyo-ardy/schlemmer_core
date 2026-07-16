@@ -613,6 +613,8 @@ const clearProjectStatus = () => {
     form.status = "";
     projectStatusSearch.value = "";
 };
+
+
 </script>
 
 <template>
@@ -745,7 +747,7 @@ const clearProjectStatus = () => {
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 mb-1">APQP Phase</label>
-                            <input type="text" v-model="form.apqp_phase" maxlength="50" placeholder="e.g. Phase 1: Planning" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
+                            <input type="text" v-model="form.apqp_phase" maxlength="50" placeholder="e.g. phase_1: Planning, phase_2: Product Design, phase_3: Process Design (PFMEA), phase_4: Validation, phase_5: Production" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" />
                         </div>
                         
                         <!-- Dropdown Project Status -->

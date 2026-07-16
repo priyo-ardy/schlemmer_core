@@ -20,6 +20,9 @@ class ProcessHeader extends Model
 
     protected $fillable = [
         'uuid',
+        'sequence',
+        'process_parent',
+        'process_child',
         'name',
         'revision',
         'remark',
@@ -27,6 +30,14 @@ class ProcessHeader extends Model
         'control_detection',
         'created_by',
         'updated_by'
+    ];
+
+    protected $casts = [
+        'sequence' => 'integer',
+        'process_parent' => 'integer',
+        'process_child' => 'integer',
+        'revision' => 'integer',
+        'is_active' => 'boolean'
     ];
 
     public function details(): HasMany

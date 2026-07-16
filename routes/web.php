@@ -3,8 +3,11 @@
 use App\Http\Controllers\ActivityLog\ActivityLogController;
 use App\Http\Controllers\api\v1\Customer\CustomerApiController;
 use App\Http\Controllers\api\v1\Material\MaterialApiController;
+use App\Http\Controllers\api\v1\ProcessTemplate\ProcessTemplateApiController;
+use App\Http\Controllers\api\v1\Project\ProjectApiController;
 use App\Http\Controllers\api\v1\UnitCategory\UnitCategoryApiController;
 use App\Http\Controllers\api\v1\Units\UnitApiController as UnitsUnitApiController;
+use App\Http\Controllers\api\v1\User\UserApiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
@@ -46,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
     // Transaction
     Route::get('/pfmea', [PfmeaController::class, 'index'])->name('pfmea');
     Route::get('/pfmea/create', [PfmeaController::class, 'create'])->name('pfmea.create');
+    Route::get('/pfmea/{id}/view', [PfmeaController::class, 'view'])->name('pfmea.view');
 
     // Process Management
 
@@ -137,4 +141,11 @@ Route::prefix('api/v1')->middleware('auth')->group(function () {
 
     Route::get('/materials', [MaterialApiController::class, 'dropdown']);
     Route::get('/materials/list', [MaterialApiController::class, 'list']);
+
+    Route::get('projects', [ProjectApiController::class, 'dropdown']);
+    Route::get('projects/{project_id}/material', [ProjectApiController::class, 'getMaterialList']);
+
+    Route::get('/process-template', [ProcessTemplateApiController::class, 'dropdown']);
+
+    Route::get('/users', [UserApiController::class, 'dropdown']);
 });

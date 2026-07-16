@@ -203,4 +203,13 @@ class UserServices
             throw $e;
         }
     }
+
+    public function searchUser($search)
+    {
+        try {
+            return $this->userRepository->searchProcess($search);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

@@ -10,6 +10,7 @@ use App\Services\PFMEA\PfmeaService;
 use App\Services\ProcessTemplate\ProcessTemplateServices;
 use App\Services\Users\UserServices;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PfmeaController extends Controller
@@ -37,5 +38,23 @@ class PfmeaController extends Controller
             'departments' => DepartmentResource::collection($this->deptService->getAllData()),
             'page_title' => 'Create PFMEA Document'
         ]);
+    }
+
+    public function store(Request $request)
+    {
+        // try {
+        //     $validated = $request->validate([]);
+
+        //     $insert = $this->pfmeaService->store($validated);
+
+        //     return to_route('pfmea.view', ['id' => $insert->id])
+        //         ->with('success', 'Successfully saved new PFMEA data');
+        // } catch (ValidationException $e) {
+        //     throw $e;
+        // } catch (\Exception $e) {
+        //     return redirect()->back()->withErrors([
+        //         'error' => $e->getMessage()
+        //     ]);
+        // }
     }
 }

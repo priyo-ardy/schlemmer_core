@@ -371,4 +371,13 @@ class ProcessTemplateServices
             throw $e;
         }
     }
+
+    public function searchProcess($search)
+    {
+        try {
+            return $this->processRepo->searchProcess($search);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
+        }
+    }
 }

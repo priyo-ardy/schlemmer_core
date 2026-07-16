@@ -131,4 +131,18 @@ class ProcessTemplateRepository
 
         return $query->paginate($page)->withQueryString();
     }
+
+    public function searchProcess($search)
+    {
+        $process = ProcessHeader::query()
+            ->where('is_active', 1)
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('remark', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('name', 'asc')
+            ->paginate(10);
+
+        return $process;
+    }
 }

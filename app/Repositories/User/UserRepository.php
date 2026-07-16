@@ -89,4 +89,19 @@ class UserRepository implements UserRepositoryInterface
     {
         return User::whereIn('id', $ids)->delete();
     }
+
+    public function searchProcess($search)
+    {
+        $users = User::query()
+            ->select('id', 'name')
+            ->where('is_active', 1)
+            ->where('is_locked', 0)
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('name', 'asc')
+            ->paginate(10);
+
+        return $users;
+    }
 }

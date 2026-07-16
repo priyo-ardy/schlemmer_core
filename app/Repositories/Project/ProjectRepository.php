@@ -114,4 +114,34 @@ class ProjectRepository
             ['material_id', 'updated_by', 'updated_at']
         );
     }
+
+
+    public function searchProject($search)
+    {
+        return Project::query()
+            ->select([
+                'projects.id',
+                'projects.customer_id',
+                'projects.code',
+                'projects.name',
+                'projects.revision',
+                'projects.status',
+            ])
+            ->with([
+                'customer:id,name,alias',
+            ])
+            ->where('is_active', 1)
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhereHas('customer', function ($customer) use ($search) {
+                            $customer->where('name', 'like', "%{$search}%")
+                                ->orWhere('alias', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy('code')
+            ->paginate(10);
+    }
 }
