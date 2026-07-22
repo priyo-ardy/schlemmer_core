@@ -21,6 +21,9 @@ class ProcessRevisionService
         $revisionHeader = $this->revisionRepo->storeHeader([
             'uuid' => Str::uuid7(),
             'header_id' => $header->id,
+            'sequence' => $header->sequence,
+            'process_parent' => $header->process_parent,
+            'process_child' => $header->process_child,
             'revision' => $header->revision,
             'name' => $header->name,
             'remark' => $header->remark,

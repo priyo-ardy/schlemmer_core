@@ -16,17 +16,22 @@ class PfmeaRepository
 
     public function getDetails($id_header) {}
 
-    public function store(array $data) {}
-
-    public function storeDetails(PfmeaHeader $pfmea, array $data)
+    public function store(array $data): ?PfmeaHeader
     {
-        return $pfmea->details()->createMany($data);
+        return PfmeaHeader::create($data);
     }
 
     public function storeCoreTeam(PfmeaHeader $pfmea, array $data)
     {
         return $pfmea->coreTeam()->createMany($data);
     }
+
+    public function storeDetails(PfmeaHeader $pfmea, array $data)
+    {
+        return $pfmea->details()->createMany($data);
+    }
+
+
 
     public function findManyIds(array $ids): Collection
     {

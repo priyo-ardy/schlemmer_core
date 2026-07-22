@@ -9,7 +9,9 @@ use App\Services\MaterialService\MaterialService;
 use App\Services\PFMEA\PfmeaService;
 use App\Services\ProcessTemplate\ProcessTemplateServices;
 use App\Services\Users\UserServices;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -42,19 +44,63 @@ class PfmeaController extends Controller
 
     public function store(Request $request)
     {
-        // try {
-        //     $validated = $request->validate([]);
+        try {
+            $request->merge([
+                'code' => strtoupper(trim($request->input('code'))),
+            ]);
 
-        //     $insert = $this->pfmeaService->store($validated);
+            $validated = $request->validate([
+                'code' => [
+                    'required',
+                    'string',
+                    'max:50',
+                    Rule::unique('pfmea', 'code')
+                ],
+                'date' => 'required|date',
+                'department_id' => 'required|exists:departments,id',
+                'version' => 'nullable',
+                'scope' => 'required',
+                'project_id' => 'required|exists:projects,id',
+                'material_id' => 'required|exists:materials,id',
+                'process_responsibility' => 'required|string',
 
-        //     return to_route('pfmea.view', ['id' => $insert->id])
-        //         ->with('success', 'Successfully saved new PFMEA data');
-        // } catch (ValidationException $e) {
-        //     throw $e;
-        // } catch (\Exception $e) {
-        //     return redirect()->back()->withErrors([
-        //         'error' => $e->getMessage()
-        //     ]);
-        // }
+                // Core teams
+                'core_teams' => 'required|array|min:1',
+                'core_teams.*.id' => [
+                    'required',
+                    'exists:users,id',
+                    'distinct'
+                ],
+
+                // details
+                'details' => 'required|array|min:1',
+                'details.*.process_id' => [
+                    'required',
+                    'exists:processes,id',
+                    'distinct'
+                ],
+            ]);
+
+            $insert = $this->pfmeaService->store($validated);
+
+            return to_route('pfmea.view', ['id' => $insert->id])
+                ->with('success', 'Successfully saved new PFMEA data');
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (QueryException $e) {
+
+            if ($e->getCode() == 23000) {
+
+                throw ValidationException::withMessages([
+                    'code' => 'Code already exists.'
+                ]);
+            }
+
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

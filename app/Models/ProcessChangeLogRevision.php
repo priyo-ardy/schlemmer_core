@@ -24,8 +24,10 @@ class ProcessChangeLogRevision extends Model
 
     public function revisionHeader(): BelongsTo
     {
-        return $this->belongsTo(ProcessHeaderRevision::class, 'header_id', 'header_id')
-            ->where('revision', $this->revision);
+        return $this->belongsTo(
+            ProcessHeaderRevision::class,
+            'header_id'
+        );
     }
 
     public function creator(): BelongsTo

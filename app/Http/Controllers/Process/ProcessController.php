@@ -59,6 +59,9 @@ class ProcessController extends Controller
                     // Validasi unik HANYA untuk data yang belum di-soft delete
                     Rule::unique('process_functions', 'name')->whereNull('deleted_at')
                 ],
+                'process_id' => [
+                    'required',
+                ],
                 'remark' => 'nullable|string',
 
                 // Validasi Array Details
@@ -119,7 +122,11 @@ class ProcessController extends Controller
                         ->ignore($id)
                         ->whereNull('deleted_at')
                 ],
+                'process_id' => [
+                    'required',
+                ],
                 'remark' => 'nullable|string',
+                'reason' => 'nullable|string',
 
                 // Validasi Array Details
                 'processItems'                                  => 'required|array|min:1',

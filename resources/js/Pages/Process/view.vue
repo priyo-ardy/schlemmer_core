@@ -20,6 +20,9 @@ const props = defineProps({
 
 const page = usePage();
 const errors = computed(() => page.props.errors || {});
+const isLoadingHistory = ref(false);
+const historyLogs = ref([]);
+const selectedName = ref("");
 
 const selectedRowIndex = ref(null);
 
@@ -50,17 +53,30 @@ const showConfirmModal = ref(false);
 
 const openLogs = async (id) => {
     isFetching.value = true;
+    isLoadingHistory.value = true;
+    selectedName.value = '';
+    historyLogs.value = [];
+
     try{
         const response = await axios.get(`/process/logs/${id}`);
-        logs.value = response.data;
-        showModal.value = true;
+        historyLogs.value = response.data;
+        selectedName.value = response.data.header?.name;
     } catch(e){
-        toast.error('Failed to getting logs data: ', e);
+        const firstError = Object.values(err)[0];
+        toast.error(firstError);
     }
     finally{
         isFetching.value = false;
+        showModal.value = true;
+        isLoadingHistory.value = false;
     }
 };
+
+const closeHistoryModal = () => {
+    showModal.value = false;
+    selectedName.value = "";
+    historyLogs.value = [];
+}
 
 const deleteSelected = (headerId) => {
     showConfirmModal.value = true;
@@ -78,7 +94,7 @@ const confirmAction = (headerId) => {
 const openDetail = async(log) => {
     isFetching.value = true;
     try{
-        const response = await axios.get(`/process/logs/detail/${log.id}`);
+        const response = await axios.get(`/process/logs/detail/${log.header_id}`);
         detailLogs.value = response.data.details;
         selectedLogDetail.value = response.data.name + " (Rev. " + response.data.revision + ")";
         selectedLogRemark.value = response.data.remark;
@@ -96,10 +112,21 @@ watch(isEditing, (newValue) => {
 
 const pageTitle = computed(() => (isEditing.value ? 'Edit' : 'View') + ' PMFEA Template Data | ' + props.header?.name);
 
+const processId = computed(() => {
+    const processParent = props.header?.process_parent;
+    const processChild = props.header?.process_child;
+
+    return processChild == null
+        ? processParent
+        : `${processParent}.${processChild}`;
+});
+
 const form = useForm({
     name: props.header?.name || '',
+    process_id: processId.value,
     revision: props.header?.revision || '0',
     remark: props.header?.remark || '',
+    reason: '',
     processItems: props.header?.details?.length > 0 
         ? props.header.details 
         : [{
@@ -169,7 +196,7 @@ const validateAndSave = () => {
     form.clearErrors();
     let isValid = true;
     const nameValue = form.name ? form.name.trim() : '';
-    const remarkValue = form.remark ? form.remark.trim() : '';
+    const reasonValue = form.reason ? form.reason.trim() : '';
 
     if (!nameValue) {
         form.setError('name', 'Function name is required');
@@ -179,8 +206,8 @@ const validateAndSave = () => {
         isValid = false;
     }
 
-    if(!remarkValue){
-        form.setError('Please fill the change reason before save the data')
+    if(!reasonValue){
+        form.setError('reason', 'Please fill the change reason before save the data')
         isValid = false;
     }
 
@@ -391,6 +418,118 @@ const selectUser = (id, item) => {
     openDropdownIndex.value = null;
     userSearch.value = "";
 }
+
+const getChangedFields = (log) => {
+    // Kolom-kolom teknis database yang tidak perlu ditampilkan ke user
+    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
+    const changes = [];
+    
+    if (log.event_name === 'update' && log.before.header && log.after.header) {
+        // Cari perbedaan antara data sebelum dan sesudah
+        Object.keys(log.after.header).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before.header[key] !== log.after.header[key]) {
+                changes.push({
+                    field: key,
+                    before: log.before.header[key],
+                    after: log.after.header[key]
+                });
+            }
+        });
+    } else if (log.event_name === 'delete' && log.before.header) {
+        // Tampilkan semua data yang dihapus
+        Object.keys(log.before.header).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before.header[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: log.before.header[key],
+                    after: null
+                });
+            }
+        });
+    } else if (log.event_name === 'create' && log.after.header) {
+        // Tampilkan semua data yang baru dibuat
+        Object.keys(log.after.header).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.after.header[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: null,
+                    after: log.after.header[key]
+                });
+            }
+        });
+    }
+    
+    return changes;
+};
+
+// Show logs details
+const historyLogsDetails = ref([]);
+const showModalDetail = ref(false);
+const showLogsDetails = async (id) => {
+    isFetching.value = true;
+    isLoadingHistory.value = true;
+
+    try{
+        const response = await axios(`/process/logs/detail/${id}`);
+        historyLogsDetails.value = response.data;
+
+        console.log(response.data);
+    } catch(err){
+        const firstError = Object.values(err)[0];
+        toast.error(firstError);
+    }finally{
+        isFetching.value = false;
+        isLoadingHistory.value = false;
+    }
+};
+
+// const getChangedDetailsFields = (log) => {
+//     const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
+//     const changes = [];
+    
+//     if (log.event_name === 'update' && log.before.detail && log.after.detail) {
+//         // Cari perbedaan antara data sebelum dan sesudah
+//         Object.keys(log.after.detail).forEach(key => {
+//             if (!ignoredKeys.includes(key) && log.before.detail[key] !== log.after.detail[key]) {
+//                 changes.push({
+//                     field: key,
+//                     before: log.before.detail[key],
+//                     after: log.after.detail[key]
+//                 });
+//             }
+//         });
+//     } else if (log.event_name === 'delete' && log.before.detail) {
+//         // Tampilkan semua data yang dihapus
+//         Object.keys(log.before.detail).forEach(key => {
+//             if (!ignoredKeys.includes(key) && log.before.detail[key] !== null) {
+//                 changes.push({
+//                     field: key,
+//                     before: log.before.detail[key],
+//                     after: null
+//                 });
+//             }
+//         });
+//     } else if (log.event_name === 'create' && log.after.header) {
+//         // Tampilkan semua data yang baru dibuat
+//         Object.keys(log.after.header).forEach(key => {
+//             if (!ignoredKeys.includes(key) && log.after.header[key] !== null) {
+//                 changes.push({
+//                     field: key,
+//                     before: null,
+//                     after: log.after.header[key]
+//                 });
+//             }
+//         });
+//     }
+    
+//     return changes;
+// }
+
+// Helper untuk mempercantik nama kolom (contoh: billing_address -> Billing Address)
+const formatFieldName = (text) => {
+    if (!text) return '';
+    return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
 </script>
 
 
@@ -543,7 +682,26 @@ const selectUser = (id, item) => {
             <!-- Buat header -->
             <div class="bg-white  border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
-                    <div class="lg:col-span-3">
+                    <div class="lg:col-span-2">
+                        <div class="flex gap-1.5 mb-2">
+                            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                                Process ID <span class="text-rose-500">*</span>
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="number" v-model="form.process_id" placeholder="Process ID"
+                                :class="[
+                                    'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none',
+                                    form.errors.process_id 
+                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
+                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                ]"
+                            />
+                            <p v-if="form.errors.process_id" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.process_id }}</p>
+                            <p v-else class="mt-1.5 text-[10px] font-medium text-slate-400">Unique process ID</p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                                 Function Name <span class="text-rose-500">*</span>
@@ -589,17 +747,41 @@ const selectUser = (id, item) => {
                         <p class="mt-1.5 text-[10px] font-medium text-slate-400 text-center">Initial</p>
                     </div>
 
-                    <div class="lg:col-span-6">
+                    <div class="lg:col-span-5">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
-                                Remarks (Change reason) <span class="text-rose-500">*</span>
+                                Remarks (Change reason)
                             </label>
                         </div>
                         <textarea v-model="form.remark" rows="2" placeholder="Provide detailed context, e.g., on equipment conditions, key dependencies, environmental factors..." 
                             :disabled="!isEditing"
                             class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium text-slate-700 transition-all outline-none resize-none leading-relaxed"></textarea>
                     </div>
-                    
+                    <div class="lg:col-span-5">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                                Change Reason <span class="text-rose-500">*</span>
+                            </label>
+                        </div>
+                        <textarea
+                            v-model="form.reason"
+                            rows="2"
+                            placeholder="Describe the change reason here ..."
+                            :disabled="!isEditing"
+                            :class="[
+                                'w-full px-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none resize-none',
+                                form.errors.reason
+                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600'
+                                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                            ]"
+                        />
+                        <p
+                            v-if="form.errors.reason"
+                            class="mt-1.5 text-[10px] font-bold text-rose-500"
+                        >
+                            {{ form.errors.reason }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -992,52 +1174,134 @@ const selectUser = (id, item) => {
     </div>
 
     <!-- Modal buat nampilin change logs -->
-    <transition
-        enter-active-class="transition duration-500 ease-out"
-        enter-from-class="opacity-0 translate-y-4"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-4"
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
     >
-    
-        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div class="bg-white  w-full max-w-lg shadow-xl p-6">
-            <h2 class="text-lg font-black mb-6">Change History Timeline</h2>
-            
-            <div class="max-h-96 overflow-y-auto pl-2">
-                <!-- Timeline Container -->
-                <div class="relative border-l-2 border-blue-200 ml-2 space-y-8 pb-4">
-                    
-                    <div v-for="log in logs" :key="log.id" class="relative pl-6">
-                        <!-- Dot penanda (Garis Timeline) -->
-                        <div class="absolute -left-[9px] top-0 h-4 w-4  border-4 border-white bg-blue-600 shadow"></div>
-                        
-                        <!-- Content -->
-                        <div class="bg-slate-50 p-3 border border-slate-100">
-                            <p @click="openDetail(log)" class="text-xs font-bold text-blue-700 uppercase cursor-pointer hover:underline">
-                                {{ log.action }} (V.{{ log.revision }})
-                            </p>
-                            <p class="text-xs text-slate-600 mt-1">
-                                <span class="font-semibold">Reason:</span> {{ log.change_reason || '-' }}
-                            </p>
-                            <p class="text-[10px] text-slate-400 mt-2 font-mono">
-                                {{ new Date(log.created_at).toLocaleString('id-ID') }}
-                            </p>
-                            <p class="text-[10px] text-slate-400 mt-2 font-mono">Updated By: {{ log.creator.name }}</p>
-                        </div>
+        <div
+            v-show="showModal"
+            @click.self="closeHistoryModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        >
+            <div
+                class="bg-white w-full max-w-5xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            >
+                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        Process Function Revision History
+                    </h3>
+                    <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
+                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
+                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
                     </div>
 
+                    <div v-else-if="historyLogs.length === 0" class="text-center py-12 border border-dashed border-slate-200 bg-white p-8 ">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">This customer profile has no recorded changes.</p>
+                    </div>
+
+                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+                        <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
+                            <div
+                                :class="{
+                                    'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
+                                    'bg-blue-600 border-blue-100 ring-4 ring-blue-50': log.event_name === 'update' && index === 0,
+                                    'bg-slate-400 border-white': log.event_name === 'update' && index !== 0,
+                                    'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete'
+                                }"
+                                class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
+                            ></div>
+
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-mono font-bold uppercase px-2 py-0.5  border bg-white shadow-sm text-slate-700">
+                                        Rev. {{ log.revision }}
+                                    </span>
+                                    <span 
+                                        :class="{
+                                            'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
+                                            'bg-blue-50 text-blue-700 border-blue-200': log.event_name === 'update',
+                                            'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete'
+                                        }"
+                                        class="text-[9px] font-bold uppercase px-1.5 py-0.5 border -sm tracking-wide"
+                                    >
+                                        {{ log.event_name }}
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-900">
+                                        {{ log.creator?.name || 'System Auto' }}
+                                    </span>
+                                </div>
+                                <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                                    {{ new Date(log.created_at).toLocaleString('id-ID') }}
+                                </span>
+                            </div>
+
+                            <div class="bg-white p-4 border border-slate-200 shadow-sm space-y-3">
+                                <div>
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Change Reason</span>
+                                    <p class="text-xs font-bold text-slate-800 leading-relaxed whitespace-pre-line">
+                                        {{ log.change_reason || 'No description provided.' }}
+                                    </p>
+                                </div>
+
+                                <div v-if="getChangedFields(log).length > 0" class="pt-2 border-t border-slate-100 overflow-x-auto">
+                                    <table class="min-w-full text-[11px] font-mono">
+                                        <thead>
+                                            <tr class="text-slate-400 border-b border-slate-100 text-left font-bold uppercase tracking-wider text-[10px]">
+                                                <th class="pb-1.5 w-1/4">Field Data</th>
+                                                <th class="pb-1.5 w-3/8 text-rose-600" v-if="log.event_name !== 'create'">Data Before</th>
+                                                <th class="pb-1.5 w-3/8 text-emerald-600" v-if="log.event_name !== 'delete'">Data After</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
+                                            <tr v-for="item in getChangedFields(log)" :key="item.field" class="hover:bg-slate-50/50">
+                                                <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
+                                                
+                                                <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
+                                                    <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 -sm line-through block w-fit max-w-xs truncate" :title="String(item.before)">
+                                                        {{ item.before === null || item.before === '' ? '-' : item.before }}
+                                                    </span>
+                                                </td>
+                                                
+                                                <td class="py-1.5" v-if="log.event_name !== 'delete'">
+                                                    <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 -sm font-bold block w-fit max-w-xs truncate" :title="String(item.after)">
+                                                        {{ item.after === null || item.after === '' ? '-' : item.after }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div>
+                                    <span 
+                                        @click="showLogsDetails(log.id)"
+                                        class="text-[10px] font-mono font-bold text-blue-400 hover:text-blue-800 uppercase tracking-wider cursor-pointer"
+                                    >
+                                        Show Details ...
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <button @click="showModal = false" class="mt-6 w-full py-2 bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition">
-                Close
-            </button>
         </div>
-        </div>
-    
-    </transition>
+    </Transition>
 
     <!-- Modal Log Details -->
     <transition

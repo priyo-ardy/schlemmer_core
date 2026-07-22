@@ -2,6 +2,7 @@
 
 namespace App\Repositories\ProcessTemplate;
 
+use App\Models\ChangeLogs;
 use App\Models\ProcessChangeLogRevision;
 use App\Models\ProcessDetail;
 use App\Models\ProcessHeader;
@@ -35,6 +36,23 @@ class ProcessTemplateRepository
         return ProcessHeader::whereIn('id', $ids)->get();
     }
 
+    public function existsByParentAndChild(
+        int $parentId,
+        ?int $childId,
+        ?int $ignoreId = null
+    ): bool {
+        return ProcessHeader::query()
+            ->where('process_parent', $parentId)
+            ->where('process_child', $childId)
+            ->when($ignoreId, fn($q) => $q->whereKeyNot($ignoreId))
+            ->exists();
+    }
+
+    public function getLasSequence()
+    {
+        return ProcessHeader::max('sequence') ?? 0;
+    }
+
     public function updateHeader($id, $headerData)
     {
         $header = ProcessHeader::findOrFail($id);
@@ -63,19 +81,16 @@ class ProcessTemplateRepository
 
     public function getLogs($headerId)
     {
-        return ProcessChangeLogRevision::where('header_id', $headerId)
-            ->with(['revisionHeader:id,revision,change_reason', 'creator:id,name'])
+        return ChangeLogs::where('item_id', $headerId)
+            ->with(['creator:id,name'])
+            ->where('table_name', 'process_functions')
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
     public function getLogDetail($logId)
     {
-        return ProcessHeaderRevision::with(['details' => function ($query) {
-            $query->orderBy('order', 'asc'); // Sort di level detail
-        }])
-            ->where('id', $logId)
-            ->first();
+        return ChangeLogs::where('id', $logId)->get();
     }
 
     public function deleteAll($ids)
@@ -140,7 +155,7 @@ class ProcessTemplateRepository
                 return $query->where('name', 'LIKE', "%{$search}%")
                     ->orWhere('remark', 'LIKE', "%{$search}%");
             })
-            ->orderBy('name', 'asc')
+            ->orderBy('sequence', 'asc')
             ->paginate(10);
 
         return $process;

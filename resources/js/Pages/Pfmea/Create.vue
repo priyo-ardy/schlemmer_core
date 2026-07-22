@@ -33,6 +33,9 @@ const createBlankitem = () => ({
     row_key: Math.random().toString(36).substring(2, 9),
     process_id: '',
     revision: '',
+    sequence: '',
+    process_parent: '',
+    process_child: '',
     selected_process: null,
     errors: { material_id: null }
 });
@@ -43,9 +46,10 @@ const form = useForm({
     department_id: '',
     version: '',
     scope: '',
+    project_id: '',
     material_id: '',
     drawing_change: '',
-    process_responsibility: '',
+    process_responsibility: 'Development, Manufacturing, Quality, Business, Logistics',
     prepared_by: '',
     reviewed_by: '',
     approved_by: '',
@@ -533,7 +537,91 @@ watch(
 
 // Buat save
 const validateAndSave = () => {
-    toast.info("Button save di clik");
+    form.clearErrors();
+    let isValid = true;
+    const processMap = new Map();
+
+    if(!form.code){
+        form.setError('code', 'PFMEA Document No. is required');
+        isValid = false;
+    }else if(form.code.length > 50){
+        form.setError('code', 'PFMEA Document No. cannot exceed 50 characters');
+        isValid = false;
+    }
+
+    if(!form.date){
+        form.setError('date', 'PFMEA issue date is required');
+        isValid = false;
+    }
+
+    if(!form.department_id){
+        form.setError('department_id', 'Issued department is required');
+        isValid = false;
+    }
+
+    if(!form.scope){
+        form.setError('scope', 'PFMEA document scope is required');
+        isValid = false;
+    }
+
+    if(!form.project_id){
+        form.setError('project_id', 'PFMEA Project is required');
+        isValid = false;
+    }
+
+    if(!form.material_id){
+        form.setError('material_id', 'Part No. is required');
+        isValid = false;
+    }
+
+    if(!form.process_responsibility){
+        form.setError('process_responsibility', 'PFMEA process responsibility is required');
+        isValid = false;
+    }
+
+    if (form.core_teams.length === 0) {
+        form.setError('core_teams', 'Core Teams is required');
+        isValid = false;
+    }
+
+    // Isi details
+    form.details.forEach((item, index) => {
+        if(!item.process_id){
+            form.setError(`details.${index}.process_id`, 'Process function is required')
+            isValid = false;
+        }
+
+        if (processMap.has(item.process_id)) {
+
+            const firstIndex = processMap.get(item.process_id);
+
+            form.setError(
+                `details.${index}.process_id`,
+                "Process function already selected."
+            );
+
+            form.setError(
+                `details.${firstIndex}.process_id`,
+                "Duplicate process function."
+            );
+
+            isValid = false;
+        } else {
+            processMap.set(item.process_id, index);
+        }
+    })
+
+    if(!isValid){
+        return;
+    }
+
+    form.post('/pfmea/store', {
+        preserveScroll: true,
+        onError: (errors) => {
+            const firstErrorMessage = Object.values(errors)[0];
+            toast.error(firstErrorMessage);
+        }
+    })
 }
 
 // buat cancel form
@@ -662,6 +750,9 @@ const selectProcess = (prc, index) => {
     if(item){
         item.process_id = prc.id;
         item.selected_process = prc;
+        item.sequence = prc.sequence;
+        item.process_parent = prc.process_parent;
+        item.process_child = prc.process_child;
         item.revision = "Rev. " + prc.revision;
 
         if(item.errors) item.errors.process_id = null;
@@ -949,13 +1040,14 @@ const handleClickOutside = (event) => {
                             Issue Date <span class="text-rose-500">*</span>
                         </label>
                         <div>
-                            <input type="date" v-model="form.issue_date" 
+                            <input type="date" v-model="form.date" 
                             :class="[
                                 'w-full pl-2 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none mt-2',
-                                form.errors.issue_date 
+                                form.errors.date 
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                             ]">
+                            <p v-if="form.errors.code" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.date }}</p>
                         </div>
                     </div>
                     <div class="lg:col-span-2">
@@ -1163,18 +1255,18 @@ const handleClickOutside = (event) => {
                                 @click="toggleProjectDropdown"
                                 class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                 :class="[
-                                    form.errors.project
+                                    form.errors.project_id
                                         ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
                                         : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
                                 ]"
                             >
-                                <span :class="form.project ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                <span :class="form.project_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
                                     {{ selectedProjectName }}
                                 </span>
 
                                 <div class="flex items-center space-x-1.5 relative z-20">
                                     <svg
-                                        v-if="form.project"
+                                        v-if="form.project_id"
                                         @click.stop="clearProject"
                                         xmlns="http://www.w3.org/2000/svg"
                                         class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors duration-150"
@@ -1195,10 +1287,10 @@ const handleClickOutside = (event) => {
                             </div>
 
                             <p
-                                v-if="form.errors.project"
+                                v-if="form.errors.project_id"
                                 class="mt-1 text-[10px] font-bold text-rose-500"
                             >
-                                {{ form.errors.project }}
+                                {{ form.errors.project_id }}
                             </p>
 
 
@@ -1407,7 +1499,21 @@ const handleClickOutside = (event) => {
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Process Responsibility.
                         </label>
-                        <input type="text" v-model="form.process_responsibility" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800" placeholder="Process Responsibility" />
+                        <input 
+                            type="text" 
+                            v-model="form.process_responsibility" 
+                            class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800"
+                            :class="[
+                                    'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
+                                    form.errors.process_responsibility
+                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                                ]"
+                            placeholder="Process Responsibility" 
+                        />
+                        <p v-if="form.errors.process_responsibility" class="block mt-1 text-[9px] font-bold text-rose-500">
+                            {{ form.errors.process_responsibility }}
+                        </p>
                     </div>
                     <div class="lg:col-span-4">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
@@ -1417,12 +1523,12 @@ const handleClickOutside = (event) => {
                             <!-- INPUT -->
                             <div
                                 @click="isUserDropdownOpen = true"
-                                class="relative w-full min-h-[38px] px-3 py-2 bg-slate-50 border border-slate-300
-                                    focus-within:bg-white
-                                    focus-within:border-blue-500
-                                    focus-within:ring-2
-                                    focus-within:ring-blue-200
-                                    transition-all duration-200 cursor-text pr-9"
+                                class="relative w-full min-h-[38px] px-3 py-2 border transition-all duration-200 cursor-text pr-9"
+                                :class="[
+                                    form.errors.core_teams
+                                        ? 'bg-slate-50 border-rose-500 focus-within:bg-white focus-within:border-rose-500 focus-within:ring-2 focus-within:ring-rose-200'
+                                        : 'bg-slate-50 border-slate-300 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200'
+                                ]"
                             >
                                 <div class="flex flex-wrap items-center gap-1">
                                     <span
@@ -1449,6 +1555,11 @@ const handleClickOutside = (event) => {
                                         v-model="userSearch"
                                         @focus="isUserDropdownOpen = true"
                                         class="flex-1 min-w-[120px] bg-transparent outline-none text-xs"
+                                        :class="[
+                                            form.errors.core_teams
+                                                ? 'text-rose-600'
+                                                : 'text-slate-800'
+                                        ]"
                                         placeholder="Search user..."
                                     />
                                 </div>
@@ -1473,6 +1584,13 @@ const handleClickOutside = (event) => {
                                     </svg>
                                 </div>
                             </div>
+
+                            <p
+                                v-if="form.errors.core_teams"
+                                class="mt-1 text-[10px] font-bold text-rose-500"
+                            >
+                                {{ form.errors.core_teams }}
+                            </p>
 
                             <!-- DROPDOWN -->
                             <transition
@@ -1548,6 +1666,9 @@ const handleClickOutside = (event) => {
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[350px]">Process Function</th>
+                                <th class="px-4 py-3 min-w-[100px]">Process Sequence</th>
+                                <th class="px-4 py-3 min-w-[100px]">Process Parent</th>
+                                <th class="px-4 py-3 min-w-[100px]">Process Child</th>
                                 <th class="px-4 py-3 min-w-[100px]">Revision</th>
                             </tr>
                         </thead>
@@ -1569,7 +1690,7 @@ const handleClickOutside = (event) => {
                                             @click="toggleProcessDropdown(index)"
                                             class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                             :class="[
-                                                item.errors?.process_id 
+                                                form.errors[`details.${index}.process_id`]
                                                     ? 'border-rose-500 focus:border-rose-500 bg-rose-50 text-rose-600' 
                                                     : 'border-slate-300 focus:border-blue-500 text-slate-800'
                                             ]"
@@ -1588,7 +1709,12 @@ const handleClickOutside = (event) => {
                                             </div>
                                         </div>
 
-                                        <p v-if="item.errors?.process_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ item.errors.process_id }}</p>
+                                       <p
+                                            v-if="form.errors[`details.${index}.process_id`]"
+                                            class="mt-1 text-[10px] font-bold text-rose-500"
+                                        >
+                                            {{ form.errors[`details.${index}.process_id`] }}
+                                        </p>
 
                                         <Teleport to="body">
                                             <div v-if="openedRowIndex === index" class="fixed inset-0 z-[9998]" @click="openedRowIndex = null"></div>
@@ -1646,6 +1772,15 @@ const handleClickOutside = (event) => {
                                             </Transition>
                                         </Teleport>
                                     </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="text" v-model="item.sequence" placeholder="Process Sequence" readonly class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="text" v-model="item.process_parent" placeholder="Process Parent" readonly class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800">
+                                </td>
+                                <td class="px-4 py-3">
+                                    <input type="text" v-model="item.process_child" placeholder="Process Child" readonly class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800">
                                 </td>
                                 <td class="px-4 py-3">
                                     <input type="text" v-model="item.revision" placeholder="Process function revision" readonly class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800">

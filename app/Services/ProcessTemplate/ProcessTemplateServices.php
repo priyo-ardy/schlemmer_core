@@ -35,8 +35,22 @@ class ProcessTemplateServices
 
         try {
             return DB::transaction(function () use ($data, $userId) {
+                $process_id = $data['process_id'];
+                [$processParent, $processChild] = array_pad(explode('.', $process_id), 2, null);
+
+                $processParent = (int) $processParent;
+                $processChild = $processChild !== null ? (int) $processChild : null;
+
+                // Buat update
+                // if ($this->processRepo->existsByParentAndChild($parent, $child, $id)) {
+                //     throw new Exception('Process ID already registered');
+                // }
+
                 $headerData = [
                     'name' => trim($data['name']),
+                    'process_parent' => $processParent,
+                    'process_child' => $processChild,
+                    'sequence' => $this->processRepo->getLasSequence() + 1,
                     'revision' => 0,
                     'remark' => !empty($data['remark']) ? trim($data['remark']) : 'Initial PFMEA',
                     'is_active' => true,
@@ -147,16 +161,29 @@ class ProcessTemplateServices
     {
         try {
             return DB::transaction(function () use ($id, $data) {
+                $process_id = $data['process_id'];
+                [$processParent, $processChild] = array_pad(explode('.', $process_id), 2, null);
+
+                $processParent = (int) $processParent;
+                $processChild = $processChild !== null ? (int) $processChild : null;
                 $oldHeaderData = $this->processRepo->getHeaderById($id);
                 $oldDetailData = $this->processRepo->getDetailData($id);
 
                 $nextRevision = ($oldHeaderData->revision ?? 0) + 1;
 
+                // Cek apakah process parent & process child sudah ada
+                $checkProcessId = $this->processRepo->existsByParentAndChild($processParent, $processChild, $id);
+                if ($checkProcessId) {
+                    throw new \Exception("Process ID already registered");
+                }
+
                 $headerData = [
-                    'name'       => trim($data['name']),
-                    'revision'   => $nextRevision,
-                    'remark'     => trim($data['remark'] ?? ''),
-                    'updated_by' => Auth::id()
+                    'process_parent'    => $processParent,
+                    'process_child'     => $processChild,
+                    'name'              => trim($data['name']),
+                    'revision'          => $nextRevision,
+                    'remark'            => trim($data['remark'] ?? ''),
+                    'updated_by'        => Auth::id()
                 ];
 
                 $freshHeader = $this->processRepo->updateHeader($id, $headerData);
@@ -223,7 +250,7 @@ class ProcessTemplateServices
                 $this->revisionService->createSnapShot(
                     header: $freshHeader,
                     action: 'UPDATE',
-                    reason: !empty($data['remark']) ? trim($data['remark']) : null
+                    reason: !empty($data['reason']) ? trim($data['reason']) : null
                 );
 
                 $oldData = [
@@ -236,7 +263,7 @@ class ProcessTemplateServices
                     'detail' => $freshDetail->toArray(),
                 ];
 
-                $this->logService->store($freshHeader, 'update', $data['remark'] ?? '', $oldData, $newData);
+                $this->logService->store($freshHeader, 'update', $data['reason'] ?? '', $oldData, $newData);
 
                 // Buat persiapan nanti pas udah ada tabel transaksi pfmea nya
                 ProcessFunctionQueueJob::dispatch('update', [])->afterCommit();

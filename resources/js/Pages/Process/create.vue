@@ -83,6 +83,7 @@ const createBlankItem = () => ({
 });
 
 const form = useForm({
+    process_id: '',
     name: '',
     revision: '',
     remark:'',
@@ -301,7 +302,26 @@ const selectUser = (id) => {
             <!-- Buat header -->
             <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
-                    <div class="lg:col-span-3">
+                    <div class="lg:col-span-2">
+                        <div class="flex gap-1.5 mb-2">
+                            <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
+                                Process ID <span class="text-rose-500">*</span>
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <input type="number" v-model="form.process_id" placeholder="Process ID"
+                                :class="[
+                                    'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none',
+                                    form.errors.process_id 
+                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
+                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
+                                ]"
+                            />
+                            <p v-if="form.errors.process_id" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.process_id }}</p>
+                            <p v-else class="mt-1.5 text-[10px] font-medium text-slate-400">Unique process ID</p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-5">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                                 Function Name <span class="text-rose-500">*</span>
@@ -346,7 +366,7 @@ const selectUser = (id) => {
                         <p class="mt-1.5 text-[10px] font-medium text-slate-400 text-center">Initial</p>
                     </div>
 
-                    <div class="lg:col-span-6">
+                    <div class="lg:col-span-10">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                                 Remarks (Optional)
@@ -400,19 +420,19 @@ const selectUser = (id) => {
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[150px]">Previous</th>
-                                <th class="px-4 py-3 min-w-[350px]">Requirements</th>
-                                <th class="px-4 py-3 min-w-[350px]">Potential Failure Mode</th>
-                                <th class="px-4 py-3 min-w-[350px]">Potential Effect(s)</th>
+                                <th class="px-4 py-3 min-w-[550px]">Requirements</th>
+                                <th class="px-4 py-3 min-w-[550px]">Potential Failure Mode</th>
+                                <th class="px-4 py-3 min-w-[550px]">Potential Effect(s)</th>
                                 <th class="px-4 py-3 min-w-[100px]">Severity</th>
                                 <th class="px-4 py-3 min-w-[100px]">Classification</th>
-                                <th class="px-4 py-3 min-w-[350px]">Potential Cause(s)</th>
+                                <th class="px-4 py-3 min-w-[550px]">Potential Cause(s)</th>
                                 <th class="px-4 py-3 min-w-[100px]">Occurrence</th>
-                                <th class="px-4 py-3 min-w-[350px]">Controls Prevention</th>
-                                <th class="px-4 py-3 min-w-[350px]">Control Detection</th>
+                                <th class="px-4 py-3 min-w-[550px]">Controls Prevention</th>
+                                <th class="px-4 py-3 min-w-[550px]">Control Detection</th>
                                 <th class="p-4 y-3 min-w-[100px]">Detection</th>
                                 <th class="p-4 y-3 min-w-[100px]">RPN</th>
-                                <th class="p-4 y-3 min-w-[350px]">Recommended Action(s)</th>
-                                <th class="p-4 y-3 min-w-[350px]">Responsibility</th>
+                                <th class="p-4 y-3 min-w-[550px]">Recommended Action(s)</th>
+                                <th class="p-4 y-3 min-w-[550px]">Responsibility</th>
                                 <th class="p-4 y-3 min-w-[200px]">Target Completion Date</th>
                                 <th class="p-4 y-3 min-w-[200px]">Action Taken Completion Date</th>
                                 <th class="p-4 y-3 min-w-[100px]">Result Severity</th>
@@ -441,37 +461,40 @@ const selectUser = (id) => {
                                     <input type="text" v-model="item.previous_problem" placeholder="Enter previous ..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs transition-all outline-none">
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.requirements" placeholder="Enter requirements..." required 
+                                    <textarea v-model="item.requirements" placeholder="Enter requirements..." required 
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.requirements`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.requirements`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.requirements`] }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_failure_mode" placeholder="Failure mode..." required
+                                    <textarea v-model="item.potential_failure_mode" placeholder="Failure mode..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_failure_mode`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.potential_failure_mode`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_failure_mode`] }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_effect_of_failure" placeholder="Effects..." required
+                                    <textarea v-model="item.potential_effect_of_failure" placeholder="Effects..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_effect_of_failure`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.potential_effect_of_failure`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_effect_of_failure`] }}
                                     </span>
@@ -502,13 +525,14 @@ const selectUser = (id) => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.potential_cause_of_failure" placeholder="Causes..." required
+                                    <textarea v-model="item.potential_cause_of_failure" placeholder="Causes..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.potential_cause_of_failure`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.potential_cause_of_failure`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_cause_of_failure`] }}
                                     </span>
@@ -527,25 +551,27 @@ const selectUser = (id) => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.controls_prevention" placeholder="Prevention..." required
+                                    <textarea v-model="item.controls_prevention" placeholder="Prevention..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.controls_prevention`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.controls_prevention`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.controls_prevention`] }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.controls_detection" placeholder="Control Detection..." required
+                                    <textarea v-model="item.controls_detection" placeholder="Control Detection..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.controls_detection`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.controls_detection`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.controls_detection`] }}
                                     </span>
@@ -576,13 +602,14 @@ const selectUser = (id) => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <input type="text" v-model="item.recommended_action" placeholder="Recommended Action..." required
+                                    <textarea v-model="item.recommended_action" placeholder="Recommended Action..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.recommended_action`] 
                                                 ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
                                                 : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
                                         ]">
+                                    </textarea>
                                     <span v-if="form.errors[`processItems.${index}.recommended_action`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.recommended_action`] }}
                                     </span>
