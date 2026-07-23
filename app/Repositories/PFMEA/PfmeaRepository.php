@@ -2,6 +2,7 @@
 
 namespace App\Repositories\PFMEA;
 
+use App\Models\PfmeaCoreTeam;
 use App\Models\PfmeaDetail;
 use App\Models\PfmeaHeader;
 use Illuminate\Database\Eloquent\Collection;
@@ -12,9 +13,32 @@ class PfmeaRepository
 
     public function getDataList() {}
 
-    public function getDataById(int $id) {}
+    public function getDataById(int $id): ?PfmeaHeader
+    {
+        return PfmeaHeader::with([
+            'department:id,code,name,short_name',
+            'project:id,code,name',
+            'material:id,code,name,specification,drawing_change',
+            'creator:id,name',
+            'updater:id,name'
+        ])->find($id);
+    }
 
-    public function getDetails($id_header) {}
+    public function getCoreTeamByPfmeaId($pfmea_id): ?Collection
+    {
+        return PfmeaCoreTeam::with(['team:id,name'])
+            ->where('pfmea_id', $pfmea_id)
+            ->orderBy('order', 'asc')
+            ->get();
+    }
+
+    public function getDetails($pfmea_id): ?Collection
+    {
+        return PfmeaDetail::with(['processFunction:id,name,sequence,process_parent,process_child,revision'])
+            ->where('pfmea_id', $pfmea_id)
+            ->orderBy('order', 'asc')
+            ->get();
+    }
 
     public function store(array $data): ?PfmeaHeader
     {
@@ -31,34 +55,32 @@ class PfmeaRepository
         return $pfmea->details()->createMany($data);
     }
 
+    public function updateHeader(array $data, $id): ?PfmeaHeader
+    {
+        $pfmea = PfmeaHeader::find($id);
 
+        if (!$pfmea) {
+            return null;
+        }
+
+        $pfmea->update($data);
+
+        return $pfmea;
+    }
+
+    public function deleteCoreTeamsByPfmeaId($pfmea_id)
+    {
+        return PfmeaCoreTeam::where('pfmea_id', $pfmea_id)->delete();
+    }
+
+    public function deleteDetailsByPfmeaId($pfmea_id)
+    {
+        return PfmeaDetail::where('pfmea_id', $pfmea_id)->delete();
+    }
 
     public function findManyIds(array $ids): Collection
     {
         return PfmeaHeader::whereIn('id', $ids)->get();
-    }
-
-    public function update(array $data, int $id) {}
-
-    public function deleteDetailsNotIn($id_header, array $keepIds)
-    {
-        return PfmeaDetail::where('pfmea_id', $id_header)
-            ->whereNotIn('id', $keepIds)
-            ->delete();
-    }
-
-    public function upsertDetails(array $details)
-    {
-        if (empty($details)) return;
-
-        return PfmeaDetail::upsert(
-            $details,
-            ['uuid'],
-            ['order'],
-            ['process_id'],
-            ['created_by'],
-            ['updated_by']
-        );
     }
 
     public function delete(int $id): ?PfmeaHeader
@@ -74,6 +96,6 @@ class PfmeaRepository
 
     public function massDelete(array $ids)
     {
-        return PfmeaHeader::whereIn($ids)->delete();
+        return PfmeaHeader::whereIn('id', $ids)->delete();
     }
 }

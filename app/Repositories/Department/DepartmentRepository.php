@@ -10,4 +10,9 @@ class DepartmentRepository
     {
         return Department::orderBy('code', 'asc')->get();
     }
+
+    public function getDataById($id)
+    {
+        return Department::find($id);
+    }
 }

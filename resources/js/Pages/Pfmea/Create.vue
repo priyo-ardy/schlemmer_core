@@ -28,6 +28,8 @@ const isDeptDropDownOpen = ref (false);
 const deptSearch = ref('');
 const searchInputDept = ref(null);
 const highlightedDeptIndex = ref(-1);
+const highlightedIndex = ref('');
+const searchInput = ref('');
 
 const createBlankitem = () => ({
     row_key: Math.random().toString(36).substring(2, 9),
@@ -256,7 +258,7 @@ const selectedMaterialName = computed(() => {
 });
 
 const fetchMaterials = async (isNewSearch = false) => {
-    if (!form.project) {
+    if (!form.project_id) {
         dropdownMaterials.value = [];
         hasMore.value = false;
         return;
@@ -278,7 +280,7 @@ const fetchMaterials = async (isNewSearch = false) => {
 
     try {
         const response = await axios.get(
-            `/api/v1/projects/${form.project}/material`,
+            `/api/v1/projects/${form.project_id}/material`,
             {
                 params: {
                     search: materialSearch.value,
@@ -438,7 +440,7 @@ const fetchProjects = async (isNewSearch = false) => {
 };
 
 const selectedProjectName = computed(() => {
-    if(!form.project) return "Select project...";
+    if(!form.project_id) return "Select project...";
     return activeSelectedProject.value 
         ? `[${activeSelectedProject.value.code}] - ${activeSelectedProject.value.name}`
         : "Select project ...";
@@ -457,7 +459,7 @@ const toggleProjectDropdown = async() => {
 }
 
 const selectProject = (project) => {
-    form.project = project.id;
+    form.project_id = project.id;
     activeSelectedProject.value = project;
 
     isProjectOpen.value = false;
@@ -499,7 +501,7 @@ const ensureProjectVisible = () => {
 };
 
 const clearProject = () => {
-    form.project = null;
+    form.project_id = null;
     activeSelectedProject.value = null;
     highlightedProjectIndex.value = -1;
     projectSearch.value = "";
@@ -1339,7 +1341,7 @@ const handleClickOutside = (event) => {
                                             @mouseenter="highlightedProjectIndex = index"
                                             class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0"
                                             :class="[
-                                                form.project === prj.id ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30' : '',
+                                                form.project_id === prj.id ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30' : '',
                                                 index === highlightedProjectIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
                                             ]"
                                         >

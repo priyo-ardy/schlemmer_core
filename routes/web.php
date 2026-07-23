@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pfmea/create', [PfmeaController::class, 'create'])->name('pfmea.create');
     Route::post('/pfmea/store', [PfmeaController::class, 'store'])->name('pfmea.store');
     Route::get('/pfmea/{id}/view', [PfmeaController::class, 'view'])->name('pfmea.view');
+    Route::put('/pfmea/{id}', [PfmeaController::class, 'update'])->name('pfmea.update');
 
     // Process Management
 

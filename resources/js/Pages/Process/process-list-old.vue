@@ -2,11 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import { Head, router, Link, usePage, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import HistoryListModal from '@/Components/History/HistoryListModal.vue';
-import HistoryDetailModal from '@/Components/History/HistoryDetailModal.vue';
-import { useRevisionHistory } from '@/Composables/useRevisionHistory';
 import { toast } from 'vue3-toastify';
-import axios from 'axios';
 
 defineOptions({ layout: AuthenticatedLayout, inheritAttrs: false });
 
@@ -19,25 +15,10 @@ const isRefreshing = ref(false);
 const isSearching = ref(false);
 const selectedFilter = ref("all");
 const deleteReason = ref("");
-
-const {
-    showListModal: isHistoryModalOpen,
-    isLoadingList: isLoadingHistory,
-    historyLogs,
-    selectedLabel: selectedName,
-    openHistory: openHistoryModal,
-    closeHistoryModal,
-
-    showDetailModal: isHistoryDetailModalOpen,
-    isLoadingDetail: isLoadingHistoryDetail,
-    historyLogsDetails,
-    openHistoryDetail,
-    closeHistoryDetailModal,
-} = useRevisionHistory({
-    listEndpoint: (id) => `/process/${id}/logs`,
-    detailEndpoint: (id) => `process/logs/detail/${id}`, // <-- WAJIB
-    headerBasePath: 'header',
-});
+const isHistoryModalOpen = ref(false);
+const historyLogs = ref([]);
+const isLoadingHistory = ref(false);
+const selectedName = ref("");
 
 // Delete form dalam modal
 const deleteForm = useForm({
@@ -197,6 +178,75 @@ const updatePerPage = (event) => {
             onFinish: () => (isSearching.value = false),
         }
     );
+};
+
+// proses histori change logs revisi
+const openHistoryModal = async(id, name) => {
+    isHistoryModalOpen.value = true;
+    isLoadingHistory.value = true;
+    selectedName.value = name,
+    historyLogs.value = [];
+
+    try{
+        const response = await axios.get(`/process/${id}/logs`);
+        historyLogs.value = response.data;
+    } catch(errors){
+        const firstError = Object.values(err)[0];
+        toast.error(firstError);
+    } finally {
+        isLoadingHistory.value = false;
+    }
+}
+
+const closeHistoryModal = () => {
+    isHistoryModalOpen.value = false;
+    selectedName.value = "";
+    historyLogs.value = [];
+}
+
+// Isi perubahan
+const getChangedFields = (log) => {
+    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
+    const changes = [];
+    
+    if (log.event_name === 'update' && log.before && log.after) {
+        Object.keys(log.after).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before[key] !== log.after[key]) {
+                changes.push({
+                    field: key,
+                    before: log.before[key],
+                    after: log.after[key]
+                });
+            }
+        });
+    } else if (log.event_name === 'delete' && log.before) {
+        Object.keys(log.before).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.before[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: log.before[key],
+                    after: null
+                });
+            }
+        });
+    } else if (log.event_name === 'create' && log.after) {
+        Object.keys(log.after).forEach(key => {
+            if (!ignoredKeys.includes(key) && log.after[key] !== null) {
+                changes.push({
+                    field: key,
+                    before: null,
+                    after: log.after[key]
+                });
+            }
+        });
+    }
+    
+    return changes;
+};
+
+const formatFieldName = (text) => {
+    if (!text) return '';
+    return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 // Modal filter
@@ -621,23 +671,137 @@ const copyRow = () => {
     </Transition>
 
     <!-- History modal -->
-    <HistoryListModal
-        :show="isHistoryModalOpen"
-        :loading="isLoadingHistory"
-        :logs="historyLogs"
-        :title="`Process Function Revision History : ${selectedName}`"
-        empty-message="This process function has no recorded changes."
-        @view-detail="openHistoryDetail"
-        @close="closeHistoryModal"
-    />
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+    >
+        <div
+            v-show="isHistoryModalOpen"
+            @click.self="closeHistoryModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        >
+            <div
+                class="bg-white w-full max-w-9xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            >
+                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        Process Function Revision History : {{ selectedName }}
+                    </h3>
+                    <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
-    <!-- Modal Revision History Detail -->
-    <HistoryDetailModal
-        :show="showModalDetail"
-        :loading="isLoadingHistoryDetail"
-        :logs="historyLogsDetails"
-        @close="closeModalDetail"
-    />
+                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
+
+                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
+                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
+                    </div>
+
+                    <div v-else-if="historyLogs.length === 0" class="text-center py-12 border border-dashed border-slate-200 bg-white p-8 ">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">This UoM category has no recorded changes.</p>
+                    </div>
+
+                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+                                <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
+                                    <div
+                                        :class="{
+                                            'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
+                                            'bg-blue-600 border-blue-100 ring-4 ring-blue-50': (log.event_name === 'update' || log.event_name === 'restore') && index === 0,
+                                            'bg-purple-500 border-purple-100 ring-4 ring-purple-50': log.event_name === 'update' && index !== 0,
+                                            'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete',
+                                            'bg-orange-500 border-orange-100 ring-4 ring-orange-50': log.event_name === 'restore'
+                                        }"
+                                        class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
+                                    ></div>
+                                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[10px] font-mono font-bold uppercase px-2 py-0.5  border bg-white shadow-sm text-slate-700">
+                                                Rev. {{ log.revision }}
+                                            </span>
+                                            <span
+                                                :class="{
+                                                    'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
+                                                    'bg-purple-50 text-purple-700 border-purple-200': log.event_name === 'update',
+                                                    'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete',
+                                                    'bg-orange-50 text-orange-700 border-orange-200': log.event_name === 'restore',
+                                                }"
+                                                class="text-[9px] font-bold uppercase px-1.5 py-0.5 border -sm tracking-wide"
+                                            >
+                                                {{ log.event_name }}
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-900">
+                                                {{ log.creator?.name || 'System Auto' }}
+                                            </span>
+                                        </div>
+                                        <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                                            {{ formatLogDate(log.created_at) }}
+                                        </span>
+                                    </div>
+                                    <div class="bg-white p-4 border border-slate-200 shadow-sm space-y-3">
+                                        <div>
+                                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Change Reason</span>
+                                            <p class="text-xs font-bold text-slate-800 leading-relaxed whitespace-pre-line">
+                                                {{ log.change_reason || 'No description provided.' }}
+                                            </p>
+                                        </div>
+                                        <div v-if="getChangedFields(log).length > 0" class="pt-2 border-t border-slate-100 overflow-x-auto">
+                                            <table class="min-w-full text-[11px] font-mono">
+                                                <thead>
+                                                    <tr class="text-slate-400 border-b border-slate-100 text-left font-bold uppercase tracking-wider text-[10px]">
+                                                        <th class="pb-1.5 w-1/4">Field Data</th>
+                                                        <th class="pb-1.5 w-3/8 text-rose-600" v-if="log.event_name !== 'create'">Data Before</th>
+                                                        <th class="pb-1.5 w-3/8 text-emerald-600" v-if="log.event_name !== 'delete'">Data After</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
+                                                    <tr v-for="item in getChangedFields(log)" :key="item.field" class="hover:bg-slate-50/50">
+                                                        <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
+                                                        <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
+                                                            <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 -sm line-through block w-fit max-w-xs truncate" :title="String(item.before)">
+                                                                {{ item.before === null || item.before === '' ? '-' : item.before }}
+                                                            </span>
+                                                        </td>
+
+                                                        <td class="py-1.5" v-if="log.event_name !== 'delete'">
+                                                            <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 -sm font-bold block w-fit max-w-xs truncate" :title="String(item.after)">
+                                                                {{ item.after === null || item.after === '' ? '-' : item.after }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                </div>
+                    </div>
+
+                </div>
+
+                <div class="border-t border-slate-100 px-6 py-3.5 bg-white flex justify-end shrink-0">
+                            <button
+                                type="button"
+                                @click="closeHistoryModal"
+                                class="px-5 py-2 bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-200 transition active:scale-95 shadow-sm -lg"
+                            >
+                                Close
+                            </button>
+                </div>
+            </div>
+        </div>
+    </Transition>
 
     <!-- modal filter -->
     <Transition

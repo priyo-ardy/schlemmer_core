@@ -2,6 +2,9 @@
 import { ref, computed, watch } from 'vue';
 import { Head, useForm, router, Link, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import HistoryListModal from '@/Components/History/HistoryListModal.vue';
+import HistoryDetailModal from '@/Components/History/HistoryDetailModal.vue';
+import { useRevisionHistory } from '@/Composables/useRevisionHistory';
 import { toast } from 'vue3-toastify';
 import axios from 'axios';
 
@@ -20,11 +23,26 @@ const props = defineProps({
 
 const page = usePage();
 const errors = computed(() => page.props.errors || {});
-const isLoadingHistory = ref(false);
-const historyLogs = ref([]);
-const selectedName = ref("");
 
 const selectedRowIndex = ref(null);
+
+const {
+    showListModal: showModal,
+    isLoadingList: isLoadingHistory,
+    historyLogs,
+    openHistory: openLogs,
+    closeHistoryModal,
+
+    showDetailModal: showModalDetail,
+    isLoadingDetail: isLoadingHistoryDetail,
+    historyLogsDetails,
+    openHistoryDetail: showLogsDetails,
+    closeHistoryDetailModal: closeModalDetail,
+} = useRevisionHistory({
+    listEndpoint: (id) => `/process/logs/${id}`,
+    detailEndpoint: (id) => `/process/logs/detail/${id}`,
+    headerBasePath: 'header',
+});
 
 watch(
     errors,
@@ -41,42 +59,7 @@ watch(
 defineEmits(['close']);
 
 const isEditing = ref(false);
-const showModal = ref(false);
-const showDetailModal = ref(false);
-const loadingLogs = ref(false);
-const logs = ref([]);
-const selectedLogDetail = ref([]);
-const detailLogs = ref([]);
-const isFetching = ref(false);
-const selectedLogRemark = ref([]);
 const showConfirmModal = ref(false);
-
-const openLogs = async (id) => {
-    isFetching.value = true;
-    isLoadingHistory.value = true;
-    selectedName.value = '';
-    historyLogs.value = [];
-
-    try{
-        const response = await axios.get(`/process/logs/${id}`);
-        historyLogs.value = response.data;
-        selectedName.value = response.data.header?.name;
-    } catch(e){
-        const firstError = Object.values(err)[0];
-        toast.error(firstError);
-    }
-    finally{
-        isFetching.value = false;
-        showModal.value = true;
-        isLoadingHistory.value = false;
-    }
-};
-
-const closeHistoryModal = () => {
-    showModal.value = false;
-    selectedName.value = "";
-    historyLogs.value = [];
-}
 
 const deleteSelected = (headerId) => {
     showConfirmModal.value = true;
@@ -89,21 +72,6 @@ const confirmAction = (headerId) => {
             toast.success('Process function data deleted successfuully')
         }
     });
-}
-
-const openDetail = async(log) => {
-    isFetching.value = true;
-    try{
-        const response = await axios.get(`/process/logs/detail/${log.header_id}`);
-        detailLogs.value = response.data.details;
-        selectedLogDetail.value = response.data.name + " (Rev. " + response.data.revision + ")";
-        selectedLogRemark.value = response.data.remark;
-        showDetailModal.value = true;
-    } catch(e){
-        toast.error('Failed to getting logs detail data: ', e);
-    } finally{
-        isFetching.value = false;
-    }
 }
 
 watch(isEditing, (newValue) => {
@@ -419,185 +387,6 @@ const selectUser = (id, item) => {
     userSearch.value = "";
 }
 
-const getChangedFields = (log) => {
-    // Kolom-kolom teknis database yang tidak perlu ditampilkan ke user
-    const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
-    const changes = [];
-    
-    if (log.event_name === 'update' && log.before.header && log.after.header) {
-        // Cari perbedaan antara data sebelum dan sesudah
-        Object.keys(log.after.header).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.before.header[key] !== log.after.header[key]) {
-                changes.push({
-                    field: key,
-                    before: log.before.header[key],
-                    after: log.after.header[key]
-                });
-            }
-        });
-    } else if (log.event_name === 'delete' && log.before.header) {
-        // Tampilkan semua data yang dihapus
-        Object.keys(log.before.header).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.before.header[key] !== null) {
-                changes.push({
-                    field: key,
-                    before: log.before.header[key],
-                    after: null
-                });
-            }
-        });
-    } else if (log.event_name === 'create' && log.after.header) {
-        // Tampilkan semua data yang baru dibuat
-        Object.keys(log.after.header).forEach(key => {
-            if (!ignoredKeys.includes(key) && log.after.header[key] !== null) {
-                changes.push({
-                    field: key,
-                    before: null,
-                    after: log.after.header[key]
-                });
-            }
-        });
-    }
-    
-    return changes;
-};
-
-// Show logs details
-const historyLogsDetails = ref([]);
-const showModalDetail = ref(false);
-
-const showLogsDetails = async (id) => {
-    isFetching.value = true;
-    isLoadingHistory.value = true;
-
-    try{
-        const response = await axios(`/process/logs/detail/${id}`);
-        historyLogsDetails.value = response.data;
-
-        historyLogsDetails.value = response.data.map(log => ({
-            ...log,
-            detailChanges: getChangedDetailsFields(log)
-        }));
-    } catch(err){
-        const firstError = Object.values(err)[0];
-        toast.error(firstError);
-    }finally{
-        isFetching.value = false;
-        isLoadingHistory.value = false;
-        showModalDetail.value = true;
-    }
-};
-
-const closeModalDetail = () => {
-    showModalDetail.value = false;
-    historyLogsDetails.value = [];
-}
-
-const getChangedDetailsFields = (log) => {
-    const ignoredKeys = [
-        'id',
-        'uuid',
-        'created_at',
-        'updated_at',
-        'deleted_at',
-        'created_by',
-        'updated_by',
-        'revision',
-        'deleted_by',
-        'header_id'
-    ];
-
-    const changesDetails = [];
-
-    const beforeDetails = log.before?.detail ?? [];
-    const afterDetails = log.after?.detail ?? [];
-
-    const maxLength = Math.max(beforeDetails.length, afterDetails.length);
-
-    for (let i = 0; i < maxLength; i++) {
-
-        const before = beforeDetails[i];
-        const after = afterDetails[i];
-
-        // CREATE DETAIL
-        if (!before && after) {
-
-            Object.entries(after).forEach(([key, value]) => {
-
-                if (ignoredKeys.includes(key)) return;
-
-                changesDetails.push({
-                    row: i + 1,
-                    field: key,
-                    before: null,
-                    after: value
-                });
-
-            });
-
-            continue;
-        }
-
-        // DELETE DETAIL
-        if (before && !after) {
-
-            Object.entries(before).forEach(([key, value]) => {
-
-                if (ignoredKeys.includes(key)) return;
-
-                changesDetails.push({
-                    row: i + 1,
-                    field: key,
-                    before: value,
-                    after: null
-                });
-
-            });
-
-            continue;
-        }
-
-        // UPDATE DETAIL
-        Object.keys(after).forEach(key => {
-
-            if (ignoredKeys.includes(key)) return;
-
-            if (before[key] !== after[key]) {
-
-                changesDetails.push({
-                    row: i + 1,
-                    field: key,
-                    before: before[key],
-                    after: after[key]
-                });
-
-            }
-
-        });
-    }
-
-    // console.table(changesDetails);
-    return changesDetails;
-};
-
-const groupChangedDetailsByRow = (log) => {
-    return log.detailChanges.reduce((groups, item) => {
-        if (!groups[item.row]) {
-            groups[item.row] = [];
-        }
-
-        groups[item.row].push(item);
-
-        return groups;
-    }, {});
-};
-
-
-// Helper untuk mempercantik nama kolom (contoh: billing_address -> Billing Address)
-const formatFieldName = (text) => {
-    if (!text) return '';
-    return text.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
 </script>
 
 
@@ -708,19 +497,19 @@ const formatFieldName = (text) => {
                                     </button>
                                     <div class="absolute right-0 top-full mt-1.5 w-40 bg-white border border-slate-100 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden origin-top-right transform scale-95 group-hover:scale-100">
                                         <div class="py-1 flex flex-col">
-                                            <button type="button" @click="openLogs(props.header.id)" :disabled="loadingLogs" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
+                                            <button type="button" @click="openLogs(props.header.id)" :disabled="isLoadingHistory" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
                                                     <path d="M21 6.375c0 2.692-4.03 4.875-9 4.875S3 9.067 3 6.375 7.03 1.5 12 1.5s9 2.183 9 4.875Z" />
                                                     <path d="M12 12.75c2.685 0 5.19-.586 7.078-1.609a8.283 8.283 0 0 0 1.897-1.384c.016.121.025.244.025.368C21 12.817 16.97 15 12 15s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.285 8.285 0 0 0 1.897 1.384C6.809 12.164 9.315 12.75 12 12.75Z" />
                                                     <path d="M12 16.5c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 0 0 1.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 0 0 1.897 1.384C6.809 15.914 9.315 16.5 12 16.5Z" />
                                                     <path d="M12 20.25c2.685 0 5.19-.586 7.078-1.609a8.282 8.282 0 0 0 1.897-1.384c.016.121.025.244.025.368 0 2.692-4.03 4.875-9 4.875s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.284 8.284 0 0 0 1.897 1.384C6.809 19.664 9.315 20.25 12 20.25Z" />
                                                 </svg>
-                                                <svg v-if="loadingLogs" class="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24">
+                                                <svg v-if="isLoadingHistory" class="animate-spin h-3 w-3 text-white" viewBox="0 0 24 24">
                                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
-                                                
-                                                {{ loadingLogs ? 'Loading...' : 'View Change Logs' }}
+
+                                                {{ isLoadingHistory ? 'Loading...' : 'View Change Logs' }}
                                             </button>
                                             <button type="button" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1241,290 +1030,29 @@ const formatFieldName = (text) => {
         </div>
     </div>
 
-    <!-- Modal buat nampilin change logs -->
-    <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-    >
-        <div
-            v-show="showModal"
-            @click.self="closeHistoryModal"
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-        >
-            <div
-                class="bg-white w-full max-w-5xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
-            >
-                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
-                        Process Function Revision History
-                    </h3>
-                    <button @click="closeHistoryModal" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+    <!-- Modal Revision History -->
+    <HistoryListModal
+        :show="showModal"
+        :loading="isLoadingHistory"
+        :logs="historyLogs"
+        title="Process Function Revision History"
+        empty-message="This process function has no recorded changes."
+        @close="closeHistoryModal"
+        @view-detail="showLogsDetails"
+    />
 
-                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
-                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
-                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
-                    </div>
-
-                    <div v-else-if="historyLogs.length === 0" class="text-center py-12 border border-dashed border-slate-200 bg-white p-8 ">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">No History Records</span>
-                        <p class="text-[11px] text-slate-400 mt-0.5">This customer profile has no recorded changes.</p>
-                    </div>
-
-                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
-                        <div v-for="(log, index) in historyLogs" :key="log.id" class="relative pl-6 animate-fade-in">
-                            <div
-                                :class="{
-                                    'bg-emerald-500 border-emerald-100 ring-4 ring-emerald-50': log.event_name === 'create',
-                                    'bg-blue-600 border-blue-100 ring-4 ring-blue-50': log.event_name === 'update' && index === 0,
-                                    'bg-slate-400 border-white': log.event_name === 'update' && index !== 0,
-                                    'bg-rose-500 border-rose-100 ring-4 ring-rose-50': log.event_name === 'delete'
-                                }"
-                                class="absolute w-3.5 h-3.5 -left-[8px] top-1 border-2 shadow-sm transition-all"
-                            ></div>
-
-                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-mono font-bold uppercase px-2 py-0.5  border bg-white shadow-sm text-slate-700">
-                                        Rev. {{ log.revision }}
-                                    </span>
-                                    <span 
-                                        :class="{
-                                            'bg-emerald-50 text-emerald-700 border-emerald-200': log.event_name === 'create',
-                                            'bg-blue-50 text-blue-700 border-blue-200': log.event_name === 'update',
-                                            'bg-rose-50 text-rose-700 border-rose-200': log.event_name === 'delete'
-                                        }"
-                                        class="text-[9px] font-bold uppercase px-1.5 py-0.5 border -sm tracking-wide"
-                                    >
-                                        {{ log.event_name }}
-                                    </span>
-                                    <span class="text-xs font-bold text-slate-900">
-                                        {{ log.creator?.name || 'System Auto' }}
-                                    </span>
-                                </div>
-                                <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                                    {{ new Date(log.created_at).toLocaleString('id-ID') }}
-                                </span>
-                            </div>
-
-                            <div class="bg-white p-4 border border-slate-200 shadow-sm space-y-3">
-                                <div>
-                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Change Reason</span>
-                                    <p class="text-xs font-bold text-slate-800 leading-relaxed whitespace-pre-line">
-                                        {{ log.change_reason || 'No description provided.' }}
-                                    </p>
-                                </div>
-
-                                <div v-if="getChangedFields(log).length > 0" class="pt-2 border-t border-slate-100 overflow-x-auto">
-                                    <table class="min-w-full text-[11px] font-mono">
-                                        <thead>
-                                            <tr class="text-slate-400 border-b border-slate-100 text-left font-bold uppercase tracking-wider text-[10px]">
-                                                <th class="pb-1.5 w-1/4">Field Data</th>
-                                                <th class="pb-1.5 w-3/8 text-rose-600" v-if="log.event_name !== 'create'">Data Before</th>
-                                                <th class="pb-1.5 w-3/8 text-emerald-600" v-if="log.event_name !== 'delete'">Data After</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
-                                            <tr v-for="item in log.detailChanges" :key="item.field" class="hover:bg-slate-50/50">
-                                                <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
-                                                
-                                                <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
-                                                    <span class="bg-rose-50 text-rose-700 px-1.5 py-0.5 -sm line-through block w-fit max-w-xs truncate" :title="String(item.before)">
-                                                        {{ item.before === null || item.before === '' ? '-' : item.before }}
-                                                    </span>
-                                                </td>
-                                                
-                                                <td class="py-1.5" v-if="log.event_name !== 'delete'">
-                                                    <span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 -sm font-bold block w-fit max-w-xs truncate" :title="String(item.after)">
-                                                        {{ item.after === null || item.after === '' ? '-' : item.after }}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                
-                                <div v-if="log.detailChanges.length > 0">
-                                    <span
-                                        @click="showLogsDetails(log.id)"
-                                        class="..."
-                                    >
-                                        Show Details ...
-                                    </span>
-                                </div>
-                            </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </Transition>
-
-    <!-- Modal Log Details -->
-    <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-    >
-        <div
-            v-if="showModalDetail"
-            @click.self="closeModalDetail"
-            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-        >
-            <div
-                class="bg-white w-full max-w-5xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
-            >
-                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
-                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
-                        History Details
-                        <span
-                            v-if="historyLogsDetails.length"
-                            class="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700"
-                        >
-                            Rev. {{ historyLogsDetails[0].revision }}
-                        </span>
-                    </h3>
-                    <button @click="closeModalDetail" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
-                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
-                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
-                    </div>
-
-                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
-                        <div v-for="(log, index) in historyLogsDetails" :key="log.id" class="relative pl-6 animate-fade-in">
-                            <template v-if="Object.keys(groupChangedDetailsByRow(log)).length">
-
-                                <div
-                                    v-for="(fields, row) in groupChangedDetailsByRow(log)"
-                                    :key="row"
-                                    class="mb-6 rounded border border-slate-200 bg-white"
-                                >
-
-                                    <div class="border-b border-slate-200 bg-slate-100 px-4 py-2">
-                                        <div class="flex items-center justify-between">
-                                            <div>
-                                                <div class="text-xs font-bold text-slate-700">
-                                                    Detail Order {{ row }}
-                                                </div>
-                                                <div class="mt-1 text-[10px] text-slate-500">
-                                                    Revision {{ log.revision }}
-                                                    •
-                                                    {{ log.creator.name ?? log.creator.name }}
-                                                    •
-                                                    {{ new Date(log.created_at).toLocaleString('id-ID') }}
-                                                </div>
-                                            </div>
-                                            <span
-                                                class="rounded px-2 py-0.5 text-[10px] font-bold"
-                                                :class="{
-                                                    'bg-blue-100 text-blue-700': log.event_name === 'update',
-                                                    'bg-emerald-100 text-emerald-700': log.event_name === 'create',
-                                                    'bg-rose-100 text-rose-700': log.event_name === 'delete'
-                                                }"
-                                            >
-                                                {{ log.event_name.toUpperCase() }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <table class="min-w-full text-[11px] font-mono">
-                                        <thead>
-                                            <tr class="border-b border-slate-100 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                <th class="w-1/4 px-3 py-2">Field Data</th>
-                                                <th
-                                                    v-if="log.event_name !== 'create'"
-                                                    class="w-3/8 px-3 py-2 text-rose-600"
-                                                >
-                                                    Data Before
-                                                </th>
-                                                <th
-                                                    v-if="log.event_name !== 'delete'"
-                                                    class="w-3/8 px-3 py-2 text-emerald-600"
-                                                >
-                                                    Data After
-                                                </th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody class="divide-y divide-slate-100">
-                                            <tr
-                                                v-for="item in fields"
-                                                :key="item.field"
-                                            >
-                                                <td class="px-3 py-2 font-bold text-slate-600">
-                                                    {{ formatFieldName(item.field) }}
-                                                </td>
-
-                                                <td v-if="log.event_name !== 'create'" class="px-3 py-2">
-                                                    {{ item.before ?? '-' }}
-                                                </td>
-
-                                                <td v-if="log.event_name !== 'delete'" class="px-3 py-2">
-                                                    {{ item.after ?? '-' }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-                                </div>
-
-                            </template>
-
-                            <div
-                                v-else
-                                class="rounded border border-dashed border-slate-300 bg-white px-4 py-6 text-center"
-                            >
-                                <p class="text-xs font-semibold text-slate-500">
-                                    No change found
-                                </p>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </Transition>
+        <!-- Modal Revision History Detail -->
+        <HistoryDetailModal
+            :show="showModalDetail"
+            :loading="isLoadingHistoryDetail"
+            :logs="historyLogsDetails"
+            @close="closeModalDetail"
+        />
+        <pre>
+            show: {{ showModalDetail }}
+            logs: {{ JSON.stringify(historyLogsDetails, null, 2) }}
+        </pre>
     
-
-   <!-- Loading Overlay -->
-    <div v-if="isFetching" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
-        <div class="flex flex-col items-center">
-            <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="text-sm font-black text-blue-900 animate-pulse tracking-widest">
-                Retrieving data, please wait...
-            </p>
-        </div>
-    </div>
 
     <!-- Modal konfirmasi -->
     <!-- <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
