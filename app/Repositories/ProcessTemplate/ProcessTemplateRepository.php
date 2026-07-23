@@ -90,7 +90,9 @@ class ProcessTemplateRepository
 
     public function getLogDetail($logId)
     {
-        return ChangeLogs::where('id', $logId)->get();
+        return ChangeLogs::with('creator:id,name')
+            ->where('id', $logId)
+            ->get();
     }
 
     public function deleteAll($ids)

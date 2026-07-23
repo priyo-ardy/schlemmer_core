@@ -465,6 +465,7 @@ const getChangedFields = (log) => {
 // Show logs details
 const historyLogsDetails = ref([]);
 const showModalDetail = ref(false);
+
 const showLogsDetails = async (id) => {
     isFetching.value = true;
     isLoadingHistory.value = true;
@@ -473,57 +474,124 @@ const showLogsDetails = async (id) => {
         const response = await axios(`/process/logs/detail/${id}`);
         historyLogsDetails.value = response.data;
 
-        console.log(response.data);
+        historyLogsDetails.value = response.data.map(log => ({
+            ...log,
+            detailChanges: getChangedDetailsFields(log)
+        }));
     } catch(err){
         const firstError = Object.values(err)[0];
         toast.error(firstError);
     }finally{
         isFetching.value = false;
         isLoadingHistory.value = false;
+        showModalDetail.value = true;
     }
 };
 
-// const getChangedDetailsFields = (log) => {
-//     const ignoredKeys = ['id', 'uuid', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'revision', 'deleted_by'];
-//     const changes = [];
-    
-//     if (log.event_name === 'update' && log.before.detail && log.after.detail) {
-//         // Cari perbedaan antara data sebelum dan sesudah
-//         Object.keys(log.after.detail).forEach(key => {
-//             if (!ignoredKeys.includes(key) && log.before.detail[key] !== log.after.detail[key]) {
-//                 changes.push({
-//                     field: key,
-//                     before: log.before.detail[key],
-//                     after: log.after.detail[key]
-//                 });
-//             }
-//         });
-//     } else if (log.event_name === 'delete' && log.before.detail) {
-//         // Tampilkan semua data yang dihapus
-//         Object.keys(log.before.detail).forEach(key => {
-//             if (!ignoredKeys.includes(key) && log.before.detail[key] !== null) {
-//                 changes.push({
-//                     field: key,
-//                     before: log.before.detail[key],
-//                     after: null
-//                 });
-//             }
-//         });
-//     } else if (log.event_name === 'create' && log.after.header) {
-//         // Tampilkan semua data yang baru dibuat
-//         Object.keys(log.after.header).forEach(key => {
-//             if (!ignoredKeys.includes(key) && log.after.header[key] !== null) {
-//                 changes.push({
-//                     field: key,
-//                     before: null,
-//                     after: log.after.header[key]
-//                 });
-//             }
-//         });
-//     }
-    
-//     return changes;
-// }
+const closeModalDetail = () => {
+    showModalDetail.value = false;
+    historyLogsDetails.value = [];
+}
+
+const getChangedDetailsFields = (log) => {
+    const ignoredKeys = [
+        'id',
+        'uuid',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+        'created_by',
+        'updated_by',
+        'revision',
+        'deleted_by',
+        'header_id'
+    ];
+
+    const changesDetails = [];
+
+    const beforeDetails = log.before?.detail ?? [];
+    const afterDetails = log.after?.detail ?? [];
+
+    const maxLength = Math.max(beforeDetails.length, afterDetails.length);
+
+    for (let i = 0; i < maxLength; i++) {
+
+        const before = beforeDetails[i];
+        const after = afterDetails[i];
+
+        // CREATE DETAIL
+        if (!before && after) {
+
+            Object.entries(after).forEach(([key, value]) => {
+
+                if (ignoredKeys.includes(key)) return;
+
+                changesDetails.push({
+                    row: i + 1,
+                    field: key,
+                    before: null,
+                    after: value
+                });
+
+            });
+
+            continue;
+        }
+
+        // DELETE DETAIL
+        if (before && !after) {
+
+            Object.entries(before).forEach(([key, value]) => {
+
+                if (ignoredKeys.includes(key)) return;
+
+                changesDetails.push({
+                    row: i + 1,
+                    field: key,
+                    before: value,
+                    after: null
+                });
+
+            });
+
+            continue;
+        }
+
+        // UPDATE DETAIL
+        Object.keys(after).forEach(key => {
+
+            if (ignoredKeys.includes(key)) return;
+
+            if (before[key] !== after[key]) {
+
+                changesDetails.push({
+                    row: i + 1,
+                    field: key,
+                    before: before[key],
+                    after: after[key]
+                });
+
+            }
+
+        });
+    }
+
+    // console.table(changesDetails);
+    return changesDetails;
+};
+
+const groupChangedDetailsByRow = (log) => {
+    return log.detailChanges.reduce((groups, item) => {
+        if (!groups[item.row]) {
+            groups[item.row] = [];
+        }
+
+        groups[item.row].push(item);
+
+        return groups;
+    }, {});
+};
+
 
 // Helper untuk mempercantik nama kolom (contoh: billing_address -> Billing Address)
 const formatFieldName = (text) => {
@@ -1269,7 +1337,7 @@ const formatFieldName = (text) => {
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-50 text-slate-600 font-medium">
-                                            <tr v-for="item in getChangedFields(log)" :key="item.field" class="hover:bg-slate-50/50">
+                                            <tr v-for="item in log.detailChanges" :key="item.field" class="hover:bg-slate-50/50">
                                                 <td class="py-1.5 font-bold text-slate-500">{{ formatFieldName(item.field) }}</td>
                                                 
                                                 <td class="py-1.5 pr-2" v-if="log.event_name !== 'create'">
@@ -1287,14 +1355,16 @@ const formatFieldName = (text) => {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div>
-                                    <span 
+                                
+                                <div v-if="log.detailChanges.length > 0">
+                                    <span
                                         @click="showLogsDetails(log.id)"
-                                        class="text-[10px] font-mono font-bold text-blue-400 hover:text-blue-800 uppercase tracking-wider cursor-pointer"
+                                        class="..."
                                     >
                                         Show Details ...
                                     </span>
                                 </div>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -1304,58 +1374,144 @@ const formatFieldName = (text) => {
     </Transition>
 
     <!-- Modal Log Details -->
-    <transition
-        enter-active-class="transition duration-500 ease-out"
-        enter-from-class="opacity-0 translate-y-4"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-4"
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
     >
-        <div v-if="showDetailModal" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
-            <div class="bg-white  w-full shadow-xl p-6 max-h-[80vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <div>
-                        <h2 class="text-lg font-black">Detail Log: {{ selectedLogDetail }}</h2>
-                        <p class="text-sm font-slate-500 mt-1">Remark: {{ selectedLogRemark }}</p>
-                    </div>
-                    <button @click="showDetailModal = false" class="text-slate-400 hover:text-black">✕</button>
+        <div
+            v-if="showModalDetail"
+            @click.self="closeModalDetail"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        >
+            <div
+                class="bg-white w-full max-w-5xl border border-slate-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            >
+                <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white shrink-0">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-5 w-5 text-blue-600">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        History Details
+                        <span
+                            v-if="historyLogsDetails.length"
+                            class="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700"
+                        >
+                            Rev. {{ historyLogsDetails[0].revision }}
+                        </span>
+                    </h3>
+                    <button @click="closeModalDetail" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
-                <!-- Tabel Detail -->
-                <table class="w-full text-[11px] border-collapse bg-white">
-                    <thead class="bg-blue-300 text-slate-500 uppercase tracking-wider text-[12px] font-bold">
-                        <tr>
-                            <th class="px-6 py-4 text-center">Step</th>
-                            <th class="px-6 py-4 text-center">Previous Problem</th>
-                            <th class="px-6 py-4 text-center">Requirement</th>
-                            <th class="px-6 py-4 text-center">Potential Failure Mode</th>
-                            <th class="px-6 py-4 text-center">Potential Effect of Failure</th>
-                            <th class="px-6 py-4 text-center">Potential Cause of Failure</th>
-                            <th class="px-6 py-4 text-center">Controls Prevention</th>
-                            <th class="px-6 py-4 text-center">Controls Detection</th>
-                            <th class="px-6 py-4 text-center">Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs text-slate-600">
-                        <tr v-for="item in detailLogs" :key="item.id" class=" hover:bg-slate-50">
-                            <td class="px-6 py-4 font-medium text-center font-mono">{{ item.order }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.previous_problem }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.requirements }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.potential_failure_mode }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.potential_effect_of_failure }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.potential_cause_of_failure }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.controls_prevention }}</td>
-                            <td class="px-6 py-4 font-medium">{{ item.controls_detection }}</td>
-                            <td class="px-6 py-4 font-medium">
-                                {{ new Date(item.created_at).toLocaleString('id-ID') }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="max-h-[65vh] overflow-y-auto flex-1 px-6 py-6 bg-slate-50/60 divide-y divide-slate-200/60">
+                    <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-12 gap-3">
+                        <div class="animate-spin h-7 w-7 border-b-2 border-blue-600"></div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading system logs...</span>
+                    </div>
+
+                    <div v-else class="relative border-l-2 border-slate-200 ml-3 space-y-8 pb-4">
+                        <div v-for="(log, index) in historyLogsDetails" :key="log.id" class="relative pl-6 animate-fade-in">
+                            <template v-if="Object.keys(groupChangedDetailsByRow(log)).length">
+
+                                <div
+                                    v-for="(fields, row) in groupChangedDetailsByRow(log)"
+                                    :key="row"
+                                    class="mb-6 rounded border border-slate-200 bg-white"
+                                >
+
+                                    <div class="border-b border-slate-200 bg-slate-100 px-4 py-2">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <div class="text-xs font-bold text-slate-700">
+                                                    Detail Order {{ row }}
+                                                </div>
+                                                <div class="mt-1 text-[10px] text-slate-500">
+                                                    Revision {{ log.revision }}
+                                                    •
+                                                    {{ log.creator.name ?? log.creator.name }}
+                                                    •
+                                                    {{ new Date(log.created_at).toLocaleString('id-ID') }}
+                                                </div>
+                                            </div>
+                                            <span
+                                                class="rounded px-2 py-0.5 text-[10px] font-bold"
+                                                :class="{
+                                                    'bg-blue-100 text-blue-700': log.event_name === 'update',
+                                                    'bg-emerald-100 text-emerald-700': log.event_name === 'create',
+                                                    'bg-rose-100 text-rose-700': log.event_name === 'delete'
+                                                }"
+                                            >
+                                                {{ log.event_name.toUpperCase() }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <table class="min-w-full text-[11px] font-mono">
+                                        <thead>
+                                            <tr class="border-b border-slate-100 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                <th class="w-1/4 px-3 py-2">Field Data</th>
+                                                <th
+                                                    v-if="log.event_name !== 'create'"
+                                                    class="w-3/8 px-3 py-2 text-rose-600"
+                                                >
+                                                    Data Before
+                                                </th>
+                                                <th
+                                                    v-if="log.event_name !== 'delete'"
+                                                    class="w-3/8 px-3 py-2 text-emerald-600"
+                                                >
+                                                    Data After
+                                                </th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody class="divide-y divide-slate-100">
+                                            <tr
+                                                v-for="item in fields"
+                                                :key="item.field"
+                                            >
+                                                <td class="px-3 py-2 font-bold text-slate-600">
+                                                    {{ formatFieldName(item.field) }}
+                                                </td>
+
+                                                <td v-if="log.event_name !== 'create'" class="px-3 py-2">
+                                                    {{ item.before ?? '-' }}
+                                                </td>
+
+                                                <td v-if="log.event_name !== 'delete'" class="px-3 py-2">
+                                                    {{ item.after ?? '-' }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+
+                            </template>
+
+                            <div
+                                v-else
+                                class="rounded border border-dashed border-slate-300 bg-white px-4 py-6 text-center"
+                            >
+                                <p class="text-xs font-semibold text-slate-500">
+                                    No change found
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        </transition>
+    </Transition>
+    
 
    <!-- Loading Overlay -->
     <div v-if="isFetching" class="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
@@ -1371,7 +1527,7 @@ const formatFieldName = (text) => {
     </div>
 
     <!-- Modal konfirmasi -->
-    <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
+    <!-- <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
         <div v-if="showConfirmModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div class="bg-white  w-full max-w-sm shadow-2xl p-6 border border-slate-100">
                 <div class="flex flex-col items-center text-center">
@@ -1387,5 +1543,5 @@ const formatFieldName = (text) => {
                 </div>
             </div>
         </div>
-    </transition>
+    </transition> -->
 </template>
