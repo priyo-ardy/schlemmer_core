@@ -22,17 +22,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (\Exception $e, Request $request) {
-            if ($e instanceof ValidationException) {
-                return;
-            }
+        // $exceptions->render(function (\Exception $e, Request $request) {
+        //     // JANGAN GANGGU ValidationException! 
+        //     // Biarkan Laravel menangani error validasi form/login secara normal.
+        //     if ($e instanceof ValidationException) {
+        //         return;
+        //     }
 
-            if ($request->inertia()) {
-                return back()->withErrors([
-                    'error' => $e->getMessage()
-                ]);
-            }
-        });
+        //     // Untuk error umum / exception lain di luar validasi form:
+        //     if ($request->inertia()) {
+        //         return back()->withErrors([
+        //             'error' => $e->getMessage()
+        //         ]);
+        //     }
+        // });
 
         $exceptions->respond(function (Response $response) {
             if ($response->getStatusCode() === 404) {
