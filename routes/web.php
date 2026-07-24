@@ -84,7 +84,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('project.update');
     Route::post('/projects/delete', [ProjectController::class, 'delete'])->name('project.delete');
     Route::post('/projects/mass-delete', [ProjectController::class, 'massDelete'])->name('project.mass-delete');
-    Route::get('/projects/{project}/logs', [ProjectController::class, 'getLog'])->name('project.mass-delete');
+    Route::get('/projects/{project}/logs', [ProjectController::class, 'getLog'])->name('project.logs');
 
     // UoM Category
     Route::get('/unit_category', [UnitCategoryController::class, 'index'])->name('uom_category.index');
