@@ -26,18 +26,14 @@ class AuthService
     {
         $user = $this->userRepository->findByEmail($credentials['email']);
 
-
-
-        // 1. Antisipasi Timing Attack: Jika user tidak ada, tetap jalankan Hash::check dengan dummy string
-        if (!$user || !$user->is_active) { // Catatan: sesuaikan dengan kolom 'status' di migrasi sebelumnya
+        if (!$user || !$user->is_active) {
             Hash::check($credentials['password'], self::DUMMY_HASH);
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed')
+                'email' => 'Your account is not found or not activated yet'
             ]);
         }
 
-        // 2. Cek apakah akun dikunci administrator
         if ($user->is_locked) {
             activity('auth')
                 ->performedOn($user)
@@ -49,23 +45,18 @@ class AuthService
             ]);
         }
 
-        // 3. Verifikasi Password
         if (!Hash::check($credentials['password'], $user->password)) {
-            // Naikkan hitungan di DB & memori ($user->login_attempts otomatis bertambah)
             $this->userRepository->incrementAttempts($user);
 
-            // Audit Log: Catat setiap kegagalan login
             activity('auth')
                 ->performedOn($user)
                 ->causedBy($user)
                 ->withProperties(['ip' => $ip, 'attempt' => $user->login_attempts])
                 ->log('Failed login attempt.');
 
-            // Fix Logical Bug: Cek nilai asli setelah di-increment
             if ($user->login_attempts >= self::MAX_ATTEMPTS) {
                 $this->userRepository->lockAccount($user);
 
-                // Audit Log: Catat saat sistem otomatis mengunci akun
                 activity('auth')
                     ->performedOn($user)
                     ->causedBy($user)
@@ -78,17 +69,14 @@ class AuthService
             }
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                'email' => 'Invalid username or password'
             ]);
         }
 
-        // 4. Login Sukses
         Auth::login($user, $credentials['remember'] ?? false);
 
-        // Update data login dan RESET attempts ke 0
         $this->userRepository->updateLoginSuccess($user, $ip);
 
-        // Audit Log: Login sukses
         activity('auth')
             ->performedOn($user)
             ->causedBy($user)

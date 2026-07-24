@@ -28,7 +28,7 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/', [AuthController::class, 'index'])
         ->name('login');
-    Route::post('/', [AuthController::class, 'store'])->middleware('throttle:5,1');
+    Route::post('/login', [AuthController::class, 'store'])->middleware('throttle:5,1');
 
     Route::get('forgot-password', [AuthController::class, 'forgotPassword'])
         ->name('password.request');

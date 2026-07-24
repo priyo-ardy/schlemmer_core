@@ -12,10 +12,10 @@ const form = useForm({
 });
 
 const submit = () => {
-    // Bersihkan error lama setiap kali tombol ditekan
+    // Bersihkan error lama setiap kali tombol ditekan[cite: 4]
     form.clearErrors();
 
-    // Validasi instan di Frontend (Client-side)
+    // Validasi instan di Frontend (Client-side)[cite: 4]
     if (!form.email) {
         form.setError("email", "Email address is required.");
     }
@@ -24,13 +24,13 @@ const submit = () => {
         form.setError("password", "Password is required.");
     }
 
-    // Jika ada error, stop proses submit ke backend
+    // Jika ada error, stop proses submit ke backend[cite: 4]
     if (form.hasErrors) {
         return;
     }
 
-    // Jika semua terisi, baru gas kirim ke Laravel backend
-    form.post("/", {
+    // Jika semua terisi, kirim ke rute POST /login yang benar
+    form.post("/login", {
         onFinish: () => form.reset("password"),
     });
 };
@@ -81,7 +81,7 @@ const submit = () => {
                             type="email"
                             v-model="form.email"
                             autofocus
-                            class="w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm text-sm"
+                            class="w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm"
                             :class="{
                                 'border-rose-500 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500':
                                     form.errors.email,
@@ -90,13 +90,14 @@ const submit = () => {
                             }"
                             placeholder="name@schlemmer.co.id"
                         />
+                        <!-- Tempat munculnya error dari backend (AuthService) maupun frontend -->
                         <div
                             v-if="form.errors.email"
                             class="text-xs text-rose-500 mt-1.5 font-medium flex items-center gap-1"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                class="h-3.5 w-3.5"
+                                class="h-3.5 w-3.5 shrink-0"
                                 viewBox="0 0 20 20"
                                 fill="currentColor"
                             >
@@ -106,7 +107,7 @@ const submit = () => {
                                     clip-rule="evenodd"
                                 />
                             </svg>
-                            {{ form.errors.email }}
+                            <span>{{ form.errors.email }}</span>
                         </div>
                     </div>
 
@@ -143,7 +144,7 @@ const submit = () => {
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                class="h-3.5 w-3.5"
+                                class="h-3.5 w-3.5 shrink-0"
                                 viewBox="0 0 20 20"
                                 fill="currentColor"
                             >
@@ -153,7 +154,7 @@ const submit = () => {
                                     clip-rule="evenodd"
                                 />
                             </svg>
-                            {{ form.errors.password }}
+                            <span>{{ form.errors.password }}</span>
                         </div>
                     </div>
 
