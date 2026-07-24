@@ -40,11 +40,11 @@ const header = computed(() => props.data?.header || {});
 // State editing & loading
 const isEditing = ref(false);
 const isLoadingHistory = ref(false);
+const showSaveModal = ref(false);
 
 const isDeptDropDownOpen = ref(false);
 const deptSearch = ref('');
 const highlightedDeptIndex = ref(-1);
-const highlightedIndex = ref(-1);
 const searchInput = ref(null);
 
 const isStageDropDownOpen = ref(false);
@@ -107,11 +107,19 @@ const form = useForm({
     material_id: '',
     drawing_change: '',
     process_responsibility: 'Development, Manufacturing, Quality, Business, Logistics',
+    reason: '',
     prepared_by: '',
     reviewed_by: '',
     approved_by: '',
     core_teams: [],
     details: []
+});
+
+// Watcher hapus error reason saat user mulai ngetik
+watch(() => form.reason, (newVal) => {
+    if (newVal && newVal.trim()) {
+        form.clearErrors('reason');
+    }
 });
 
 // Populate Form & Update Defaults
@@ -125,10 +133,10 @@ const populateForm = (data) => {
 
     const allUsers = props.users && props.users.length > 0 ? props.users : (page.props.users || []);
     const mappedTeams = (data.core_teams || []).map(item => {
-        const userObj = allUsers.find(u => u.id === item.user_id);
+        const userObj = allUsers.find(u => u.id === (item.user_id || item.id));
         return userObj || {
-            id: item.user_id,
-            name: item.team?.name || `User #${item.user_id}`
+            id: item.user_id || item.id,
+            name: item.team?.name || item.name || item.user?.name || `User #${item.user_id || item.id}`
         };
     });
 
@@ -150,24 +158,24 @@ const populateForm = (data) => {
         mappedDetails.push(createBlankitem());
     }
 
-    // Set values to form
     form.id = data.header.id || '';
     form.code = data.header.code || '';
     form.date = formattedDate;
-    form.department_id = data.header.department_id || '';
+    // Strictly UUID
+    form.department_id = data.header.department?.uuid || data.header.department_id || '';
     form.version = data.header.version || 0;
     form.scope = data.header.scope || '';
     form.project_id = data.header.project_id || '';
     form.material_id = data.header.material_id || '';
     form.drawing_change = data.header.material?.drawing_change ?? '';
     form.process_responsibility = data.header.process_responsibility || 'Development, Manufacturing, Quality, Business, Logistics';
+    form.reason = '';
     form.prepared_by = data.header.prepared_by || '';
     form.reviewed_by = data.header.reviewed_by || '';
     form.approved_by = data.header.approved_by || '';
     form.core_teams = mappedTeams;
     form.details = mappedDetails;
 
-    // Update form default values
     form.defaults({
         id: form.id,
         code: form.code,
@@ -179,6 +187,7 @@ const populateForm = (data) => {
         material_id: form.material_id,
         drawing_change: form.drawing_change,
         process_responsibility: form.process_responsibility,
+        reason: '',
         prepared_by: form.prepared_by,
         reviewed_by: form.reviewed_by,
         approved_by: form.approved_by,
@@ -187,7 +196,6 @@ const populateForm = (data) => {
     });
 };
 
-// Watcher data utama dari Backend
 watch(
     () => props.data,
     (newData) => {
@@ -196,7 +204,6 @@ watch(
     { immediate: true, deep: true }
 );
 
-// Cancel Editing Handler
 const cancelEdit = () => {
     isEditing.value = false;
     form.clearErrors();
@@ -207,11 +214,14 @@ const cancelEdit = () => {
 const filteredDept = computed(() => {
     if (!deptSearch.value) return props.departments;
     const lowerSearch = deptSearch.value.toLowerCase();
-    return props.departments.filter(c => c.name.toLowerCase().includes(lowerSearch) || c.short_name.toLowerCase().includes(lowerSearch));
+    return props.departments.filter(c => 
+        c.name.toLowerCase().includes(lowerSearch) || 
+        (c.short_name && c.short_name.toLowerCase().includes(lowerSearch))
+    );
 });
 
 watch(deptSearch, () => {
-    highlightedIndex.value = filteredDept.value.length > 0 ? 0 : -1;
+    highlightedDeptIndex.value = filteredDept.value.length > 0 ? 0 : -1;
 });
 
 const toggleDeptDropdown = async () => {
@@ -219,48 +229,54 @@ const toggleDeptDropdown = async () => {
     isDeptDropDownOpen.value = !isDeptDropDownOpen.value;
     
     if (isDeptDropDownOpen.value) {
-        highlightedIndex.value = filteredDept.value.length > 0 ? 0 : -1;
+        highlightedDeptIndex.value = filteredDept.value.length > 0 ? 0 : -1;
         await nextTick();
         searchInput.value?.focus();
     }
 };
 
 const moveDown = () => {
-    if (highlightedIndex.value < filteredDept.value.length - 1) {
-        highlightedIndex.value++;
+    if (highlightedDeptIndex.value < filteredDept.value.length - 1) {
+        highlightedDeptIndex.value++;
         ensureVisible();
     }
 };
 
 const moveUp = () => {
-    if (highlightedIndex.value > 0) {
-        highlightedIndex.value--;
+    if (highlightedDeptIndex.value > 0) {
+        highlightedDeptIndex.value--;
         ensureVisible();
     }
 };
 
 const selectHighlighted = () => {
-    if (highlightedIndex.value >= 0 && highlightedIndex.value < filteredDept.value.length) {
-        const targetDept = filteredDept.value[highlightedIndex.value];
-        selectDept(targetDept.id);
+    if (highlightedDeptIndex.value >= 0 && highlightedDeptIndex.value < filteredDept.value.length) {
+        const targetDept = filteredDept.value[highlightedDeptIndex.value];
+        selectDept(targetDept);
     }
 };
 
+// Strictly matching via UUID
 const selectedDeptName = computed(() => {
     if (!form.department_id) return "Select department ...";
-    const targetCode = props.data?.header?.department?.code;
-    const dept = props.departments.find(c => 
-        c.id == form.department_id || (targetCode && c.code === targetCode)
-    );
-    return dept ? `${dept.short_name} - ${dept.name}` : (props.data?.header?.department ? `${props.data.header.department.short_name} - ${props.data.header.department.name}` : "Select department ...");
+
+    const dept = props.departments.find(c => String(c.uuid) === String(form.department_id));
+    if (dept) return `${dept.short_name} - ${dept.name}`;
+
+    if (props.data?.header?.department) {
+        return `${props.data.header.department.short_name} - ${props.data.header.department.name}`;
+    }
+
+    return "Select department ...";
 });
 
-const selectDept = (id) => {
+// Strictly assign dept.uuid
+const selectDept = (dept) => {
     if (!isEditing.value) return;
-    form.department_id = id;
+    form.department_id = dept.uuid;
     isDeptDropDownOpen.value = false;
     deptSearch.value = "";
-    highlightedIndex.value = -1;
+    highlightedDeptIndex.value = -1;
 };
 
 const optionsList = ref(null);
@@ -268,7 +284,7 @@ const ensureVisible = () => {
     nextTick(() => {
         const listEl = optionsList.value;
         if (!listEl) return;
-        const activeEl = listEl.children[highlightedIndex.value];
+        const activeEl = listEl.children[highlightedDeptIndex.value];
         if (!activeEl) return;
         const listScrollTop = listEl.scrollTop;
         const listHeight = listEl.clientHeight;
@@ -631,10 +647,11 @@ watch(
 
 // Process template
 const dropdownStyle = ref({
-    position: 'absolute',
+    position: 'fixed',
     top: '0px',
     left: '0px',
-    width: '0px'
+    width: '0px',
+    zIndex: '9999'
 });
 
 const selectedProcessName = (item) => {
@@ -695,10 +712,18 @@ const updateProcessDropdownPosition = (index) => {
     const triggerEl = document.getElementById(`process-trigger-${index}`);
     if (triggerEl) {
         const rect = triggerEl.getBoundingClientRect();
+        const dropdownHeight = 220;
+        const spaceBelow = window.innerHeight - rect.bottom;
+
+        let topPos = rect.bottom;
+        if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+            topPos = rect.top - dropdownHeight;
+        }
+
         dropdownStyle.value = {
             position: 'fixed',
-            top: `${rect.bottom + window.scrollY}px`,
-            left: `${rect.left + window.scrollX}px`,
+            top: `${topPos}px`,
+            left: `${rect.left}px`,
             width: `${rect.width}px`,
             zIndex: '9999'
         };
@@ -956,24 +981,29 @@ const newForm = () => {
     router.get('/pfmea/create');
 };
 
+const handleOpenSaveModal = () => {
+    if (!isEditing.value) return;
+    showSaveModal.value = true;
+};
+
 const validateAndSave = () => {
+    // Validasi frontend untuk reason
+    if (!form.reason || !form.reason.trim()) {
+        form.setError('reason', 'Revision / change reason is required.');
+        return;
+    }
+
     form.put(`/pfmea/${form.id}`, {
         onSuccess: () => {
+            showSaveModal.value = false;
             isEditing.value = false;
+            form.reason = '';
             toast.success("Document updated successfully");
         },
         onError: () => {
             toast.error("Validation error, please check your input");
         }
     });
-};
-
-const openLogs = (id) => {
-    isLoadingHistory.value = true;
-    setTimeout(() => {
-        isLoadingHistory.value = false;
-        toast.info("Change logs feature clicked");
-    }, 500);
 };
 
 const deleteSelected = (id) => {
@@ -983,6 +1013,152 @@ const deleteSelected = (id) => {
             onSuccess: () => toast.success("Document deleted successfully")
         });
     }
+};
+
+// --- CHANGE LOGS & REVISION HISTORY LOGIC ---
+const showLogs = ref(false);
+const dataLogs = ref([]);
+const showDetailModal = ref(false);
+const selectedDetailLog = ref(null);
+
+const changeLogs = async (id) => {
+    isLoadingHistory.value = true;
+    try {
+        const response = await axios(`/pfmea/${id}/logs`);
+        dataLogs.value = response.data;
+        showLogs.value = true;
+    } catch (err) {
+        const firstError = typeof err === 'object' && err !== null ? Object.values(err)[0] : 'Failed to fetch logs';
+        toast.error(typeof firstError === 'string' ? firstError : 'Error fetching change logs');
+    } finally {
+        isLoadingHistory.value = false;
+    }
+};
+
+const openDetailsModal = (log) => {
+    selectedDetailLog.value = log;
+    showDetailModal.value = true;
+};
+
+const formatTeams = (teams) => {
+    if (!teams || !Array.isArray(teams) || teams.length === 0) return '-';
+    
+    return teams
+        .map(t => t.team?.name || t.name || t.user?.name || (t.user_id ? `User #${t.user_id}` : `User #${t.id}`))
+        .filter(Boolean)
+        .join(', ');
+};
+
+const getHeaderDiffs = (log) => {
+    const beforeH = log.before?.header || {};
+    const afterH = log.after?.header || {};
+
+    const beforeTeams = formatTeams(log.before?.core_teams);
+    const afterTeams = formatTeams(log.after?.core_teams);
+
+    const comparisons = [
+        { label: 'Code', before: beforeH.code, after: afterH.code },
+        { label: 'Scope', before: beforeH.scope, after: afterH.scope },
+        { label: 'Department', before: beforeH.department?.name || beforeH.department?.short_name, after: afterH.department?.name || afterH.department?.short_name },
+        { label: 'Project', before: beforeH.project?.name || beforeH.project?.code, after: afterH.project?.name || afterH.project?.code },
+        { label: 'Material', before: beforeH.material?.name || beforeH.material?.code, after: afterH.material?.name || afterH.material?.code },
+        { label: 'Process Responsibility', before: beforeH.process_responsibility, after: afterH.process_responsibility },
+        { label: 'Core Teams', before: beforeTeams, after: afterTeams }
+    ];
+
+    if (log.event_name === 'create') {
+        return comparisons.filter(c => c.after && c.after !== '-').map(c => ({ label: c.label, before: '-', after: c.after }));
+    }
+
+    const changed = comparisons.filter(c => (c.before || '') !== (c.after || ''));
+    return changed.length > 0 ? changed : [{ label: 'Remark', before: '-', after: '-' }];
+};
+
+const getDetailItems = (log) => {
+    if (!log) return [];
+    const beforeDetails = log.before?.details || [];
+    const afterDetails = log.after?.details || [];
+
+    const maxLen = Math.max(beforeDetails.length, afterDetails.length);
+    const result = [];
+
+    for (let i = 0; i < maxLen; i++) {
+        const b = beforeDetails[i] || {};
+        const a = afterDetails[i] || {};
+        const pfB = b.process_function || b.process || {};
+        const pfA = a.process_function || a.process || {};
+
+        const rawFields = [
+            { label: 'Order', before: b.order, after: a.order },
+            { label: 'Process Function Name', before: pfB.name, after: pfA.name },
+            { label: 'Sequence', before: pfB.sequence, after: pfA.sequence },
+            { label: 'Process Parent', before: pfB.process_parent, after: pfA.process_parent },
+            { label: 'Process Child', before: pfB.process_child, after: pfA.process_child },
+            { 
+                label: 'Revision', 
+                before: pfB.revision !== undefined && pfB.revision !== null ? `Rev. ${pfB.revision}` : undefined, 
+                after: pfA.revision !== undefined && pfA.revision !== null ? `Rev. ${pfA.revision}` : undefined 
+            }
+        ];
+
+        const changedFields = rawFields.filter(f => {
+            const valBefore = (f.before === null || f.before === undefined || f.before === '') ? '-' : String(f.before);
+            const valAfter = (f.after === null || f.after === undefined || f.after === '') ? '-' : String(f.after);
+
+            if (log.event_name === 'create') {
+                return valAfter !== '-';
+            }
+
+            return valBefore !== valAfter;
+        }).map(f => ({
+            label: f.label,
+            before: (f.before === null || f.before === undefined || f.before === '') ? '-' : String(f.before),
+            after: (f.after === null || f.after === undefined || f.after === '') ? '-' : String(f.after)
+        }));
+
+        if (changedFields.length > 0) {
+            result.push({
+                order: a.order || b.order || (i + 1),
+                updater: a.updater?.name || log.after?.header?.updater?.name || 'System User',
+                date: dayjs(a.created_at || log.created_at).format('DD/MM/YYYY, HH.mm.ss'),
+                event_name: log.event_name,
+                fields: changedFields
+            });
+        }
+    }
+
+    return result;
+};
+
+const hasDetailChanges = (log) => {
+    if (!log) return false;
+    
+    const beforeDetails = log.before?.details || [];
+    const afterDetails = log.after?.details || [];
+
+    if (log.event_name === 'create' && afterDetails.length > 0) return true;
+    if (beforeDetails.length !== afterDetails.length) return true;
+
+    for (let i = 0; i < beforeDetails.length; i++) {
+        const b = beforeDetails[i] || {};
+        const a = afterDetails[i] || {};
+        const pfB = b.process_function || b.process || {};
+        const pfA = a.process_function || a.process || {};
+
+        if (
+            b.order !== a.order ||
+            b.process_id !== a.process_id ||
+            pfB.name !== pfA.name ||
+            pfB.sequence !== pfA.sequence ||
+            pfB.process_parent !== pfA.process_parent ||
+            pfB.process_child !== pfA.process_child ||
+            pfB.revision !== pfA.revision
+        ) {
+            return true;
+        }
+    }
+    
+    return false;
 };
 </script>
 
@@ -994,7 +1170,6 @@ const deleteSelected = (id) => {
         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
             <!-- Heading -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <!-- Page Head -->
                 <div>
                     <h1 class="text-2xl font-black text-slate-900 tracking-tight">PMFEA Process Function</h1>
                     <p class="text-xs text-slate-500 mt-1">View and manage PFMEA template process function.</p>
@@ -1041,7 +1216,7 @@ const deleteSelected = (id) => {
                                 <div class="w-px h-6 bg-slate-300 mx-1"></div>
 
                                 <div class="flex items-center gap-1.5">
-                                    <button v-if="isEditing" type="button" @click="validateAndSave" :disabled="form.processing"
+                                    <button v-if="isEditing" type="button" @click="handleOpenSaveModal" :disabled="form.processing"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                                         <svg v-if="form.processing" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1096,7 +1271,7 @@ const deleteSelected = (id) => {
                                         </button>
                                         <div class="absolute right-0 top-full mt-1.5 w-40 bg-white border border-slate-100 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden origin-top-right transform scale-95 group-hover:scale-100">
                                             <div class="py-1 flex flex-col">
-                                                <button type="button" @click="openLogs(header.id)" :disabled="isLoadingHistory" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
+                                                <button type="button" @click="changeLogs(header.id)" :disabled="isLoadingHistory" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
                                                     <svg v-if="!isLoadingHistory" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
                                                         <path d="M21 6.375c0 2.692-4.03 4.875-9 4.875S3 9.067 3 6.375 7.03 1.5 12 1.5s9 2.183 9 4.875Z" />
                                                         <path d="M12 12.75c2.685 0 5.19-.586 7.078-1.609a8.283 8.283 0 0 0 1.897-1.384c.016.121.025.244.025.368C21 12.817 16.97 15 12 15s-9-2.183-9-4.875c0-.124.009-.247.025-.368a8.285 8.285 0 0 0 1.897 1.384C6.809 12.164 9.315 12.75 12 12.75Z" />
@@ -1134,8 +1309,8 @@ const deleteSelected = (id) => {
                 </div>     
             </div>
 
-            <!-- Form header -->
-            <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
+            <!-- Form header (Ditambahkan relative z-20 agar berada di atas layer tabel) -->
+            <div class="relative z-20 bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
                     <div class="lg:col-span-3">
                         <div class="flex items-center gap-1.5 mb-2">
@@ -1198,11 +1373,11 @@ const deleteSelected = (id) => {
                             Issued Department <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <div v-if="isDeptDropDownOpen && isEditing" @click="isDeptDropDownOpen = false" class="fixed inset-0 z-0"></div>
+                            <div v-if="isDeptDropDownOpen && isEditing" @click="isDeptDropDownOpen = false" class="fixed inset-0 z-40"></div>
 
                             <div
                                 @click="toggleDeptDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
                                 :class="[
                                     !isEditing ? 'bg-slate-100/70 border-slate-200 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
                                     form.errors.department_id ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600' : ''
@@ -1219,7 +1394,7 @@ const deleteSelected = (id) => {
                             <p v-if="form.errors.department_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ form.errors.department_id }}</p>
 
                             <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-out" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                <div v-if="isDeptDropDownOpen && isEditing" class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
+                                <div v-if="isDeptDropDownOpen && isEditing" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1230,7 +1405,7 @@ const deleteSelected = (id) => {
                                     </div>
 
                                     <div ref="optionsList" class="max-h-48 overflow-y-auto">
-                                        <div v-for="(dept, index) in filteredDept" :key="dept.id" @click="selectDept(dept.id)" @mouseenter="highlightedDeptIndex = index" class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0" :class="[form.department_id === dept.id ? 'border-l-2 border-l-blue-600 font-bold' : '', index === highlightedDeptIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700']">
+                                        <div v-for="(dept, index) in filteredDept" :key="dept.uuid || dept.id" @click="selectDept(dept)" @mouseenter="highlightedDeptIndex = index" class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0" :class="[(form.department_id === dept.uuid) ? 'border-l-2 border-l-blue-600 font-bold' : '', index === highlightedDeptIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700']">
                                             {{ dept.short_name }} - {{ dept.name }}
                                         </div>
                                         <div v-if="filteredDept.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">Department not found ... "{{ deptSearch }}"</div>
@@ -1245,11 +1420,11 @@ const deleteSelected = (id) => {
                             Document Scope <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <div v-if="isStageDropDownOpen && isEditing" @click="isStageDropDownOpen = false" class="fixed inset-0 z-0"></div>
+                            <div v-if="isStageDropDownOpen && isEditing" @click="isStageDropDownOpen = false" class="fixed inset-0 z-40"></div>
 
                             <div
                                 @click="toggleStagesDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
                                 :class="[
                                     !isEditing ? 'bg-slate-100/70 border-slate-200 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
                                     form.errors.scope ? 'border-rose-500 focus:border-rose-500 text-rose-600' : ''
@@ -1266,7 +1441,7 @@ const deleteSelected = (id) => {
                             <p v-if="form.errors.scope" class="mt-1 text-[10px] font-bold text-rose-500">{{ form.errors.scope }}</p>
 
                             <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-out" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                <div v-if="isStageDropDownOpen && isEditing" class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
+                                <div v-if="isStageDropDownOpen && isEditing" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1292,11 +1467,11 @@ const deleteSelected = (id) => {
                             Project <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <div v-if="isProjectOpen && isEditing" @click="isProjectOpen = false" class="fixed inset-0 z-20"></div>
+                            <div v-if="isProjectOpen && isEditing" @click="isProjectOpen = false" class="fixed inset-0 z-40"></div>
 
                             <div
                                 @click="toggleProjectDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
                                 :class="[
                                     !isEditing ? 'bg-slate-100/70 border-slate-200 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
                                     form.errors.project_id ? 'border-rose-500 focus:border-rose-500 text-rose-600' : ''
@@ -1306,7 +1481,7 @@ const deleteSelected = (id) => {
                                     {{ selectedProjectName }}
                                 </span>
 
-                                <div class="flex items-center space-x-1.5 relative z-20">
+                                <div class="flex items-center space-x-1.5 relative z-40">
                                     <svg v-if="form.project_id && isEditing" @click.stop="clearProject" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -1319,7 +1494,7 @@ const deleteSelected = (id) => {
                             <p v-if="form.errors.project_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ form.errors.project_id }}</p>
 
                             <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-out" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                <div v-if="isProjectOpen && isEditing" class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
+                                <div v-if="isProjectOpen && isEditing" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1346,11 +1521,11 @@ const deleteSelected = (id) => {
                             Part No. <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <div v-if="isMaterialOpen && isEditing" @click="isMaterialOpen = false" class="fixed inset-0 z-0"></div>
+                            <div v-if="isMaterialOpen && isEditing" @click="isMaterialOpen = false" class="fixed inset-0 z-40"></div>
 
                             <div
                                 @click="toggleMaterialDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
                                 :class="[
                                     !isEditing ? 'bg-slate-100/70 border-slate-200 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800',
                                     form.errors.material_id ? 'border-rose-500 focus:border-rose-500 text-rose-600' : ''
@@ -1360,7 +1535,7 @@ const deleteSelected = (id) => {
                                     {{ selectedMaterialName }}
                                 </span>
 
-                                <div class="flex items-center space-x-1.5 relative z-30">
+                                <div class="flex items-center space-x-1.5 relative z-40">
                                     <svg v-if="form.material_id && isEditing" @click.stop="clearMaterial" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors duration-150" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -1373,7 +1548,7 @@ const deleteSelected = (id) => {
                             <p v-if="form.errors.material_id" class="mt-1 text-[10px] font-bold text-rose-500">{{ form.errors.material_id }}</p>
 
                             <Transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-out" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                <div v-if="isMaterialOpen && isEditing" class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
+                                <div v-if="isMaterialOpen && isEditing" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden">
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1483,7 +1658,7 @@ const deleteSelected = (id) => {
                 </div>
                 <div class="overflow-auto max-h-[100vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
-                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider z-30 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[350px]">Process Function</th>
@@ -1509,7 +1684,7 @@ const deleteSelected = (id) => {
                                         <div
                                             :id="`process-trigger-${index}`"
                                             @click="toggleProcessDropdown(index)"
-                                            class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
+                                            class="relative z-1 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all"
                                             :class="[
                                                 !isEditing ? 'bg-slate-100/70 border-slate-200 cursor-not-allowed text-slate-600' : 'bg-white cursor-pointer border-slate-300 focus:border-blue-500 text-slate-800',
                                                 form.errors[`details.${index}.process_id`] ? 'border-rose-500 bg-rose-50 text-rose-600' : ''
@@ -1519,7 +1694,7 @@ const deleteSelected = (id) => {
                                                 {{ selectedProcessName(item) }}
                                             </span>
 
-                                            <div class="flex items-center space-x-1.5 relative z-30">
+                                            <div class="flex items-center space-x-1.5 relative z-10">
                                                 <svg v-if="item.process_id && isEditing" @click.stop="clearProcess(index)" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
@@ -1601,5 +1776,250 @@ const deleteSelected = (id) => {
                 </div>
             </div>
         </div>
+
+        <!-- MODAL 1: SAVE CONFIRMATION WITH REASON -->
+        <Teleport to="body">
+            <div v-if="showSaveModal" class="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div class="bg-white border border-slate-200 shadow-2xl w-full max-w-md p-6 font-sans">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Revision / Change Reason
+                        </h3>
+                        <button type="button" @click="showSaveModal = false" class="text-slate-400 hover:text-slate-600">✕</button>
+                    </div>
+
+                    <p class="text-xs text-slate-500 mb-3">
+                        Please enter the reason for updating this PFMEA document. This reason will be recorded in the change log history.
+                    </p>
+
+                    <div class="mb-4">
+                        <textarea
+                            v-model="form.reason"
+                            rows="3"
+                            class="w-full p-2.5 border text-xs font-medium transition-all outline-none resize-none"
+                            :class="[
+                                form.errors.reason 
+                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 text-rose-600 bg-rose-50/50' 
+                                    : 'bg-slate-50 border-slate-300 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:ring-blue-100 text-slate-800'
+                            ]"
+                            placeholder="e.g., Updated process function details and team members..."
+                        ></textarea>
+                        <p v-if="form.errors.reason" class="mt-1.5 text-[10px] font-bold text-rose-500 font-sans">
+                            {{ form.errors.reason }}
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            @click="showSaveModal = false"
+                            class="px-3.5 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            @click="validateAndSave"
+                            :disabled="form.processing"
+                            class="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        >
+                            <svg v-if="form.processing" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>{{ form.processing ? 'Saving...' : 'Save Changes' }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- MODAL 2: PROCESS FUNCTION REVISION HISTORY TIMELINE -->
+        <Teleport to="body">
+            <div v-if="showLogs" class="fixed inset-0 z-[9990] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div class="bg-white border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col font-sans">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white sticky top-0 z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="p-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-black text-slate-900 tracking-wider uppercase">
+                                PROCESS FUNCTION REVISION HISTORY : {{ header?.code || 'DOCUMENT' }}
+                            </h3>
+                        </div>
+                        <button type="button" @click="showLogs = false" class="text-slate-400 hover:text-slate-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Timeline Content Body -->
+                    <div class="p-6 overflow-y-auto space-y-6 bg-slate-50/50">
+                        <div v-if="dataLogs.length === 0" class="text-center py-12 text-slate-400 font-medium text-xs">
+                            No revision logs found.
+                        </div>
+
+                        <div v-else class="relative border-l-2 border-slate-200 ml-3 pl-6 space-y-6">
+                            <div v-for="(log, idx) in dataLogs" :key="log.id" class="relative group">
+                                <!-- Timeline Marker Dot -->
+                                <div class="absolute -left-[31px] top-3.5 h-3 w-3 bg-blue-600 border-2 border-white shadow-sm"></div>
+
+                                <!-- Card Item -->
+                                <div class="bg-white border border-slate-200 shadow-xs p-5 space-y-4">
+                                    <!-- Meta Header -->
+                                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2 py-0.5 text-[10px] font-mono font-bold text-slate-600 border border-slate-300 uppercase">
+                                                REV. {{ log.after?.header?.version ?? log.revision ?? 0 }}
+                                            </span>
+                                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700 bg-blue-100">
+                                                {{ log.event_name }}
+                                            </span>
+                                            <span class="text-xs font-black text-slate-800 ml-1">
+                                                {{ log.after?.header?.updater?.name || log.before?.header?.updater?.name || 'System User' }}
+                                            </span>
+                                        </div>
+                                        <span class="text-xs font-semibold text-slate-400">
+                                            {{ dayjs(log.created_at).format('DD/MM/YYYY, HH.mm.ss') }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Change Reason -->
+                                    <div>
+                                        <span class="block text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                                            CHANGE REASON
+                                        </span>
+                                        <p class="text-xs font-bold text-slate-800 mt-1">
+                                            {{ log.change_reason || 'No description provided.' }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Header Diff Table -->
+                                    <div class="border border-slate-100 bg-white">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider">
+                                                    <th class="py-2 px-3 text-slate-400 w-1/3">FIELD DATA</th>
+                                                    <th class="py-2 px-3 text-rose-500 w-1/3">DATA BEFORE</th>
+                                                    <th class="py-2 px-3 text-emerald-600 w-1/3">DATA AFTER</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100 text-xs">
+                                                <tr v-for="diff in getHeaderDiffs(log)" :key="diff.label">
+                                                    <td class="py-2 px-3 font-semibold text-slate-600">{{ diff.label }}</td>
+                                                    <td class="py-2 px-3">
+                                                        <span v-if="diff.before !== '-'" class="bg-rose-100/80 text-rose-700 line-through px-1.5 py-0.5 font-mono text-[11px]">
+                                                            {{ diff.before }}
+                                                        </span>
+                                                        <span v-else class="text-slate-400 font-mono">-</span>
+                                                    </td>
+                                                    <td class="py-2 px-3">
+                                                        <span v-if="diff.after !== '-'" class="bg-emerald-100/80 text-emerald-800 font-bold px-1.5 py-0.5 font-mono text-[11px]">
+                                                            {{ diff.after }}
+                                                        </span>
+                                                        <span v-else class="text-slate-400 font-mono">-</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Trigger Show Details Modal -->
+                                    <div v-if="hasDetailChanges(log)" class="pt-2 border-t border-slate-100/60 mt-4">
+                                        <button type="button" @click="openDetailsModal(log)" class="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline transition-all">
+                                            Show Details ...
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- MODAL 3: HISTORY DETAILS (DETAILS BREAKDOWN) -->
+        <Teleport to="body">
+            <div v-if="showDetailModal" class="fixed inset-0 z-[9995] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div class="bg-white border border-slate-200 shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col font-sans">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white sticky top-0 z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="p-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-sm font-black text-slate-900 tracking-wider uppercase flex items-center gap-2">
+                                HISTORY DETAILS 
+                                <span class="bg-blue-100 text-blue-700 text-[10px] font-mono px-2 py-0.5 rounded-xs uppercase">
+                                    REV. {{ selectedDetailLog?.after?.header?.version ?? selectedDetailLog?.revision ?? 1 }}
+                                </span>
+                            </h3>
+                        </div>
+                        <button type="button" @click="showDetailModal = false" class="text-slate-400 hover:text-slate-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-6 overflow-y-auto space-y-6 bg-slate-50/50">
+                        <div v-if="getDetailItems(selectedDetailLog).length === 0" class="text-center py-12 text-slate-400 font-medium text-xs bg-white border border-slate-200">
+                            No process function details were changed in this revision.
+                        </div>
+
+                        <div v-else v-for="item in getDetailItems(selectedDetailLog)" :key="item.order" class="bg-white border border-slate-200 shadow-xs">
+                            <div class="flex items-center justify-between bg-slate-100/70 px-4 py-3 border-b border-slate-200">
+                                <div>
+                                    <h4 class="text-xs font-black text-slate-800">Detail Order {{ item.order }}</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium mt-0.5">
+                                        Revision {{ selectedDetailLog?.after?.header?.version ?? selectedDetailLog?.revision ?? 1 }} • {{ item.updater }} • {{ item.date }}
+                                    </p>
+                                </div>
+                                <span class="px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700 bg-blue-100">
+                                    {{ item.event_name }}
+                                </span>
+                            </div>
+
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider">
+                                        <th class="py-2.5 px-4 text-slate-400 w-1/3">FIELD DATA</th>
+                                        <th class="py-2.5 px-4 text-rose-500 w-1/3">DATA BEFORE</th>
+                                        <th class="py-2.5 px-4 text-emerald-600 w-1/3">DATA AFTER</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-xs font-mono">
+                                    <tr v-for="field in item.fields" :key="field.label">
+                                        <td class="py-2 px-4 font-sans font-bold text-slate-600">{{ field.label }}</td>
+                                        <td class="py-2 px-4">
+                                            <span v-if="field.before !== '-'" class="bg-rose-100/80 text-rose-700 line-through px-1.5 py-0.5">
+                                                {{ field.before }}
+                                            </span>
+                                            <span v-else class="text-slate-400">-</span>
+                                        </td>
+                                        <td class="py-2 px-4">
+                                            <span v-if="field.after !== '-'" class="bg-emerald-100/80 text-emerald-800 font-bold px-1.5 py-0.5">
+                                                {{ field.after }}
+                                            </span>
+                                            <span v-else class="text-slate-400">-</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>

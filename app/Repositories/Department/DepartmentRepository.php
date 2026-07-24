@@ -15,4 +15,9 @@ class DepartmentRepository
     {
         return Department::find($id);
     }
+
+    public function getDataByUUID($uuid)
+    {
+        return Department::where('uuid', $uuid)->first();
+    }
 }

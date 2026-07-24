@@ -29,7 +29,12 @@ class PfmeaController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Pfmea/Index', [
-            'page_title' => 'PFMEA List'
+            'page_title' => 'PFMEA List',
+            'pfmea' => $this->pfmeaService->getPfmeaList(
+                $request->input('filter', 'all'),
+                (int) $request->input('per_page', 10),
+                $request->input('search')
+            )
         ]);
     }
 
@@ -50,37 +55,48 @@ class PfmeaController extends Controller
                 'code' => strtoupper(trim($request->input('code'))),
             ]);
 
-            $validated = $request->validate([
-                'code' => [
-                    'required',
-                    'string',
-                    'max:50',
-                    Rule::unique('pfmea', 'code')
-                ],
-                'date' => 'required|date',
-                'department_id' => 'required|exists:departments,id',
-                'version' => 'nullable',
-                'scope' => 'required',
-                'project_id' => 'required|exists:projects,id',
-                'material_id' => 'required|exists:materials,id',
-                'process_responsibility' => 'required|string',
+            $validated = $request->validate(
+                [
+                    'code' => [
+                        'required',
+                        'string',
+                        'max:50',
+                        Rule::unique('pfmea', 'code')
+                    ],
+                    'date' => 'required|date',
+                    'department_id' => 'required|exists:departments,uuid',
+                    'version' => 'nullable',
+                    'scope' => 'required',
+                    'project_id' => 'required|exists:projects,id',
+                    'material_id' => [
+                        'required',
+                        'exists:materials,id',
+                        Rule::unique('pfmea', 'material_id')
+                            ->where('project_id', $request->input('project_id'))
+                            ->whereNull('deleted_at')
+                    ],
+                    'process_responsibility' => 'required|string',
 
-                // Core teams
-                'core_teams' => 'required|array|min:1',
-                'core_teams.*.id' => [
-                    'required',
-                    'exists:users,id',
-                    'distinct'
-                ],
+                    // Core teams
+                    'core_teams' => 'required|array|min:1',
+                    'core_teams.*.id' => [
+                        'required',
+                        'exists:users,id',
+                        'distinct'
+                    ],
 
-                // details
-                'details' => 'required|array|min:1',
-                'details.*.process_id' => [
-                    'required',
-                    'exists:process_functions,id',
-                    'distinct'
+                    // details
+                    'details' => 'required|array|min:1',
+                    'details.*.process_id' => [
+                        'required',
+                        'exists:process_functions,id',
+                        'distinct'
+                    ],
                 ],
-            ]);
+                [
+                    'material_id.unique' => 'PFMEA document with this Project and Material combination already exists.'
+                ]
+            );
 
             $insert = $this->pfmeaService->store($validated);
 
@@ -123,38 +139,50 @@ class PfmeaController extends Controller
                 'code' => strtoupper(trim($request->input('code'))),
             ]);
 
-            $validated = $request->validate([
-                'code' => [
-                    'required',
-                    'string',
-                    'max:50',
-                    Rule::unique('pfmea', 'code')->ignore($id)
-                ],
-                'date' => 'required|date',
-                'department_id' => 'required|exists:departments,id',
-                'version' => 'nullable',
-                'scope' => 'required',
-                'project_id' => 'required|exists:projects,id',
-                'material_id' => 'required|exists:materials,id',
-                'process_responsibility' => 'required|string',
-                'reason' => 'nullable|string',
+            $validated = $request->validate(
+                [
+                    'code' => [
+                        'required',
+                        'string',
+                        'max:50',
+                        Rule::unique('pfmea', 'code')->ignore($id)
+                    ],
+                    'date' => 'required|date',
+                    'department_id' => 'required|exists:departments,id',
+                    'version' => 'nullable',
+                    'scope' => 'required',
+                    'project_id' => 'required|exists:projects,id',
+                    'material_id' => [
+                        'required',
+                        'exists:materials,id',
+                        Rule::unique('pfmea', 'material_id')
+                            ->where('project_id', $request->input('project_id'))
+                            ->ignore($id)
+                            ->whereNull('deleted_at')
+                    ],
+                    'process_responsibility' => 'required|string',
+                    'reason' => 'nullable|string',
 
-                // Core teams
-                'core_teams' => 'required|array|min:1',
-                'core_teams.*.id' => [
-                    'required',
-                    'exists:users,id',
-                    'distinct'
-                ],
+                    // Core teams
+                    'core_teams' => 'required|array|min:1',
+                    'core_teams.*.id' => [
+                        'required',
+                        'exists:users,id',
+                        'distinct'
+                    ],
 
-                // details
-                'details' => 'required|array|min:1',
-                'details.*.process_id' => [
-                    'required',
-                    'exists:process_functions,id',
-                    'distinct'
+                    // details
+                    'details' => 'required|array|min:1',
+                    'details.*.process_id' => [
+                        'required',
+                        'exists:process_functions,id',
+                        'distinct'
+                    ],
                 ],
-            ]);
+                [
+                    'material_id.unique' => 'PFMEA document with this Project and Material combination already exists.'
+                ]
+            );
 
             $update = $this->pfmeaService->update($validated, (int) $id);
 
@@ -173,6 +201,19 @@ class PfmeaController extends Controller
             return redirect()->back()->withErrors([
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    public function getLogs(Request $request, $id)
+    {
+        try {
+            $data = $this->pfmeaService->getLogs($id);
+
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch change logs: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

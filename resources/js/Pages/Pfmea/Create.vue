@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/id";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
-defineOptions({ layout: AuthenticatedLayout , inheritAttrs: false});
+defineOptions({ layout: AuthenticatedLayout, inheritAttrs: false });
 
 const props = defineProps({
     departments: {
@@ -20,16 +20,15 @@ const props = defineProps({
         type: Array,
         default: () => {}
     }
-})
+});
 
 const page = usePage();
 const errors = computed(() => page.props.errors || {});
-const isDeptDropDownOpen = ref (false);
+const isDeptDropDownOpen = ref(false);
 const deptSearch = ref('');
 const searchInputDept = ref(null);
 const highlightedDeptIndex = ref(-1);
-const highlightedIndex = ref('');
-const searchInput = ref('');
+const searchInput = ref(null);
 
 const createBlankitem = () => ({
     row_key: Math.random().toString(36).substring(2, 9),
@@ -59,55 +58,56 @@ const form = useForm({
     details: [createBlankitem()]
 });
 
-// Filter dept berdasarkan pencarian
+// Filter dept berdasarkan pencarian (nama & short_name)
 const filteredDept = computed(() => {
     if (!deptSearch.value) return props.departments;
     const lowerSearch = deptSearch.value.toLowerCase();
-    return props.departments.filter(c => c.name.toLowerCase().includes(lowerSearch));
+    return props.departments.filter(c => 
+        c.name.toLowerCase().includes(lowerSearch) ||
+        (c.short_name && c.short_name.toLowerCase().includes(lowerSearch))
+    );
 });
 
 watch(deptSearch, () => {
-    highlightedIndex.value = filteredDept.value.length > 0 ? 0 : -1;
+    highlightedDeptIndex.value = filteredDept.value.length > 0 ? 0 : -1;
 });
 
 const toggleDeptDropdown = async () => {
     isDeptDropDownOpen.value = !isDeptDropDownOpen.value;
     
     if (isDeptDropDownOpen.value) {
-        highlightedIndex.value = filteredDept.value.length > 0 ? 0 : -1;
-        // Tunggu Vue selesai render input, baru set focus
+        highlightedDeptIndex.value = filteredDept.value.length > 0 ? 0 : -1;
         await nextTick();
         searchInput.value?.focus();
     }
 };
 
 const moveDown = () => {
-    if (highlightedIndex.value < filteredDept.value.length - 1) {
-        highlightedIndex.value++;
+    if (highlightedDeptIndex.value < filteredDept.value.length - 1) {
+        highlightedDeptIndex.value++;
         ensureVisible();
     }
 };
 
 const moveUp = () => {
-    if (highlightedIndex.value > 0) {
-        highlightedIndex.value--;
+    if (highlightedDeptIndex.value > 0) {
+        highlightedDeptIndex.value--;
         ensureVisible();
     }
 };
 
 const selectHighlighted = () => {
-    // Jika ada item yang di-highlight, pilih item tersebut
-    if (highlightedIndex.value >= 0 && highlightedIndex.value < filteredDept.value.length) {
-        const targetDept = filteredDept.value[highlightedIndex.value];
+    if (highlightedDeptIndex.value >= 0 && highlightedDeptIndex.value < filteredDept.value.length) {
+        const targetDept = filteredDept.value[highlightedDeptIndex.value];
         selectDept(targetDept.id);
     }
 };
 
-// Nampilin department yang dipilih;
+// Menampilkan department yang dipilih murni dari id
 const selectedDeptName = computed(() => {
-    if(!form.department_id) return "Select department ...";
+    if (!form.department_id) return "Select department ...";
 
-    const dept = props.departments.find(c => c.id === form.department_id);
+    const dept = props.departments.find(c => String(c.id) === String(form.department_id));
     return dept ? `${dept.short_name} - ${dept.name}` : "Select department ...";
 });
 
@@ -115,8 +115,8 @@ const selectDept = (id) => {
     form.department_id = id;
     isDeptDropDownOpen.value = false;
     deptSearch.value = "";
-    highlightedIndex.value = -1;
-}
+    highlightedDeptIndex.value = -1;
+};
 
 const optionsList = ref(null);
 const ensureVisible = () => {
@@ -124,7 +124,7 @@ const ensureVisible = () => {
         const listEl = optionsList.value;
         if (!listEl) return;
         
-        const activeEl = listEl.children[highlightedIndex.value];
+        const activeEl = listEl.children[highlightedDeptIndex.value];
         if (!activeEl) return;
 
         const listScrollTop = listEl.scrollTop;
@@ -140,7 +140,7 @@ const ensureVisible = () => {
     });
 };
 
-// Buat document scope
+// Document scope
 const PRODUCTION_STAGES = [
     { id: 'prototype', name: 'Prototype', short_name: 'PROTO' },
     { id: 'pre_launch', name: 'Pre-Launch', short_name: 'PRE' },
@@ -231,7 +231,6 @@ const selectStage = (id) => {
     stageSearch.value = "";
     highlightedStageIndex.value = -1;
 };
-// end document scope
 
 // Dropdown material
 const isMaterialOpen = ref(false);
@@ -251,9 +250,8 @@ const hasMore = ref(true);
 const selectedMaterialName = computed(() => {
     if(!form.material_id) return "Select material...";
     
-    // console.log(activeSelectedMaterial.value.material.code);
     return activeSelectedMaterial.value
-        ? `[${activeSelectedMaterial.value.material.code}] - ${activeSelectedMaterial.value.material.name}`
+        ? `[${activeSelectedMaterial.value.material?.code || activeSelectedMaterial.value.code}] - ${activeSelectedMaterial.value.material?.name || activeSelectedMaterial.value.name}`
         : "Select material ...";
 });
 
@@ -268,13 +266,10 @@ const fetchMaterials = async (isNewSearch = false) => {
         materialPage.value = 1;
         dropdownMaterials.value = [];
         hasMore.value = true;
-
-        // penting!!
         isMaterialLoading.value = false;
     }
 
-    if (isMaterialLoading.value) return;
-    if (!hasMore.value) return;
+    if (isMaterialLoading.value || !hasMore.value) return;
 
     isMaterialLoading.value = true;
 
@@ -322,12 +317,10 @@ const handleSearch = () => {
     }, 400);
 };
 
-// Toggle Dropdown Function
 const toggleMaterialDropdown = async () => {
     isMaterialOpen.value = !isMaterialOpen.value;
     if (isMaterialOpen.value) {
         highlightedMaterialIndex.value = 0;
-        // Ambil data pertama kali jika array lokal masih kosong
         if (dropdownMaterials.value.length === 0) {
             await fetchMaterials(true);
         }
@@ -337,15 +330,12 @@ const toggleMaterialDropdown = async () => {
 };
 
 const selectMaterial = (mat) => {
-    form.material_id = mat.material.id;
-    form.drawing_change =
-    mat.material.drawing_change === ""
-        ? 0
-        : mat.material.drawing_change;
-    activeSelectedMaterial.value = mat;
+    const targetMat = mat.material || mat;
+    form.material_id = targetMat.id;
+    form.drawing_change = targetMat.drawing_change === "" || targetMat.drawing_change === null ? 0 : targetMat.drawing_change;
+    activeSelectedMaterial.value = targetMat;
     isMaterialOpen.value = false;
     materialSearch.value = "";
-    fetchMaterials(true);
 };
 
 const moveMaterialDown = () => {
@@ -387,9 +377,8 @@ const clearMaterial = () => {
     activeSelectedMaterial.value = null;
     highlightedMaterialIndex.value = -1;
     materialSearch.value = "";
-    fetchMaterials(true); // Reset list dropdown ke kondisi awal/halaman 1
+    fetchMaterials(true);
 };
-// End Dropdown material
 
 // Dropdown project
 const isProjectOpen = ref(false);
@@ -412,7 +401,7 @@ const fetchProjects = async (isNewSearch = false) => {
     if (isNewSearch) {
         projectPage.value = 1;
         dropdownProjects.value = [];
-        hasMore.value = true;
+        hasMoreProjects.value = true;
     }
 
     if (!hasMoreProjects.value) return;
@@ -456,7 +445,7 @@ const toggleProjectDropdown = async() => {
         await nextTick();
         searchProjectInput.value?.focus();
     }
-}
+};
 
 const selectProject = (project) => {
     form.project_id = project.id;
@@ -505,7 +494,7 @@ const clearProject = () => {
     activeSelectedProject.value = null;
     highlightedProjectIndex.value = -1;
     projectSearch.value = "";
-    fetchProjects(true); // Reset list dropdown ke kondisi awal/halaman 1
+    fetchProjects(true);
 };
 
 const handleProjectScroll = (e) => {
@@ -522,8 +511,6 @@ const handleProjectSearch = () => {
         fetchProjects(true);
     }, 400);
 };
-// End project dropdown
-
 
 watch(
     errors,
@@ -532,12 +519,10 @@ watch(
             toast.error(newErrors.error);
         }
     },
-    {
-        deep: true
-    }
+    { deep: true }
 );
 
-// Buat save
+// Save Validation
 const validateAndSave = () => {
     form.clearErrors();
     let isValid = true;
@@ -586,36 +571,23 @@ const validateAndSave = () => {
         isValid = false;
     }
 
-    // Isi details
     form.details.forEach((item, index) => {
         if(!item.process_id){
-            form.setError(`details.${index}.process_id`, 'Process function is required')
+            form.setError(`details.${index}.process_id`, 'Process function is required');
             isValid = false;
         }
 
         if (processMap.has(item.process_id)) {
-
             const firstIndex = processMap.get(item.process_id);
-
-            form.setError(
-                `details.${index}.process_id`,
-                "Process function already selected."
-            );
-
-            form.setError(
-                `details.${firstIndex}.process_id`,
-                "Duplicate process function."
-            );
-
+            form.setError(`details.${index}.process_id`, "Process function already selected.");
+            form.setError(`details.${firstIndex}.process_id`, "Duplicate process function.");
             isValid = false;
         } else {
             processMap.set(item.process_id, index);
         }
-    })
+    });
 
-    if(!isValid){
-        return;
-    }
+    if(!isValid) return;
 
     form.post('/pfmea/store', {
         preserveScroll: true,
@@ -623,15 +595,13 @@ const validateAndSave = () => {
             const firstErrorMessage = Object.values(errors)[0];
             toast.error(firstErrorMessage);
         }
-    })
-}
+    });
+};
 
-// buat cancel form
 const cancelForm = () => {
     form.clearErrors();
     router.get('/pfmea');
-}
-
+};
 
 // Dropdown process template
 const openedRowIndex = ref(null);
@@ -645,18 +615,17 @@ const optionsProcessList = ref(null);
 const hasProcessMore = ref(true);
 
 const dropdownStyle = ref({
-    position: 'absolute',
+    position: 'fixed',
     top: '0px',
     left: '0px',
-    width: '0px'
+    width: '0px',
+    zIndex: '9999'
 });
 
 const selectedProcessName = (item) => {
     if(!item.process_id) return "Select process template";
-    return item.selected_process
-        ? `[${item.selected_process.name}]`
-        : "Select process template ...";
-}
+    return item.selected_process?.name || "Select process template ...";
+};
 
 const fetchProcess = async(isNewSearch = false) => {
     if (isProcessLoading.value) return;
@@ -687,40 +656,47 @@ const fetchProcess = async(isNewSearch = false) => {
         }
     }catch(error){
         console.error("Failed to load process template data: ", error);
-    }
-    finally{
+    }finally{
         isProcessLoading.value = false;
     }
-}
+};
 
 const handleProcessScroll = (e) => {
     const { scrollTop, clientHeight, scrollHeight } = e.target;
     if (scrollHeight - scrollTop - clientHeight < 10) {
         fetchProcess(false);
     }
-}
+};
 
 let processDebounceTimeout = null;
 const handleProcessSearch = () => {
     clearTimeout(processDebounceTimeout);
     processDebounceTimeout = setTimeout(() => {
         fetchProcess(true);
-    }, 400)
-}
+    }, 400);
+};
 
 const updateProcessDropdownPosition = (index) => {
     const triggerEl = document.getElementById(`process-trigger-${index}`);
     if(triggerEl){
         const rect = triggerEl.getBoundingClientRect();
+        const dropdownHeight = 220;
+        const spaceBelow = window.innerHeight - rect.bottom;
+
+        let topPos = rect.bottom;
+        if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+            topPos = rect.top - dropdownHeight;
+        }
+
         dropdownStyle.value = {
             position: 'fixed',
-            top: `${rect.bottom + window.scrollY}px`,
-            left: `${rect.left + window.scrollX}px`,
+            top: `${topPos}px`,
+            left: `${rect.left}px`,
             width: `${rect.width}px`,
             zIndex: '9999'
-        }
+        };
     }
-}
+};
 
 const toggleProcessDropdown = async(index) => {
     if(openedRowIndex.value === index){
@@ -728,7 +704,7 @@ const toggleProcessDropdown = async(index) => {
     }else{
         openedRowIndex.value = index;
         highlightedProcessIndex.value = 0;
-        processSearch.value ="";
+        processSearch.value = "";
 
         await nextTick();
         updateProcessDropdownPosition(index);
@@ -745,24 +721,24 @@ const toggleProcessDropdown = async(index) => {
             searchProcessInput.value.focus();
         }
     }
-}
+};
 
 const selectProcess = (prc, index) => {
     const item = form.details[index];
     if(item){
         item.process_id = prc.id;
         item.selected_process = prc;
-        item.sequence = prc.sequence;
-        item.process_parent = prc.process_parent;
-        item.process_child = prc.process_child;
-        item.revision = "Rev. " + prc.revision;
+        item.sequence = prc.sequence || '';
+        item.process_parent = prc.process_parent || '';
+        item.process_child = prc.process_child || '';
+        item.revision = prc.revision ? "Rev. " + prc.revision : '';
 
         if(item.errors) item.errors.process_id = null;
     }
     openedRowIndex.value = null;
-    processSearch.value ="";
+    processSearch.value = "";
     fetchProcess(true);
-}
+};
 
 const moveProcessDown = () => {
     if (highlightedProcessIndex.value < processDropdown.value.length - 1) {
@@ -779,8 +755,8 @@ const moveProcessUp = () => {
 };
 
 const selectProcessHighlighted = (index) => {
-    if (highlightedProcessIndex.value >= 0 && highlightedProcessIndex.value < processDropDown.value.length) {
-        selectProcess(processDropDown.value[highlightedProcessIndex.value], index);
+    if (highlightedProcessIndex.value >= 0 && highlightedProcessIndex.value < processDropdown.value.length) {
+        selectProcess(processDropdown.value[highlightedProcessIndex.value], index);
     }
 };
 
@@ -802,6 +778,11 @@ const clearProcess = (index) => {
     const item = form.details[index];
     if (item) {
         item.process_id = null;
+        item.selected_process = null;
+        item.sequence = '';
+        item.process_parent = '';
+        item.process_child = '';
+        item.revision = '';
         if (item.errors) item.errors.process_id = null;
     }
     highlightedProcessIndex.value = -1;
@@ -811,7 +792,7 @@ const clearProcess = (index) => {
 
 const handleWindowResizeOrScroll = () => {
     if (openedRowIndex.value !== null) {
-        updateDropdownPosition(openedRowIndex.value);
+        updateProcessDropdownPosition(openedRowIndex.value);
     }
 };
 
@@ -819,7 +800,7 @@ onMounted(() => {
     window.addEventListener('resize', handleWindowResizeOrScroll);
     window.addEventListener('scroll', handleWindowResizeOrScroll, true);
     document.addEventListener("click", handleClickOutside);
-    fetchUsers(true);
+    fetchUsers();
 });
 
 onUnmounted(() => {
@@ -827,7 +808,6 @@ onUnmounted(() => {
     window.removeEventListener('scroll', handleWindowResizeOrScroll, true);
     document.removeEventListener("click", handleClickOutside);
 });
-// End of dopdown process template
 
 // Toolbar detail
 const selectedRowIndex = ref(null);
@@ -835,7 +815,7 @@ const selectedRowIndex = ref(null);
 const onNew = () => {
     form.details.push(createBlankitem());
     selectedRowIndex.value = form.details.length - 1;
-}
+};
 
 const onInsert = () => {
     if(selectedRowIndex.value !== null && selectedRowIndex.value !== undefined){
@@ -843,7 +823,7 @@ const onInsert = () => {
     }else{
         onNew();
     }
-}
+};
 
 const OnDelete = () => {
     if(selectedRowIndex.value !== null){
@@ -858,14 +838,14 @@ const OnDelete = () => {
     }else{
         toast.info("Select or click one of the table rows first to delete it.");
     }
-}
+};
 
 const onDeleteAll = () => {
     form.details = [createBlankitem()];
     selectedRowIndex.value = 0;
-}
+};
 
-// Dropdown core teams
+// Core teams
 const users = ref([]);
 const userSearch = ref("");
 const isUserDropdownOpen = ref(false);
@@ -874,11 +854,8 @@ const userLoading = ref(false);
 const fetchUsers = async () => {
     try {
         userLoading.value = true;
-
         const { data } = await axios.get('/api/v1/users');
-
         users.value = data.data ?? data;
-
     } catch (err) {
         console.error(err);
     } finally {
@@ -887,53 +864,37 @@ const fetchUsers = async () => {
 };
 
 const filteredUsers = computed(() => {
-    if (!userSearch.value)
-        return users.value;
-
+    if (!userSearch.value) return users.value;
     return users.value.filter(user =>
-        user.name
-            .toLowerCase()
-            .includes(userSearch.value.toLowerCase())
+        user.name.toLowerCase().includes(userSearch.value.toLowerCase())
     );
 });
 
 const toggleUser = (user) => {
-    const index = form.core_teams.findIndex(
-        item => item.id === user.id
-    );
-
+    const index = form.core_teams.findIndex(item => item.id === user.id);
     if (index >= 0) {
         form.core_teams.splice(index, 1);
     } else {
         form.core_teams.push(user);
     }
-
     userSearch.value = "";
 };
 
 const removeUser = (id) => {
-    form.core_teams = form.core_teams.filter(
-        item => item.id !== id
-    );
+    form.core_teams = form.core_teams.filter(item => item.id !== id);
 };
 
 const isSelectedUser = (id) => {
-    return form.core_teams.some(
-        item => item.id === id
-    );
+    return form.core_teams.some(item => item.id === id);
 };
 
 const dropdownRef = ref(null);
 
 const handleClickOutside = (event) => {
-    if (
-        dropdownRef.value &&
-        !dropdownRef.value.contains(event.target)
-    ) {
+    if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
         isUserDropdownOpen.value = false;
     }
 };
-// End of dropdown core teams
 </script>
 
 <template>
@@ -959,7 +920,6 @@ const handleClickOutside = (event) => {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                                     </svg>
                                     <span class="hidden sm:inline">Back</span>
-
                                 </Link>
                                 
                                 <div class="w-px h-6 bg-slate-300 mx-1"></div>
@@ -990,8 +950,8 @@ const handleClickOutside = (event) => {
                 </div>     
             </div>
 
-            <!-- Form header -->
-            <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
+            <!-- Form header (Ditambahkan relative z-20 agar berada di atas layer tabel) -->
+            <div class="relative z-20 bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
                     <div class="lg:col-span-3">
                         <div class="flex items-center gap-1.5 mb-2">
@@ -1011,7 +971,7 @@ const handleClickOutside = (event) => {
                             </div>
                             <input type="text" v-model="form.code" placeholder="ISLMGxxxxFMEA01(00)" maxlength="255" autocomplete="off" 
                             :class="[
-                                'w-full pl-10 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none',
+                                'w-full pl-10 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none',
                                 form.errors.code 
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
@@ -1020,6 +980,7 @@ const handleClickOutside = (event) => {
                         <p v-if="form.errors.code" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.code }}</p>
                         <p v-else class="mt-1.5 text-[10px] font-medium text-slate-400">Unique PFMEA Document No.</p>
                     </div>
+
                     <div class="lg:col-span-1 flex flex-col justify-start">
                         <div class="flex items-center gap-1.5 mb-2">
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
@@ -1027,7 +988,7 @@ const handleClickOutside = (event) => {
                             </label>
                         </div>
                         <div class="w-full flex">
-                            <div class="inline-flex items-center justify-center gap-1.5 px-2 py-2 bg-sky-50 border border-sky-200 text-sky-700  w-full shadow-sm select-none cursor-not-allowed whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5 px-2 py-2 bg-sky-50 border border-sky-200 text-sky-700 w-full shadow-sm select-none cursor-not-allowed whitespace-nowrap">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                                 </svg>
@@ -1037,6 +998,7 @@ const handleClickOutside = (event) => {
                         </div>
                         <p class="mt-1.5 text-[10px] font-medium text-slate-400 text-center">Initial</p>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                             Issue Date <span class="text-rose-500">*</span>
@@ -1044,14 +1006,15 @@ const handleClickOutside = (event) => {
                         <div>
                             <input type="date" v-model="form.date" 
                             :class="[
-                                'w-full pl-2 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none mt-2',
+                                'w-full pl-2 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2 text-xs font-medium transition-all outline-none mt-2',
                                 form.errors.date 
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 text-rose-600' 
                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                             ]">
-                            <p v-if="form.errors.code" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.date }}</p>
+                            <p v-if="form.errors.date" class="mt-1.5 text-[10px] font-bold text-rose-500">{{ form.errors.date }}</p>
                         </div>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Issued Department <span class="text-bold text-rose-500">*</span>
@@ -1060,12 +1023,12 @@ const handleClickOutside = (event) => {
                             <div
                                 v-if="isDeptDropDownOpen"
                                 @click="isDeptDropDownOpen = false"
-                                class="fixed inset-0 z-0"
+                                class="fixed inset-0 z-40"
                             ></div>
 
                             <div
                                 @click="toggleDeptDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                 :class="[
                                     form.errors.department_id
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
@@ -1102,7 +1065,7 @@ const handleClickOutside = (event) => {
                             >
                                 <div
                                     v-if="isDeptDropDownOpen"
-                                    class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                 >
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
@@ -1132,21 +1095,22 @@ const handleClickOutside = (event) => {
                                             @mouseenter="highlightedDeptIndex = index"
                                             class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0"
                                             :class="[
-                                            form.department_id === dept.id ? 'border-l-2 border-l-blue-600 font-bold' : '',
-                                            index === highlightedDeptIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
+                                                form.department_id === dept.id ? 'border-l-2 border-l-blue-600 font-bold' : '',
+                                                index === highlightedDeptIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
                                             ]"
                                         >
                                             {{ dept.short_name }} - {{ dept.name }}
                                         </div>
 
-                                    <div v-if="filteredDept.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
-                                        Department not found ... "{{ deptSearch }}"
-                                    </div>
+                                        <div v-if="filteredDept.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
+                                            Department not found ... "{{ deptSearch }}"
+                                        </div>
                                     </div>
                                 </div>
                             </Transition>
                         </div>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Document Scope <span class="text-bold text-rose-500">*</span>
@@ -1155,12 +1119,12 @@ const handleClickOutside = (event) => {
                             <div
                                 v-if="isStageDropDownOpen"
                                 @click="isStageDropDownOpen = false"
-                                class="fixed inset-0 z-0"
+                                class="fixed inset-0 z-40"
                             ></div>
 
                             <div
                                 @click="toggleStagesDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                 :class="[
                                     form.errors.scope
                                     ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
@@ -1197,7 +1161,7 @@ const handleClickOutside = (event) => {
                             >
                                 <div
                                     v-if="isStageDropDownOpen"
-                                    class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                 >
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
@@ -1242,6 +1206,7 @@ const handleClickOutside = (event) => {
                             </Transition>
                         </div>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Project <span class="text-bold text-rose-500">*</span>
@@ -1250,12 +1215,12 @@ const handleClickOutside = (event) => {
                             <div
                                 v-if="isProjectOpen"
                                 @click="isProjectOpen = false"
-                                class="fixed inset-0 z-20"
+                                class="fixed inset-0 z-40"
                             ></div>
 
                             <div
                                 @click="toggleProjectDropdown"
-                                class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
                                 :class="[
                                     form.errors.project_id
                                         ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
@@ -1266,7 +1231,7 @@ const handleClickOutside = (event) => {
                                     {{ selectedProjectName }}
                                 </span>
 
-                                <div class="flex items-center space-x-1.5 relative z-20">
+                                <div class="flex items-center space-x-1.5 relative z-40">
                                     <svg
                                         v-if="form.project_id"
                                         @click.stop="clearProject"
@@ -1295,7 +1260,6 @@ const handleClickOutside = (event) => {
                                 {{ form.errors.project_id }}
                             </p>
 
-
                             <Transition
                                 enter-active-class="transition duration-100 ease-out"
                                 enter-from-class="transform scale-95 opacity-0"
@@ -1306,7 +1270,7 @@ const handleClickOutside = (event) => {
                             >
                                 <div
                                     v-if="isProjectOpen"
-                                    class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                 >
                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                         <div class="relative">
@@ -1368,135 +1332,138 @@ const handleClickOutside = (event) => {
                             </Transition>
                         </div>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Part No. <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative">
+                            <div
+                                v-if="isMaterialOpen"
+                                @click="isMaterialOpen = false"
+                                class="fixed inset-0 z-40"
+                            ></div>
+
+                            <div
+                                @click="toggleMaterialDropdown"
+                                class="relative z-40 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                :class="[
+                                    form.errors.material_id
+                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
+                                    : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
+                                ]"
+                            >
+                                <span :class="form.material_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                    {{ selectedMaterialName }}
+                                </span>
+
+                                <div class="flex items-center space-x-1.5 relative z-40">
+                                    <svg
+                                        v-if="form.material_id"
+                                        @click.stop="clearMaterial"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors duration-150"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4 text-slate-400 transition-transform duration-200"
+                                        :class="{'rotate-180 text-blue-500': isMaterialOpen}"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <p
+                                v-if="form.errors.material_id"
+                                class="mt-1 text-[10px] font-bold text-rose-500"
+                            >
+                                {{ form.errors.material_id }}
+                            </p>
+
+                            <Transition
+                                enter-active-class="transition duration-100 ease-out"
+                                enter-from-class="transform scale-95 opacity-0"
+                                enter-to-class="transform scale-100 opacity-100"
+                                leave-active-class="transition duration-75 ease-out"
+                                leave-from-class="transform scale-100 opacity-100"
+                                leave-to-class="transform scale-95 opacity-0"
+                            >
                                 <div
                                     v-if="isMaterialOpen"
-                                    @click="isMaterialOpen = false"
-                                    class="fixed inset-0 z-0"
-                                ></div>
-
-                                <div
-                                    @click="toggleMaterialDropdown"
-                                    class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
-                                    :class="[
-                                        form.errors.material_id
-                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-rose-600'
-                                        : 'border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800'
-                                    ]"
+                                    class="absolute z-50 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
                                 >
-                                    <span :class="form.material_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
-                                        {{ selectedMaterialName }}
-                                    </span>
-
-                                    <div class="flex items-center space-x-1.5 relative z-30">
-                                        <svg
-                                            v-if="form.material_id"
-                                            @click.stop="clearMaterial"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors duration-150"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        >
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-4 w-4 text-slate-400 transition-transform duration-200"
-                                            :class="{'rotate-180 text-blue-500': isMaterialOpen}"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        >
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
+                                    <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
+                                        <div class="relative">
+                                            <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                            <input
+                                                ref="searchMaterialInput"
+                                                type="text"
+                                                v-model="materialSearch"
+                                                @click.stop
+                                                @input="handleSearch"
+                                                @keydown.down.prevent="moveMaterialDown"
+                                                @keydown.up.prevent="moveMaterualUp"
+                                                @keydown.enter.prevent="selectMaterialHighlighted"
+                                                @keydown.esc="isMaterialOpen = false"
+                                                class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                                                placeholder="Type to search material..."
+                                            />
+                                        </div>
                                     </div>
-                                </div>
 
-                                <p
-                                    v-if="form.errors.material_id"
-                                    class="mt-1 text-[10px] font-bold text-rose-500"
-                                >
-                                    {{ form.errors.material_id }}
-                                </p>
-
-                                <Transition
-                                    enter-active-class="transition duration-100 ease-out"
-                                    enter-from-class="transform scale-95 opacity-0"
-                                    enter-to-class="transform scale-100 opacity-100"
-                                    leave-active-class="transition duration-75 ease-out"
-                                    leave-from-class="transform scale-100 opacity-100"
-                                    leave-to-class="transform scale-95 opacity-0"
-                                >
-                                    <div
-                                        v-if="isMaterialOpen"
-                                        class="absolute z-30 w-full mt-1 bg-white border border-slate-200 shadow-xl overflow-hidden"
+                                    <div 
+                                        ref="optionsMaterialList" 
+                                        @scroll="handleMaterialScroll"
+                                        class="max-h-48 overflow-y-auto"
                                     >
-                                        <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
-                                            <div class="relative">
-                                                <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                                </svg>
-                                                <input
-                                                    ref="searchMaterialInput"
-                                                    type="text"
-                                                    v-model="materialSearch"
-                                                    @click.stop
-                                                    @input="handleSearch"
-                                                    @keydown.down.prevent="moveMaterialDown"
-                                                    @keydown.up.prevent="moveMaterualUp"
-                                                    @keydown.enter.prevent="selectMaterialHighlighted"
-                                                    @keydown.esc="isMaterialOpen = false"
-                                                    class="w-full pl-7 pr-2 py-1.5 border border-slate-200 text-xs rounded-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                                                    placeholder="Type to search material..."
-                                                />
-                                            </div>
+                                        <div
+                                            v-for="(mat, index) in dropdownMaterials"
+                                            :key="mat.id"
+                                            @click="selectMaterial(mat)"
+                                            @mouseenter="highlightedMaterialIndex = index"
+                                            class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0"
+                                            :class="[
+                                                form.material_id === (mat.material?.id || mat.id) ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30' : '',
+                                                index === highlightedMaterialIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
+                                            ]"
+                                        >
+                                            [{{ mat.material?.code || mat.code }}] - {{ mat.material?.name || mat.name }}
                                         </div>
 
                                         <div 
-                                            ref="optionsMaterialList" 
-                                            @scroll="handleMaterialScroll"
-                                            class="max-h-48 overflow-y-auto"
+                                            v-if="isMaterialLoading" 
+                                            class="px-3 py-2.5 text-center text-[10px] text-blue-600 font-bold bg-slate-50 animate-pulse border-t border-slate-100"
                                         >
-                                            <div
-                                                v-for="(mat, index) in dropdownMaterials"
-                                                :key="mat.id"
-                                                @click="selectMaterial(mat)"
-                                                @mouseenter="highlightedMaterialIndex = index"
-                                                class="px-3 py-2.5 text-xs cursor-pointer transition-colors border-b border-slate-50 last:border-0"
-                                                :class="[
-                                                form.material_id === mat.material?.id ? 'border-l-2 border-l-blue-600 font-bold bg-blue-50/30' : '',
-                                                index === highlightedMaterialIndex ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-700'
-                                                ]"
-                                            >
-                                                [{{ mat.material?.code }}] - {{ mat.material?.name }}
-                                            </div>
+                                            Loading items...
+                                        </div>
 
-                                            <div 
-                                                v-if="isMaterialLoading" 
-                                                class="px-3 py-2.5 text-center text-[10px] text-blue-600 font-bold bg-slate-50 animate-pulse border-t border-slate-100"
-                                            >
-                                                Loading items...
-                                            </div>
-
-                                            <div 
-                                                v-if="dropdownMaterials.length === 0 && !isMaterialLoading" 
-                                                class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50"
-                                            >
-                                                Material not found ... "{{ materialSearch }}"
-                                            </div>
+                                        <div 
+                                            v-if="dropdownMaterials.length === 0 && !isMaterialLoading" 
+                                            class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50"
+                                        >
+                                            Material not found ... "{{ materialSearch }}"
                                         </div>
                                     </div>
-                                </Transition>
+                                </div>
+                            </Transition>
                         </div>
                     </div>
+
                     <div class="lg:col-span-2">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Change Level.
                         </label>
                         <input type="text" v-model="form.drawing_change" class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800 text-right" readonly placeholder="Part No. changing level" />
                     </div>
+
                     <div class="lg:col-span-4">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Process Responsibility.
@@ -1504,25 +1471,24 @@ const handleClickOutside = (event) => {
                         <input 
                             type="text" 
                             v-model="form.process_responsibility" 
-                            class="w-full pl-3 pr-3 py-2 border text-xs focus:outline-none border-slate-300 focus:border-blue-500 text-slate-800"
+                            class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none"
                             :class="[
-                                    'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                    form.errors.process_responsibility
-                                        ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                        : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                ]"
+                                form.errors.process_responsibility
+                                    ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
+                                    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
+                            ]"
                             placeholder="Process Responsibility" 
                         />
                         <p v-if="form.errors.process_responsibility" class="block mt-1 text-[9px] font-bold text-rose-500">
                             {{ form.errors.process_responsibility }}
                         </p>
                     </div>
+
                     <div class="lg:col-span-4">
                         <label class="block text-[11px] font-bold text-slate-500 mb-1">
                             Core Teams. <span class="text-bold text-rose-500">*</span>
                         </label>
                         <div class="relative" ref="dropdownRef">
-                            <!-- INPUT -->
                             <div
                                 @click="isUserDropdownOpen = true"
                                 class="relative w-full min-h-[38px] px-3 py-2 border transition-all duration-200 cursor-text pr-9"
@@ -1536,11 +1502,7 @@ const handleClickOutside = (event) => {
                                     <span
                                         v-for="user in form.core_teams"
                                         :key="user.id"
-                                        class="inline-flex items-center gap-1
-                                            border border-slate-300
-                                            bg-slate-100
-                                            px-2 py-0.5
-                                            text-xs"
+                                        class="inline-flex items-center gap-1 border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs text-slate-700"
                                     >
                                         {{ user.name }}
 
@@ -1566,7 +1528,6 @@ const handleClickOutside = (event) => {
                                     />
                                 </div>
 
-                                <!-- Arrow -->
                                 <div
                                     class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
                                 >
@@ -1594,7 +1555,6 @@ const handleClickOutside = (event) => {
                                 {{ form.errors.core_teams }}
                             </p>
 
-                            <!-- DROPDOWN -->
                             <transition
                                 enter-active-class="transition duration-150 ease-out"
                                 enter-from-class="opacity-0 -translate-y-1 scale-95"
@@ -1605,12 +1565,8 @@ const handleClickOutside = (event) => {
                             >
                                 <div
                                     v-if="isUserDropdownOpen"
-                                    class="absolute z-50 mt-1 w-full
-                                        bg-white border border-slate-300
-                                        shadow-lg
-                                        max-h-64 overflow-y-auto"
+                                    class="absolute z-50 mt-1 w-full bg-white border border-slate-300 shadow-lg max-h-64 overflow-y-auto"
                                 >
-                                    <!-- Empty -->
                                     <div
                                         v-if="filteredUsers.length === 0"
                                         class="px-3 py-2 text-xs text-slate-500"
@@ -1618,17 +1574,11 @@ const handleClickOutside = (event) => {
                                         No user found.
                                     </div>
 
-                                    <!-- User -->
                                     <div
                                         v-for="user in filteredUsers"
                                         :key="user.id"
                                         @click="toggleUser(user)"
-                                        class="flex items-center justify-between
-                                            px-3 py-2
-                                            text-xs
-                                            cursor-pointer
-                                            hover:bg-slate-100
-                                            transition-colors"
+                                        class="flex items-center justify-between px-3 py-2 text-xs cursor-pointer hover:bg-slate-100 transition-colors"
                                     >
                                         <span>{{ user.name }}</span>
                                         <svg
@@ -1656,15 +1606,15 @@ const handleClickOutside = (event) => {
 
             <!-- Form detail -->
             <div class="w-full bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
-                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5">
-                    <button @click="onNew" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">New</button>
-                    <button @click="onInsert" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">Insert</button>
-                    <button @click="OnDelete" class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">Delete</button>
-                    <button @click="onDeleteAll" class="text-sm text-[12px] text-slate-600 hover:text-red-700 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200">Delete All</button>
+                <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5 bg-slate-50/50">
+                    <button @click="onNew" class="text-xs font-semibold text-slate-600 hover:text-blue-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200">New</button>
+                    <button @click="onInsert" class="text-xs font-semibold text-slate-600 hover:text-blue-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200">Insert</button>
+                    <button @click="OnDelete" class="text-xs font-semibold text-slate-600 hover:text-red-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200">Delete</button>
+                    <button @click="onDeleteAll" class="text-xs font-semibold text-slate-600 hover:text-red-700 hover:underline cursor-pointer underline-offset-4 transition-all duration-200">Delete All</button>
                 </div>
                 <div class="overflow-auto max-h-[100vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
-                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                        <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider z-30 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
                                 <th class="px-4 py-3 min-w-[350px]">Process Function</th>
@@ -1690,10 +1640,10 @@ const handleClickOutside = (event) => {
                                         <div
                                             :id="`process-trigger-${index}`"
                                             @click="toggleProcessDropdown(index)"
-                                            class="relative z-20 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                            class="relative z-1 w-full pl-3 pr-3 py-2.5 border text-xs focus:outline-none flex justify-between items-center transition-all cursor-pointer bg-white"
                                             :class="[
                                                 form.errors[`details.${index}.process_id`]
-                                                    ? 'border-rose-500 focus:border-rose-500 bg-rose-50 text-rose-600' 
+                                                    ? 'border-rose-500 bg-rose-50 text-rose-600' 
                                                     : 'border-slate-300 focus:border-blue-500 text-slate-800'
                                             ]"
                                         >
@@ -1701,7 +1651,7 @@ const handleClickOutside = (event) => {
                                                 {{ selectedProcessName(item) }}
                                             </span>
 
-                                            <div class="flex items-center space-x-1.5 relative z-30">
+                                            <div class="flex items-center space-x-1.5 relative z-10">
                                                 <svg v-if="item.process_id" @click.stop="clearProcess(index)" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
@@ -1794,6 +1744,4 @@ const handleClickOutside = (event) => {
             </div>
         </div>
     </div>
-
-    <!-- Model buat select process -->
 </template>
