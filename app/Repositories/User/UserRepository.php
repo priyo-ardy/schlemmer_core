@@ -22,14 +22,14 @@ class UserRepository implements UserRepositoryInterface
     public function lockAccount(User $user): void
     {
         $user->update([
-            'is_locked' => true
+            'is_locked' => true,
         ]);
     }
 
     public function resetAttempts(User $user): void
     {
         $user->update([
-            'login_attempts' => 0
+            'login_attempts' => 0,
         ]);
     }
 
@@ -47,7 +47,7 @@ class UserRepository implements UserRepositoryInterface
         $user->update([
             'password' => Hash::make($password),
             'login_attempts' => 0,
-            'is_locked' => false
+            'is_locked' => false,
         ]);
     }
 
@@ -60,7 +60,7 @@ class UserRepository implements UserRepositoryInterface
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return null;
         }
         $user->increment('revision');
@@ -73,7 +73,7 @@ class UserRepository implements UserRepositoryInterface
     {
         $user = User::find($id);
 
-        if (!$user) {
+        if (! $user) {
             return false;
         }
 
@@ -82,7 +82,7 @@ class UserRepository implements UserRepositoryInterface
 
     public function getAll(): Collection
     {
-        return User::orderBy('name', 'desc')->get();
+        return User::with('roles')->orderBy('name', 'desc')->get();
     }
 
     public function bulkDelete(array $ids): bool

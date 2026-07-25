@@ -22,6 +22,7 @@ import "vue-advanced-cropper/dist/style.css";
 
 const props = defineProps({
     users: Array,
+    roles: Array,
 });
 
 const isSlideOverOpen = ref(false);
@@ -34,11 +35,34 @@ const isRefreshing = ref(false);
 const showConfirmModal = ref(false);
 const deleteReason = ref("");
 
+// --- STATE SELECT2 / SEARCHABLE DROPDOWN ROLE ---
+const isRoleDropdownOpen = ref(false);
+const roleSearchQuery = ref("");
+
+const filteredRoles = computed(() => {
+    if (!props.roles) return [];
+    return props.roles.filter((role) =>
+        role.name.toLowerCase().includes(roleSearchQuery.value.toLowerCase())
+    );
+});
+
+const selectRole = (roleName) => {
+    form.role = roleName;
+    isRoleDropdownOpen.value = false;
+    roleSearchQuery.value = "";
+};
+
+const clearRole = (event) => {
+    event.stopPropagation(); // Mencegah dropdown terbuka saat tombol X diklik
+    form.role = "";
+    roleSearchQuery.value = "";
+};
+// -----------------------------------------------
+
 const imagePreview = ref(null);
 const imageToCropSrc = ref(null);
 const isCropperModalOpen = ref(false);
 const cropperRef = ref(null);
-
 
 const maskEmail = (email) => {
     if (!email) return "-";
@@ -73,7 +97,7 @@ const filteredUsers = computed(() => {
 const refreshTable = () => {
     isRefreshing.value = true;
     router.reload({
-        only: ["users"],
+        only: ["users", "roles"],
         onSuccess: () => {
             isRefreshing.value = false;
             toast.success('Refresh Success');
@@ -89,7 +113,6 @@ const refreshTable = () => {
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
 
-// Reset ke page 1 jika pencarian, filter, atau per page berubah
 watch([searchQuery, selectedFilter, itemsPerPage], () => {
     currentPage.value = 1;
 });
@@ -149,6 +172,7 @@ const form = useForm({
     email: "",
     password: "",
     avatar: null,
+    role: "",
     login_attempts: 0,
     is_locked: false,
     is_active: true,
@@ -194,6 +218,8 @@ const openCreateDrawer = () => {
     imagePreview.value = null;
     form.reset();
     form.clearErrors();
+    roleSearchQuery.value = "";
+    isRoleDropdownOpen.value = false;
     isSlideOverOpen.value = true;
 };
 
@@ -206,10 +232,13 @@ const openEditDrawer = (user) => {
     form.email = user.email;
     form.password = "";
     form.avatar = null;
+    form.role = user.roles && user.roles.length > 0 ? user.roles[0].name : "";
     form.login_attempts = user.login_attempts;
     form.is_locked = user.is_locked ? true : false;
     form.is_active = user.is_active ? true : false;
     imagePreview.value = user.avatar;
+    roleSearchQuery.value = "";
+    isRoleDropdownOpen.value = false;
     isSlideOverOpen.value = true;
 };
 
@@ -224,7 +253,7 @@ const handleSubmit = () => {
         if (isEditMode.value) {
             payload._method = "put";
         } else {
-            delete payload._method; 
+            delete payload._method;
         }
 
         return payload;
@@ -233,6 +262,7 @@ const handleSubmit = () => {
         onSuccess: () => {
             isSlideOverOpen.value = false;
             form.reset();
+            toast.success(isEditMode.value ? "User updated successfully" : "User registered successfully");
         },
         onError: (errors) => {
             console.error(errors);
@@ -240,14 +270,13 @@ const handleSubmit = () => {
     });
 };
 
-
 watch(
-    errors, 
+    errors,
     (newErrors) => {
         if (newErrors && newErrors.error) {
             toast.error(newErrors.error);
         }
-    }, 
+    },
     { deep: true }
 );
 
@@ -267,7 +296,7 @@ const confirmAction = () => {
         onSuccess: () => {
             selectedUsers.value = [];
             showConfirmModal.value = false;
-            deleteReason.value = ""; 
+            deleteReason.value = "";
             deleteForm.clearErrors();
             toast.success("Users deleted successfully");
         }
@@ -289,84 +318,40 @@ const confirmAction = () => {
                         Audit credentials, track system logs, and monitor authentication layers.
                     </p>
                 </div>
-                <!-- Toolbar -->
                  <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm">
                     <div class="flex items-center justify-between w-full">
                         <div class="flex items-center gap-1.5">
-                            <!-- Button New -->
                             <button
                                 @click="openCreateDrawer"
                                 type="button"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-3.5 w-3.5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke-width="2"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                                    />
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                 </svg>
                                 <span>New</span>
                             </button>
 
-                            <!-- Button Refresh -->
                             <button
                                 type="button"
                                 @click="refreshTable"
                                 :disabled="isRefreshing"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-600 bg-orange-50 border border-slate-200 transition-all hover:bg-orange-100 active:scale-95 shadow-sm disabled:opacity-60"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    :class="
-                                        isRefreshing
-                                            ? 'animate-spin text-blue-600'
-                                            : 'text-slate-500'
-                                    "
-                                    class="h-3.5 w-3.5 transition-colors duration-150"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke-width="2"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-                                    />
+                                <svg xmlns="http://www.w3.org/2000/svg" :class="isRefreshing ? 'animate-spin text-blue-600' : 'text-slate-500'" class="h-3.5 w-3.5 transition-colors duration-150" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                 </svg>
-                                <span>{{
-                                    isRefreshing ? "Refreshing..." : "Refresh"
-                                }}</span>
+                                <span>{{ isRefreshing ? "Refreshing..." : "Refresh" }}</span>
                             </button>
 
-                            <!-- Button Delete -->
                             <button
                                 type="button"
                                 @click="deleteSelected"
                                 :disabled="selectedUsers.length === 0"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 border border-rose-100 transition-all hover:bg-rose-100 active:scale-95 shadow-sm disabled:opacity-40 disabled:active:scale-100"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                                 <span>Delete ({{ selectedUsers.length }})</span>
                             </button>
@@ -375,7 +360,7 @@ const confirmAction = () => {
                 </div>
             </div>
 
-            <!-- TOP BAR Disesuaikan dengan Gambar -->
+            <!-- TOP BAR SEARCH & FILTER -->
             <div class="bg-white border border-slate-200/80 shadow-sm p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="relative flex-1 max-w-md">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
@@ -390,9 +375,8 @@ const confirmAction = () => {
                         class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 text-xs font-semibold focus:outline-none transition"
                     />
                 </div>
-                
+
                 <div class="flex items-center gap-6">
-                    <!-- PER PAGE Control -->
                     <div class="flex items-center gap-2">
                         <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Per Page:</label>
                         <select
@@ -405,8 +389,7 @@ const confirmAction = () => {
                             <option :value="50">50</option>
                         </select>
                     </div>
-                    
-                    <!-- STATUS Control -->
+
                     <div class="flex items-center gap-2">
                         <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status:</label>
                         <select
@@ -422,6 +405,7 @@ const confirmAction = () => {
                 </div>
             </div>
 
+            <!-- TABLE SECTION -->
             <div class="bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-auto flex flex-col">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200 text-left">
@@ -436,6 +420,7 @@ const confirmAction = () => {
                                     />
                                 </th>
                                 <th class="px-6 py-4">User Account & Profile</th>
+                                <th class="px-6 py-4">Role Assigned</th>
                                 <th class="px-6 py-4">Revision</th>
                                 <th class="px-6 py-4 text-center">Attempts</th>
                                 <th class="px-6 py-4">Lock Status</th>
@@ -487,6 +472,12 @@ const confirmAction = () => {
                                         </div>
                                     </div>
                                 </td>
+                                <td class="px-6 py-4">
+                                    <span v-if="user.roles && user.roles.length > 0" class="px-2.5 py-1 text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                                        {{ user.roles[0].name }}
+                                    </span>
+                                    <span v-else class="text-slate-400 italic text-[11px]">No Role</span>
+                                </td>
                                 <td class="px-6 py-4 text-center">
                                     <span class="inline-flex items-center gap-1 px-2.5 py-1 tracking-wide text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100">
                                     Rev. {{ user.revision }}
@@ -528,39 +519,39 @@ const confirmAction = () => {
                         </tbody>
                     </table>
                 </div>
-                
-                <!-- BOTTOM BAR PAGINATION Disesuaikan dengan Gambar -->
+
+                <!-- PAGINATION BAR -->
                 <div class="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-200 mt-auto">
                     <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         Showing {{ totalFiltered === 0 ? 0 : paginationStart }} to {{ paginationEnd }} of {{ totalFiltered }}
                     </div>
-                    
+
                     <div class="flex items-center gap-1 text-[11px] font-bold">
-                        <button 
-                            @click="goToPrev" 
-                            :disabled="currentPage === 1" 
+                        <button
+                            @click="goToPrev"
+                            :disabled="currentPage === 1"
                             class="px-2 py-1.5 text-slate-400 hover:text-blue-600 disabled:opacity-50 disabled:hover:text-slate-400 transition"
                         >
                             &laquo; Previous
                         </button>
-                        
+
                         <div class="bg-blue-600 text-white rounded-sm w-7 h-7 flex items-center justify-center shadow-sm">
                             {{ currentPage }}
                         </div>
-                        
-                        <button 
-                            @click="goToNext" 
-                            :disabled="currentPage === totalPages || totalFiltered === 0" 
+
+                        <button
+                            @click="goToNext"
+                            :disabled="currentPage === totalPages || totalFiltered === 0"
                             class="px-2 py-1.5 text-slate-400 hover:text-blue-600 disabled:opacity-50 disabled:hover:text-slate-400 transition"
                         >
                             Next &raquo;
                         </button>
                     </div>
                 </div>
-                <!-- AKHIR BLOK PAGINATION -->
             </div>
         </div>
 
+        <!-- SLIDEOVER / DRAWER FORM -->
         <div v-show="isSlideOverOpen" class="fixed inset-0 z-40 overflow-hidden" role="dialog" aria-modal="true">
             <div class="absolute inset-0 overflow-hidden">
                 <transition enter-active-class="ease-in-out duration-300" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="ease-in-out duration-300" leave-from-class="opacity-100" leave-to-class="opacity-0">
@@ -613,9 +604,72 @@ const confirmAction = () => {
                                         <input type="password" v-model="form.password" :required="!isEditMode" placeholder="Minimum 8 characters" class="w-full px-4 py-2.5 bg-white border border-slate-200 text-xs font-semibold focus:outline-none focus:border-blue-500 transition" />
                                         <p v-if="form.errors.password" class="text-xs text-rose-600 mt-1 font-medium">{{ form.errors.password }}</p>
                                     </div>
-                                    <div
-                                        v-if="isEditMode"
-                                    >
+
+                                    <!-- CUSTOM SELECT2 DROPDOWN ROLE WITH CLEAR BUTTON -->
+                                    <div class="relative">
+                                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assign Role</label>
+
+                                        <!-- Trigger Box -->
+                                        <div
+                                            @click="isRoleDropdownOpen = !isRoleDropdownOpen"
+                                            class="w-full px-4 py-2.5 bg-white border border-slate-200 text-xs font-semibold flex items-center justify-between cursor-pointer focus:border-blue-500 transition"
+                                        >
+                                            <span :class="form.role ? 'text-slate-800' : 'text-slate-400'">
+                                                {{ form.role || '-- Select Role --' }}
+                                            </span>
+
+                                            <div class="flex items-center gap-1.5">
+                                                <!-- Tombol Clear (X) - Hanya muncul jika ada data yang terisi -->
+                                                <button
+                                                    v-if="form.role"
+                                                    type="button"
+                                                    @click="clearRole"
+                                                    class="text-slate-400 hover:text-rose-600 p-0.5 transition-colors"
+                                                    title="Clear selection"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+
+                                                <!-- Arrow Icon -->
+                                                <svg class="h-4 w-4 text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': isRoleDropdownOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+
+                                        <!-- Dropdown Menu Options -->
+                                        <div v-if="isRoleDropdownOpen" class="absolute z-50 mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-sm">
+                                            <!-- Search Input inside dropdown -->
+                                            <div class="p-2 border-b border-slate-100 bg-slate-50">
+                                                <input
+                                                    type="text"
+                                                    v-model="roleSearchQuery"
+                                                    placeholder="Search role..."
+                                                    class="w-full px-3 py-1.5 bg-white border border-slate-200 text-xs font-medium focus:outline-none focus:border-blue-500"
+                                                    @click.stop
+                                                />
+                                            </div>
+                                            <div class="max-h-48 overflow-y-auto divide-y divide-slate-50">
+                                                <div
+                                                    v-for="role in filteredRoles"
+                                                    :key="role.id"
+                                                    @click="selectRole(role.name)"
+                                                    class="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 cursor-pointer flex items-center justify-between transition-colors"
+                                                >
+                                                    <span>{{ role.name }}</span>
+                                                    <span v-if="form.role === role.name" class="text-blue-600 font-bold">✓</span>
+                                                </div>
+                                                <div v-if="filteredRoles.length === 0" class="px-4 py-3 text-xs text-slate-400 text-center italic">
+                                                    No roles found
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p v-if="form.errors.role" class="text-xs text-rose-600 mt-1 font-medium">{{ form.errors.role }}</p>
+                                    </div>
+
+                                    <div v-if="isEditMode">
                                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Update Reason</label>
                                         <textarea v-model="form.remark" :required="isEditMode" class="w-full px-4 py-2.5 bg-white border border-slate-200 text-xs font-semibold focus:outline-none focus:border-blue-500 transition" placeholder="Describe change reason here ..."></textarea>
                                         <p v-if="form.errors.reason" class="text-xs text-rose-600 mt-1 font-medium">{{ form.errors.reason }}</p>
@@ -659,6 +713,7 @@ const confirmAction = () => {
             </div>
         </div>
 
+        <!-- CROPPER MODAL -->
         <div v-if="isCropperModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
             <div class="bg-white border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
                 <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
@@ -676,7 +731,7 @@ const confirmAction = () => {
         </div>
     </div>
 
-    <!-- Modal konfirmasi hapus -->
+    <!-- MODAL KONFIRMASI DELETE -->
     <transition
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="opacity-0 scale-95"
@@ -712,7 +767,7 @@ const confirmAction = () => {
                         <textarea
                             v-model="deleteReason"
                             rows="2"
-                            @input="deleteForm.clearErrors('remark')" 
+                            @input="deleteForm.clearErrors('remark')"
                             :class="deleteForm.errors.remark ? 'border-rose-500' : 'border-slate-300'"
                             class="w-full p-2 border text-xs focus:outline-none focus:border-blue-500 transition-all"
                             placeholder="e.g. Data redundancy, wrong entry, etc."

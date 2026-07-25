@@ -1,15 +1,15 @@
 <script setup>
 import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
-import { useSidebar } from "@/Composables/useSidebar"; // 1. IMPORT COMPOSABLE
+import { useSidebar } from "@/Composables/useSidebar";
 
 const page = usePage();
 const currentPath = computed(() => page.url.split("?")[0]);
 
-// 2. AMBIL STATE REAKTIF DARI SAKELAR PUSAT
+// Mengambil state reaktif dari composable sidebar
 const { isCollapsed } = useSidebar();
 
-const isUserManagementOpen = ref(currentPath.value.startsWith("/users"));
+const isUserManagementOpen = ref(currentPath.value.startsWith("/users") || currentPath.value.startsWith("/roles"));
 const isProcessOpen = ref(currentPath.value.startsWith("/process"));
 const isMaterialOpen = ref(currentPath.value.startsWith("/materials"));
 const isProjectOpen = ref(currentPath.value.startsWith("/projects"));
@@ -44,6 +44,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
 
         <nav class="flex-1 px-3 py-6 space-y-7 overflow-y-auto overflow-x-hidden select-none">
 
+            <!-- DASHBOARD -->
             <div class="space-y-1">
                 <Link
                     href="/dashboard"
@@ -61,7 +62,9 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                 <span v-show="!isCollapsed" class="block px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 whitespace-nowrap">
                     Transaction
                 </span>
-                <div>
+
+                <!-- MODUL PFMEA -->
+                <div v-if="$can('view pfmea')">
                     <button @click="togglePfmeaList" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -79,7 +82,9 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                         </Link>
                     </div>
                 </div>
-                <div>
+
+                <!-- MODUL APQP -->
+                <div v-if="$can('view apqp')">
                     <button @click="toggleApqp" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -97,7 +102,8 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     Master Data
                 </span>
 
-                <div>
+                <!-- MODUL PROCESS -->
+                <div v-if="$can('view process')">
                     <button @click="toggleProcessList" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -116,7 +122,8 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     </div>
                 </div>
 
-                <div>
+                <!-- MODUL CUSTOMER -->
+                <div v-if="$can('view customer')">
                     <button @click="toggleCustomer" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -135,7 +142,8 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     </div>
                 </div>
 
-                <div>
+                <!-- MODUL PROJECTS -->
+                <div v-if="$can('view projects')">
                     <button @click="toggleProjects" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -154,7 +162,8 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     </div>
                 </div>
 
-                <div>
+                <!-- MODUL UNITS -->
+                <div v-if="$can('view units')">
                     <button @click="toggleUnits" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -177,7 +186,8 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     </div>
                 </div>
 
-                <div>
+                <!-- MODUL MATERIALS -->
+                <div v-if="$can('view materials')">
                     <button @click="toggleMaterials" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -202,26 +212,30 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                     Application Setting
                 </span>
 
-                <div>
+                <!-- USER MANAGEMENT SETTING -->
+                <div v-if="$can('view users') || $can('view roles')">
                     <button
                         @click="toggleUserManagement"
                         class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition duration-150 group whitespace-nowrap"
-                        :class="currentPath.startsWith('/users') ? 'bg-slate-800 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
+                        :class="currentPath.startsWith('/users') || currentPath.startsWith('/roles') ? 'bg-slate-800 text-white font-semibold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'"
                     >
                         <div class="flex items-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/xl" class="h-5 w-5 shrink-0 transition" :class="currentPath.startsWith('/users') ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 transition" :class="currentPath.startsWith('/users') || currentPath.startsWith('/roles') ? 'text-blue-500' : 'text-slate-400 group-hover:text-blue-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                                 <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" />
                             </svg>
                             <span v-show="!isCollapsed">User Management</span>
                         </div>
                         <svg v-show="!isCollapsed" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 transition-transform duration-200" :class="{ 'rotate-180 text-blue-500': isUserManagementOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
                     <div v-show="isUserManagementOpen && !isCollapsed" class="mt-1 ml-4 pl-4 border-l border-slate-800 space-y-1">
-                        <Link href="/users" class="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath === '/users' ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
+                        <Link v-if="$can('view users')" href="/users" class="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath === '/users' ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
                             Users List
+                        </Link>
+                        <Link v-if="$can('view roles')" href="/roles" class="flex items-center px-3 py-2 rounded-lg text-xs font-medium transition duration-150" :class="currentPath === '/roles' ? 'text-white font-bold bg-slate-800/60' : 'text-slate-400 hover:text-white hover:bg-slate-800/20'">
+                            User Role
                         </Link>
                     </div>
                 </div>

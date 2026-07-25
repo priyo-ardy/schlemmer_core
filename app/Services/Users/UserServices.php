@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Repositories\User\UserRepository;
 use App\Services\ChangeLogs\ChangeLogsService;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,8 +17,6 @@ use Illuminate\Support\Str;
 
 class UserServices
 {
-
-
     public function __construct(
         protected UserRepository $userRepository,
         protected ChangeLogsService $logService
@@ -33,22 +32,26 @@ class UserServices
         try {
             return DB::transaction(function () use ($data) {
                 // 1. Inisialisasi Default Values
-                $data['password']       = Hash::make($data['password']);
+                $data['password'] = Hash::make($data['password']);
                 $data['login_attempts'] = 0;
-                $data['is_locked']      = false;
-                $data['is_active']      = true;
+                $data['is_locked'] = false;
+                $data['is_active'] = true;
 
-                if (isset($data['avatar']) && $data['avatar'] instanceof \Illuminate\Http\UploadedFile) {
+                if (isset($data['avatar']) && $data['avatar'] instanceof UploadedFile) {
                     $file = $data['avatar'];
                     // Tambahkan Str::random agar nama file 100% unik
-                    $filename = Str::slug($data['name']) . '-' . Str::random(8) . '.' . $file->getClientOriginalExtension();
-                    $path     = $file->storeAs('avatars', $filename, 'public');
-                    $data['avatar'] = '/storage/' . $path;
+                    $filename = Str::slug($data['name']).'-'.Str::random(8).'.'.$file->getClientOriginalExtension();
+                    $path = $file->storeAs('avatars', $filename, 'public');
+                    $data['avatar'] = '/storage/'.$path;
                 } else {
                     $data['avatar'] = null; // Pastikan benar-benar null
                 }
 
                 $save = $this->userRepository->create($data);
+
+                if (! empty($data['role'])) {
+                    $save->assignRole($data['role']);
+                }
 
                 $this->logService->store($save, 'create', 'register new user', null, $data);
 
@@ -56,13 +59,13 @@ class UserServices
                     ->causedBy(Auth::id())
                     ->withProperties([
                         'user_id' => $save->id,
-                        'ip'      => Request::ip()
+                        'ip' => Request::ip(),
                     ])
                     ->log('Save success: Successfully register new user data');
 
                 return true;
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             activity('save_user')
                 ->causedBy(Auth::id())
                 ->withProperties([
@@ -70,7 +73,7 @@ class UserServices
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ])
                 ->log('Save failed: Failed to register new user data');
             throw $e;
@@ -97,13 +100,13 @@ class UserServices
                     $data['is_active'] = filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN);
                 }
 
-                if (!empty($data['password'])) {
-                    $data['password'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+                if (! empty($data['password'])) {
+                    $data['password'] = Hash::make($data['password']);
                 } else {
                     unset($data['password']);
                 }
 
-                if (isset($data['avatar']) && $data['avatar'] instanceof \Illuminate\Http\UploadedFile) {
+                if (isset($data['avatar']) && $data['avatar'] instanceof UploadedFile) {
                     // Hapus avatar lama
                     if ($user->avatar && str_contains($user->avatar, '/storage/avatars/')) {
                         $oldPath = str_replace('/storage/', '', $user->avatar);
@@ -111,9 +114,9 @@ class UserServices
                     }
 
                     $file = $data['avatar'];
-                    $filename = Str::slug($data['name'] ?? $user->name) . '-' . time() . '.' . $file->getClientOriginalExtension();
+                    $filename = Str::slug($data['name'] ?? $user->name).'-'.time().'.'.$file->getClientOriginalExtension();
                     $path = $file->storeAs('avatars', $filename, 'public');
-                    $data['avatar'] = '/storage/' . $path;
+                    $data['avatar'] = '/storage/'.$path;
                 } else {
                     unset($data['avatar']);
                 }
@@ -122,6 +125,10 @@ class UserServices
 
                 $new = User::findOrFail($id);
 
+                if (isset($data['role'])) {
+                    $user->syncRoles([$data['role']]);
+                }
+
                 $this->logService->store($new, 'update', 'Update user data', $user->toArray(), $new->toArray());
 
                 activity('update_user')
@@ -129,13 +136,13 @@ class UserServices
                     ->withProperties([
                         'old_data' => $user,
                         'new_data' => $new,
-                        'ip' => Request::ip()
+                        'ip' => Request::ip(),
                     ])
                     ->log('Update success: Successfully update user data');
 
                 return true;
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             activity('update_user')
                 ->causedBy(Auth::id())
                 ->withProperties([
@@ -144,7 +151,7 @@ class UserServices
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => $e->getTraceAsString(),
                 ])
                 ->log('Update failed: Failed to update user data');
             throw $e;
@@ -176,7 +183,7 @@ class UserServices
                         ->withProperties([
                             'input_id' => $user->id,
                             'old_data' => $oldData,
-                            'ip' => Request::ip()
+                            'ip' => Request::ip(),
                         ])
                         ->log('Mass delete success: Successfully deleted user data');
 
@@ -187,7 +194,7 @@ class UserServices
 
                 return true;
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             activity('mass_delete_customer')
                 ->causedBy(Auth::id())
                 ->withProperties([
@@ -208,8 +215,8 @@ class UserServices
     {
         try {
             return $this->userRepository->searchProcess($search);
-        } catch (\Exception $e) {
-            throw new \Exception($e->getMessage());
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
         }
     }
 }

@@ -26,7 +26,8 @@ class StoreUserRequest extends FormRequest
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'name' => 'required|string|max:150',
             'email' => 'required|string|email|max:150|unique:users,email',
-            'password' => 'required|string|min:8'
+            'password' => 'required|string|min:8',
+            'role' => 'nullable|string|exists:roles,name',
         ];
     }
 
@@ -36,7 +37,7 @@ class StoreUserRequest extends FormRequest
             'name.max' => 'Maximum 150 characters',
             'email.max' => 'Maximum 150 characters',
             'email.unique' => 'This email address already registered',
-            'password.min' => 'The password must be at least 8 characters long'
+            'password.min' => 'The password must be at least 8 characters long',
         ];
     }
 }

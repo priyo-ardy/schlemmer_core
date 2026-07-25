@@ -8,6 +8,7 @@ use App\Http\Controllers\api\v1\Project\ProjectApiController;
 use App\Http\Controllers\api\v1\UnitCategory\UnitCategoryApiController;
 use App\Http\Controllers\api\v1\Units\UnitApiController as UnitsUnitApiController;
 use App\Http\Controllers\api\v1\User\UserApiController;
+use App\Http\Controllers\AppRole\RoleController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
@@ -19,7 +20,6 @@ use App\Http\Controllers\UnitCategory\UnitCategoryController;
 use App\Http\Controllers\Units\UnitController;
 use App\Http\Controllers\Users\UserController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Auth as FacadesAuth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -107,17 +107,24 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/materials/mass-delete', [MaterialController::class, 'massDelete'])->name('material.delete');
     Route::get('/materials/{logId}/logs', [MaterialController::class, 'getLog'])->name('material.getlog');
 
-
     // Menu user management
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::post('/users/bulk-delete', [UserController::class, 'bulkDestroy'])->name('users.bulk-delete');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index')->middleware('permission:view users');
+    Route::post('/users', [UserController::class, 'store'])->name('users.store')->middleware('permission:create users');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update')->middleware('permission:edit users');
+    Route::post('/users/bulk-delete', [UserController::class, 'bulkDestroy'])->name('users.bulk-delete')->middleware('permission:delete users');
+
+    // Menu User Role
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+    Route::put('/roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+    Route::get('/roles/{id}/logs', [RoleController::class, 'getLogs'])->name('roles.logs');
+    Route::post('/roles/mass-delete', [RoleController::class, 'massDelete'])->name('roles.mass-delete');
 
     Route::post('/logout', function (Request $request) {
         FacadesAuth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/');
     })->name('logout');
 
@@ -127,7 +134,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 });
-
 
 // Route buat API
 Route::prefix('api/v1')->middleware('auth')->group(function () {
