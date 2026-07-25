@@ -3,12 +3,14 @@ import { Link, Head } from '@inertiajs/vue3';
 </script>
 
 <template>
-    <Head title=".:: 404 Not Found ::." />
+    <Head title=".:: 403 Forbidden ::." />
     <div class="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div class="text-center">
-            <h1 class="text-9xl font-black text-blue-500">404</h1>
-            <p class="text-2xl font-bold mt-4">Oops! Page Not Found</p>
-            <p class="text-slate-400 mt-2 mb-8">Sorry, the request or page you are looking for could not be found</p>
+            <!-- Warna merah/rose agar merepresentasikan error akses/forbidden -->
+            <h1 class="text-9xl font-black text-rose-500">403</h1>
+            <p class="text-2xl font-bold mt-4">Access Denied</p>
+            <p class="text-slate-400 mt-2 mb-8">Sorry, you don't have the permission to access this page</p>
+
             <Link href="/dashboard" class="px-6 py-3 bg-blue-600 rounded-xl font-bold hover:bg-blue-700 transition inline-flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
                     <path d="M11.47 3.841a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 0 1.06-1.061l-8.689-8.69a2.25 2.25 0 0 0-3.182 0l-8.69 8.69a.75.75 0 1 0 1.061 1.06l8.69-8.689Z" />
