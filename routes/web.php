@@ -9,6 +9,7 @@ use App\Http\Controllers\api\v1\UnitCategory\UnitCategoryApiController;
 use App\Http\Controllers\api\v1\Units\UnitApiController as UnitsUnitApiController;
 use App\Http\Controllers\api\v1\User\UserApiController;
 use App\Http\Controllers\AppRole\RoleController;
+use App\Http\Controllers\ApprovalSetup\ApprovalSetupController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Material\MaterialController;
@@ -106,6 +107,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/materials/{material}', [MaterialController::class, 'update'])->name('material.update');
     Route::post('/materials/mass-delete', [MaterialController::class, 'massDelete'])->name('material.delete');
     Route::get('/materials/{logId}/logs', [MaterialController::class, 'getLog'])->name('material.getlog');
+
+    // Approval Management
+    Route::get('/approval-setup', [ApprovalSetupController::class, 'index'])->name('approval-setup.index')->middleware('permission:view approval-setup');
+    Route::get('/approval-setup/create', [ApprovalSetupController::class, 'create'])->name('approval-setup.create')->middleware('permission:create approval-setup');
+    Route::post('/approval-setup', [ApprovalSetupController::class, 'store'])->name('approval-setup.index')->middleware('permission:create approval-setup');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index')->middleware('permission:view users');

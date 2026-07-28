@@ -7,6 +7,10 @@ import { toast } from "vue3-toastify";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
 
+const can = (permission) => {
+    return usePage().props.auth.permissions.includes(permission);
+};
+
 dayjs.locale("id");
 
 const page = usePage();
@@ -224,6 +228,11 @@ const openCreateDrawer = () => {
 };
 
 const openEditDrawer = (user) => {
+
+    if (!can('edit users')) {
+        return; 
+    }
+
     isEditMode.value = true;
     slideOverTitle.value = `Security Parameters: ${user.name}`;
     form.clearErrors();
@@ -318,10 +327,11 @@ const confirmAction = () => {
                         Audit credentials, track system logs, and monitor authentication layers.
                     </p>
                 </div>
-                 <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm">
+                <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border border-slate-200 px-3 py-2 shadow-sm">
                     <div class="flex items-center justify-between w-full">
                         <div class="flex items-center gap-1.5">
                             <button
+                                v-if="$can('create users')"
                                 @click="openCreateDrawer"
                                 type="button"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 transition-all hover:bg-blue-100 active:scale-95 shadow-sm"
@@ -345,6 +355,7 @@ const confirmAction = () => {
                             </button>
 
                             <button
+                                v-if="$can('mass_delete users')"
                                 type="button"
                                 @click="deleteSelected"
                                 :disabled="selectedUsers.length === 0"
@@ -441,7 +452,12 @@ const confirmAction = () => {
                                         type="checkbox"
                                         :checked="selectedUsers.includes(user.id)"
                                         @change="toggleSelectUser(user.id)"
-                                        class="border-slate-300 text-blue-600 h-4 w-4 transition cursor-pointer"
+                                        class="transition"
+                                        :class="{
+                                            'cursor-pointer hover:bg-slate-50/80': can('edit users'),
+                                            'cursor-default': !can('edit users'),
+                                            'bg-blue-50/30': selectedUsers.includes(user.id)
+                                        }"
                                     />
                                 </td>
                                 <td class="px-6 py-4">

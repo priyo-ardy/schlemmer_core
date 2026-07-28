@@ -82,7 +82,7 @@ class UserRepository implements UserRepositoryInterface
 
     public function getAll(): Collection
     {
-        return User::with('roles')->orderBy('name', 'desc')->get();
+        return User::with('roles')->orderBy('name', 'asc')->get();
     }
 
     public function bulkDelete(array $ids): bool

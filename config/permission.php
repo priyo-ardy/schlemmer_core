@@ -224,6 +224,14 @@ return [
     'modules' => [
         'users',
         'roles',
+        'customers',
+        'projects',
+        'unit_categories',
+        'units',
+        'materials',
+        'process',
+        'pfmea',
+        'approval-setup',
         // Tambahkan nama modul ERP Anda yang lain di sini
     ],
 
