@@ -112,6 +112,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/approval-setup', [ApprovalSetupController::class, 'index'])->name('approval-setup.index')->middleware('permission:view approval-setup');
     Route::get('/approval-setup/create', [ApprovalSetupController::class, 'create'])->name('approval-setup.create')->middleware('permission:create approval-setup');
     Route::post('/approval-setup', [ApprovalSetupController::class, 'store'])->name('approval-setup.index')->middleware('permission:create approval-setup');
+    Route::get('/approval-setup/{id}/view', [ApprovalSetupController::class, 'view'])->name('approval-setup.view')->middleware('permission:view approval-setup');
+    Route::put('/approval-setup/{id}', [ApprovalSetupController::class, 'update'])->name('approval-setup.update')->middleware('permission:edit approval-setup');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index')->middleware('permission:view users');

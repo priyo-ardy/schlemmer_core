@@ -231,6 +231,7 @@ return [
         'materials',
         'process',
         'pfmea',
+        'apqp',
         'approval-setup',
         // Tambahkan nama modul ERP Anda yang lain di sini
     ],

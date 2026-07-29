@@ -133,8 +133,65 @@ const onDeleteAll = () => {
 };
 
 const validateAndSave = () => {
-    // Tambahkan logic simpan form Anda di sini
+    form.clearErrors();
+    let isValid = true;
+
+    if (!form.module) {
+        form.setError('module', 'Module name is required');
+        isValid = false;
+    }
+
+    if (!form.approver || form.approver.length === 0) {
+        toast.error('At least one approver is required.');
+        return;
+    }
+
+    const idCounts = {};
+    form.approver.forEach((item) => {
+        if (item.approver_id) {
+            idCounts[item.approver_id] = (idCounts[item.approver_id] || 0) + 1;
+        }
+    });
+
+    let hasEmptyApprover = false;
+    let hasDuplicate = false;
+
+    form.approver.forEach((item, index) => {
+        const fieldKey = `approver.${index}.approver_id`;
+
+        if (!item.approver_id) {
+            form.setError(fieldKey, 'Approver is required');
+            hasEmptyApprover = true;
+            isValid = false;
+        } 
+        else if (idCounts[item.approver_id] > 1) {
+            form.setError(fieldKey, 'This approver is duplicated');
+            hasDuplicate = true;
+            isValid = false;
+        }
+    });
+
+    if (hasEmptyApprover) {
+        toast.error('Please select an approver for all rows.');
+    }
+
+    if (hasDuplicate) {
+        toast.error('Duplicate approver found, please check it.');
+    }
+
+    if (!isValid) {
+        return;
+    }
+
+    form.post('/approval-setup', {
+        preserveScroll: true,
+        onError: (errors) => {
+            const firstError = Object.values(errors)[0];
+            toast.error(firstError || 'Failed to save data.');
+        }
+    });
 };
+
 </script>
 
 <template>
@@ -377,33 +434,49 @@ const validateAndSave = () => {
                                                     };
                                                 }
                                             }"
-                                            class="relative z-20 w-full pl-3 pr-3 py-2 border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white cursor-pointer flex justify-between items-center transition-all"
+                                            class="relative z-20 w-full pl-3 pr-3 py-2 border text-xs focus:outline-none cursor-pointer flex justify-between items-center transition-all shadow-sm"
                                             :class="[
                                                 form.errors[`approver.${index}.approver_id`]
-                                                ? 'border-rose-500 text-rose-600'
-                                                : 'border-slate-300 text-slate-800', 
+                                                    ? 'border-rose-500 bg-rose-50/50 text-rose-900 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'
+                                                    : 'border-slate-300 bg-white text-slate-800 hover:border-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                                             ]"
                                         >
-                                            <span :class="item.approver_id ? 'text-slate-800 font-semibold' : 'text-slate-400'">
+                                            <span 
+                                                :class="{
+                                                    'text-slate-800 font-semibold': item.approver_id && !form.errors[`approver.${index}.approver_id`],
+                                                    'text-rose-900 font-semibold': item.approver_id && form.errors[`approver.${index}.approver_id`],
+                                                    'text-slate-400': !item.approver_id && !form.errors[`approver.${index}.approver_id`],
+                                                    'text-rose-500 font-medium': !item.approver_id && form.errors[`approver.${index}.approver_id`]
+                                                }"
+                                            >
                                                 {{ getSelectedUserName(item.approver_id) }}
                                             </span>
+
                                             <svg
                                                 xmlns="http://www.w3.org/2000/svg"
-                                                class="h-4 w-4 text-slate-400 transition-transform duration-200"
-                                                :class="{'rotate-180 text-blue-500': activeDropdownRow === index}"
+                                                class="h-4 w-4 transition-transform duration-200"
+                                                :class="[
+                                                    activeDropdownRow === index ? 'rotate-180 text-blue-500' : '',
+                                                    form.errors[`approver.${index}.approver_id`] && activeDropdownRow !== index ? 'text-rose-500' : 'text-slate-400'
+                                                ]"
                                                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                             >
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                             </svg>
                                         </div>
+
+                                        <!-- Message Error di Bawah Box -->
                                         <p
                                             v-if="form.errors[`approver.${index}.approver_id`]"
-                                            class="mt-1 text-[10px] font-bold text-rose-500"
+                                            class="mt-1 text-[10px] font-bold text-rose-500 flex items-center gap-1"
                                         >
-                                            {{ form.errors[`approver.${index}.approver_id`] }}
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span>{{ form.errors[`approver.${index}.approver_id`] }}</span>
                                         </p>
 
-                                        <!-- Teleport untuk Panel Dropdown User agar tidak tertutup overflow tabel -->
+                                        <!-- Teleport untuk Panel Dropdown User -->
                                         <Teleport to="body">
                                             <div
                                                 v-if="activeDropdownRow === index"
