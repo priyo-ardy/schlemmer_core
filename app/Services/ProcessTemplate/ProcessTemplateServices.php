@@ -138,8 +138,6 @@ class ProcessTemplateServices
                     ])
                     ->log('Save success: Successfully saved new process funtion header data');
 
-                ProcessFunctionQueueJob::dispatch('create', [])->afterCommit();
-
                 return $processFunction;
             });
         } catch (\Exception $e) {
@@ -266,7 +264,12 @@ class ProcessTemplateServices
                 $this->logService->store($freshHeader, 'update', $data['reason'] ?? '', $oldData, $newData);
 
                 // Buat persiapan nanti pas udah ada tabel transaksi pfmea nya
-                ProcessFunctionQueueJob::dispatch('update', [])->afterCommit();
+                ProcessFunctionQueueJob::dispatch('update', [
+                    'id' => $freshHeader->id,
+                    'reason' => $data['reason'],
+                    'old_details' => $oldDetailData->toArray(),
+                    'new_detail' => $freshDetail->toArray()
+                ])->afterCommit();
 
                 return $freshHeader;
             });
