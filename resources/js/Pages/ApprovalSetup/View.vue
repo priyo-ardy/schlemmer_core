@@ -290,7 +290,7 @@ const confirmAction = () => {
 
     <div class="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-800">
         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 p-6 pb-0">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-0">
                 <div>
                     <h1 class="text-2xl font-black text-slate-900 tracking-tight">
                         {{ isEditing ? 'Edit' : 'View' }} Approval Setup | (Rev. {{ props.header?.revision }})
@@ -398,7 +398,7 @@ const confirmAction = () => {
                 </div>
             </div>
 
-            <div class="px-6">
+            <div>
                 <!-- Header Form Card -->
                 <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

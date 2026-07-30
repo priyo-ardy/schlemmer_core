@@ -95,14 +95,13 @@ class ApprovalSetupService
 
     public function update(array $data, int $id)
     {
-        $userId = Auth::id();
+        $user = Auth::user();
         $ipAddress = request()->ip();
 
         try {
             $update = DB::transaction(function () use ($data, $id) {
                 $oldHeader = $this->approvalRepo->getHeaderById($id);
 
-                // 1. Fail-early jika header data tidak ditemukan
                 if (!$oldHeader) {
                     throw new \Exception("Approval setup header with ID {$id} not found.");
                 }
@@ -110,7 +109,7 @@ class ApprovalSetupService
                 $oldDetail = $this->approvalRepo->getDetailByHeader($id);
 
                 $headerData = [
-                    'revision' => $oldHeader->revision + 1,
+                    'revision' => $oldHeader ? $oldHeader->revision + 1 : 1,
                     'module'   => $data['module'],
                     'remark'   => !empty($data['remark']) ? trim($data['remark']) : null, // Safely handle null
                 ];
@@ -118,12 +117,9 @@ class ApprovalSetupService
                 $freshHeader = $this->approvalRepo->updateHeader($headerData, $id);
 
                 $incomingApprovers = collect($data['approver'] ?? []);
-
-                // 2. Ambil ID primary key detail untuk filter delete
                 $incomingIds = $incomingApprovers->pluck('id')->filter()->toArray();
                 $this->approvalRepo->deleteDetailsNotIn($id, $incomingIds);
 
-                // 3. Masukkan 'id' dan 'approval_setup_id' agar upsert berfungsi presisi
                 $approverToSave = $incomingApprovers->map(function ($item, $index) use ($id) {
                     return [
                         'id'                => $item['id'] ?? null,
@@ -163,9 +159,14 @@ class ApprovalSetupService
             $this->logService->store($update['model'], 'update', trim($data['reason'] ?? ''), $oldData, $newData);
 
             activity('update_approval_setup')
-                ->causedBy($userId)
+                ->causedBy($user) // Menggunakan Model User
                 ->performedOn($update['model'])
-                ->withProperties([])
+                ->withProperties([
+                    'reason'        => trim($data['reason'] ?? ''),
+                    'old_data'      => $oldData,
+                    'new_data'      => $newData,
+                    'ip'            => $ipAddress,
+                ])
                 ->log('Update success: Successfully update approval setup data');
 
             return $update['model'];
@@ -173,7 +174,7 @@ class ApprovalSetupService
             Log::error("Failed to update approval setup ID {$id} with error: " . $e->getMessage());
 
             activity('update_approval_setup') // Nama disamakan dengan block try
-                ->causedBy($userId)
+                ->causedBy($user)
                 ->withProperties([
                     'input_id'   => $id,
                     'input_data' => $data,
@@ -189,5 +190,129 @@ class ApprovalSetupService
         }
     }
 
-    public function massDelete(array $ids) {}
+    public function getLogs(int $id)
+    {
+        return $this->approvalRepo->getLogs($id);
+    }
+
+    public function delete(array $data)
+    {
+        $user = Auth::user();
+        $ipAddress = request()->ip();
+
+        // 1. Dukung payload array 'ids' (Mass Delete) maupun single 'id'
+        $ids = $data['ids'] ?? (isset($data['id']) ? [$data['id']] : []);
+        $reason = trim($data['reason'] ?? $data['remark'] ?? '');
+
+        if (empty($ids)) {
+            throw new \Exception('No deleted data provided.');
+        }
+
+        try {
+            return DB::transaction(function () use ($ids, $reason, $user, $ipAddress, $data) {
+                $deletedCount = 0;
+
+                foreach ($ids as $id) {
+                    // 2. Ambil data lama (Header + Detail) sebelum di-delete
+                    $oldHeader = $this->approvalRepo->getHeaderById($id);
+
+                    if (!$oldHeader) {
+                        continue;
+                    }
+
+                    $oldData = [
+                        'header'  => $oldHeader->toArray(),
+                        'details' => $oldHeader->details ? $oldHeader->details->toArray() : [],
+                    ];
+
+                    // 3. Simpan ke Audit Log Service internal (merekam snapshot 'before' & 'reason')
+                    $this->logService->store($oldHeader, 'delete', $reason, $oldData, null);
+
+                    // 4. Activity Log Spatie untuk tiap item yang berhasil di-delete
+                    activity('delete_approval_setup')
+                        ->causedBy($user)
+                        ->performedOn($oldHeader)
+                        ->withProperties([
+                            'reason' => $reason,
+                            'old'    => $oldData,
+                            'ip'     => $ipAddress,
+                        ])
+                        ->log("Delete success: Successfully deleted approval setup ID {$id}");
+
+                    // 5. Eksekusi hapus di Repository
+                    $this->approvalRepo->delete($id);
+                    $deletedCount++;
+                }
+
+                return $deletedCount;
+            });
+        } catch (\Exception $e) {
+            Log::error("Failed to delete approval setup with error: " . $e->getMessage());
+
+            activity('delete_approval_setup')
+                ->causedBy($user)
+                ->withProperties([
+                    'input_ids'  => $ids,
+                    'input_data' => $data,
+                    'message'    => $e->getMessage(),
+                    'file'       => $e->getFile(),
+                    'line'       => $e->getLine(),
+                    'trace'      => $e->getTraceAsString(),
+                    'ip'         => $ipAddress,
+                ])
+                ->log('Delete failed: failed to perform delete action');
+
+            throw $e;
+        }
+    }
+
+    public function massDelete(array $data)
+    {
+        $user = Auth::user();
+        $ip_address = Request::ip();
+
+        try {
+            $delete = DB::transaction(function () use ($data, $user, $ip_address) {
+                if (empty($data)) {
+                    throw new \Exception('Mass delete failed, no approval setup data proovided');
+                }
+
+                $approval = $this->approvalRepo->findManyIds($data['ids']);
+
+                if ($approval->isEmpty()) {
+                    throw new \Exception('No data found from provided approval setup data');
+                }
+
+                foreach ($approval as $row) {
+                    $this->logService->store($row, 'delete', trim($data['reason']), $approval->toArray(), null);
+                    activity('mass_delete_approval_setup')
+                        ->causedBy($user)
+                        ->performedOn($row)
+                        ->withProperties([
+                            'input_id' => $row->id,
+                            'ip' => $ip_address
+                        ])
+                        ->log('Delete success: Successfully deleted approval setup data');
+                }
+
+                $this->approvalRepo->massDelete($data['ids']);
+            });
+
+            return $delete;
+        } catch (\Exception $e) {
+            activity('mass_delete_approver_setup')
+                ->causedBy($user)
+                ->withProperties([
+                    'input_id' => $data['ids'],
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                    'ip' => Request::ip()
+                ])
+                ->log('Delete failed: failed to perform mass delete action');
+
+            throw $e;
+        }
+    }
 }

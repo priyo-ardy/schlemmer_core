@@ -22,6 +22,7 @@ class ApprovalSetup extends Model
         'uuid',
         'module',
         'is_active',
+        'revision',
         'remark',
         'created_by',
         'updated_by'

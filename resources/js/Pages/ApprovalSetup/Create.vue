@@ -199,7 +199,7 @@ const validateAndSave = () => {
 
     <div class="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-800">
         <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 p-6 pb-0">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 pb-0">
                 <div>
                     <h1 class="text-2xl font-black text-slate-900 tracking-tight">Create Approval Setup</h1>
                     <p class="text-xs text-slate-500 mt-1">Create new process approval flow configuration.</p>
@@ -235,7 +235,7 @@ const validateAndSave = () => {
                 </div>
             </div>
 
-            <div class="px-6">
+            <div>
                 <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                         <!-- Module Selection -->

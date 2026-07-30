@@ -79,9 +79,85 @@ class ApprovalSetupController extends Controller
         try {
             $update = $this->approvalService->update($request->validated(), $id);
 
-            return to_route('approval-setup.view', [
-                'id' => $update->id
-            ])->with('success', 'Approval setup updated successfully');
+            return redirect()->back()
+                ->with('success', 'Approval setup updated successfully');
+        } catch (QueryException $e) {
+            Log::error('Database Error [ApprovalSetupUpdate]: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Database operation failed. Duplicate entry or constraint violation.');
+        } catch (Exception $e) {
+            Log::error('General Error [ApprovalSetupUpdate]: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->getMessage() ?: 'An unexpected error occurred while processing your request.');
+        }
+    }
+
+    public function getLogs(int $id)
+    {
+        try {
+            $logs = $this->approvalService->getLogs($id);
+
+            return response()->json($logs);
+        } catch (QueryException $e) {
+            Log::error('Database Error [ApprovalSetupGetLogs]: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Database operation failed. Unable to fetch logs.'
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('General Error [ApprovalSetupGetLogs]: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => $e->getMessage() ?: 'An unexpected error occurred while fetching logs.'
+            ], 500);
+        }
+    }
+
+    public function delete(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'id'     => 'required|integer|exists:approval_setups,id',
+                'reason' => 'required|string|min:3',
+            ]);
+
+            $this->approvalService->delete($validated);
+
+            return to_route('approval-setup.index')
+                ->with('success', 'Successfully deleted approval setup data');
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (QueryException $e) {
+            Log::error('Database Error [ApprovalSetupDelete]: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Database operation failed. Unable to delete data due to constraint violation.');
+        } catch (\Exception $e) {
+            Log::error('General Error [ApprovalSetupDelete]: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->getMessage() ?: 'An unexpected error occurred while processing your request.');
+        }
+    }
+
+    public function massDelete(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'integer|exists:approval_setups,id',
+                'reason' => 'required|string|min:5'
+            ]);
+
+            $delete = $this->approvalService->massDelete($validated);
+
+            return redirect()->back()->with('success', 'Successfully deleted approval setup data');
         } catch (QueryException $e) {
             Log::error('Database Error [ApprovalSetupUpdate]: ' . $e->getMessage());
 

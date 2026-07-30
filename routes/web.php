@@ -114,6 +114,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/approval-setup', [ApprovalSetupController::class, 'store'])->name('approval-setup.index')->middleware('permission:create approval-setup');
     Route::get('/approval-setup/{id}/view', [ApprovalSetupController::class, 'view'])->name('approval-setup.view')->middleware('permission:view approval-setup');
     Route::put('/approval-setup/{id}', [ApprovalSetupController::class, 'update'])->name('approval-setup.update')->middleware('permission:edit approval-setup');
+    Route::get('/approval-setup/{id}/logs', [ApprovalSetupController::class, 'getLogs'])->name('approval-setup.logs')->middleware('permission:view approval-setup');
+    Route::post('/approval-setup/delete', [ApprovalSetupController::class, 'delete'])->name('approval-setup.delete')->middleware('permission:delete approval-setup');
+    Route::post('/approval-setup/mass-delete', [ApprovalSetupController::class, 'massDelete'])->name('approval-setup.mass-delete')->middleware('permission:mass_delete approval-setup');
 
     // Menu user management
     Route::get('/users', [UserController::class, 'index'])->name('users.index')->middleware('permission:view users');

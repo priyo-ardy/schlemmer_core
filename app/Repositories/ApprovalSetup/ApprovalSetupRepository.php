@@ -4,6 +4,7 @@ namespace App\Repositories\ApprovalSetup;
 
 use App\Models\ApprovalSetup;
 use App\Models\ApprovalSetupDetail;
+use App\Models\ChangeLogs;
 
 class ApprovalSetupRepository
 {
@@ -40,7 +41,9 @@ class ApprovalSetupRepository
 
     public function getDetailByHeader(int $id)
     {
-        return ApprovalSetupDetail::where('header_id', $id)->get();
+        return ApprovalSetupDetail::with(['approver'])
+            ->where('header_id', $id)
+            ->get();
     }
 
     public function getDataByUuid(string $uuid) {}
@@ -55,16 +58,17 @@ class ApprovalSetupRepository
         return $approvalSetup->details()->createMany($approverLists);
     }
 
-    public function updateHeader(array $data, int $id)
+    public function updateHeader(array $data, int $id): ?ApprovalSetup
     {
-        $header = ApprovalSetup::findOrFail($id);
+        $header = ApprovalSetup::find($id);
+
         if (!$header) {
-            return;
+            return null;
         }
 
         $header->update($data);
 
-        return $header;
+        return $header->fresh();
     }
 
     public function deleteDetailsNotIn(int $idHeader, array $Ids)
@@ -87,5 +91,35 @@ class ApprovalSetupRepository
         ]);
     }
 
-    public function massDelete(array $ids) {}
+    public function getLogs(int $id)
+    {
+        return ChangeLogs::where('item_id', $id)
+            ->with(['creator:id,name'])
+            ->where('table_name', 'approval_setups')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    public function findManyIds(array $ids)
+    {
+        return ApprovalSetup::whereIn('id', $ids)->get();
+    }
+
+    public function massDelete(array $ids)
+    {
+        return ApprovalSetup::whereIn('id', $ids)->delete();
+    }
+
+    public function delete(int $id): bool
+    {
+        $header = ApprovalSetup::find($id);
+
+        if (!$header) {
+            return false;
+        }
+
+        $header->details()->delete();
+
+        return (bool) $header->delete();
+    }
 }
