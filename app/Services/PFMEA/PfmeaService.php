@@ -29,8 +29,6 @@ class PfmeaService
         }
     }
 
-    public function getDataList() {}
-
     public function getDataById(int $id)
     {
         try {
@@ -357,6 +355,150 @@ class PfmeaService
             return $this->pfmeaRepo->getLogs($id);
         } catch (\Throwable $e) {
             throw $e;
+        }
+    }
+
+    public function getPfmeaData($projectId, $materialId)
+    {
+        try {
+            $pfmea = $this->pfmeaRepo->getDataList($projectId, $materialId);
+
+            if (!$pfmea) {
+                return [
+                    'success' => false,
+                    'code'    => 404,
+                    'message' => 'Data PFMEA tidak ditemukan untuk project & material ini.',
+                    'data'    => null
+                ];
+            }
+
+            // Ambil daftar nama core team yang aktif / tidak null
+            $coreTeamNames = $pfmea->coreTeam
+                ->map(fn($item) => $item->team?->name)
+                ->filter()
+                ->values()
+                ->toArray();
+
+            $revisions = DB::table('change_logs_data')
+                ->where('item_id', $pfmea->id)
+                ->where('table_name', 'pfmea')
+                ->orderBy('created_at', 'asc') // Urutkan dari revisi awal ke terbaru
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'ver'      => $log->revision ?? '-',      // Sesuaikan nama kolom versi di change_logs_data
+                        'date'     => $log->created_at ?? '-',   // Sesuaikan kolom tanggal
+                        'content'  => $log->change_reason ?? $log->change_reason ?? '-', // Sesuaikan kolom deskripsi/konten
+                        'before'    => $log->before,
+                        'after'     => $log->after,
+                    ];
+                })
+                ->toArray();
+
+            return [
+                'success' => true,
+                'code'    => 200,
+                'message' => 'Data PFMEA berhasil ditemukan.',
+                'data'    => [
+                    'id'                     => $pfmea->id,
+                    'doc_no'                 => $pfmea->code,
+                    'issue_date'             => $pfmea->date ? $pfmea->date->format('Y-m-d') : '-',
+                    'issuing_dept'           => $pfmea->department?->name ?? '-',
+                    'page'                   => "1 of {$pfmea->version}",
+                    'key_date'               => $pfmea->date ? $pfmea->date->format('Y-m-d') : '-',
+                    'part_name'              => $pfmea->material?->name ?? '-',
+                    'part_no'                => $pfmea->material?->code ?? '-',
+                    'customer_part_name'     => $pfmea->material?->customer_part_name ?? '-',
+                    'process_responsibility' => $pfmea->process_responsibility,
+                    'dwg_no'                 => $pfmea->material?->drawing_change,
+                    'scope'                  => $pfmea->scope,
+                    'core_team'              => !empty($coreTeamNames) ? implode(', ', $coreTeamNames) : '-',
+                    'prepared_by'            => $pfmea->creator?->name ?? '-',
+                    'reviewed_by'            => $pfmea->reviewed_by ?? '-',
+                    'approved_by'            => $pfmea->approved_by ?? '-',
+
+                    'revision_history'       => $revisions,
+                    // Detail items diratakan pake flatMap menembus process_function_details
+                    'items'                  => $pfmea->details->flatMap(function ($detail) {
+                        $processFunction = $detail->processFunction;
+                        $subDetails = $processFunction?->details ?? collect();
+
+                        // Jika proses memiliki detail baris di tabel process_function_details
+                        if ($subDetails->isNotEmpty()) {
+                            return $subDetails->map(function ($sub) use ($processFunction, $detail) {
+                                return [
+                                    'id'                     => "{$detail->id}-{$sub->id}",
+                                    'order'                  => $detail->order,
+                                    'process_id'             => $detail->process_id,
+                                    'process_step'           => $processFunction?->name ?? '-',
+                                    'revision'               => $processFunction?->revision ?? 0,
+                                    'remark'                 => $processFunction?->remark ?? '',
+                                    // Ambil kolom dari process_function_details (sesuaikan nama kolomnya kalau ada beda)
+                                    'kakotora_yc'            => $sub->previous_problem ?? '-',
+                                    'requirements'           => $sub->requirements ?? '-',
+                                    'potential_failure_mode' => $sub->potential_failure_mode ?? '-',
+                                    'potential_effects'      => $sub->potential_effect_of_failure ?? '-',
+                                    'classification'         => $sub->classification ?? '-',
+                                    'occurrence'             => $sub->occurrence ?? null,
+                                    'detection'              => $sub->detection ?? null,
+                                    'rpn'                    => $sub->rpn ?? null,
+                                    'recommended_actions'    => $sub->recommended_action ?? '-',
+                                    'severity'               => $sub->severity ?? null,
+                                    'responsibility'         => $sub->responsibility ?? '-',
+                                    'potential_causes'       => $sub->potential_cause_of_failure ?? '-',
+                                    'controls_prevention'    => $sub->controls_prevention ?? '-',
+                                    'control_detection'      => $sub->controls_detection ?? '-',
+                                    'responsibility'         => $sub->responsibility ?? '-',
+                                    'target_completion_date' => $sub->target_completion_date ?? '-',
+                                    'action_taken_date'      => $sub->action_taken_date ?? '-',
+                                    'result_severity'        => $sub->result_severity ?? null,
+                                    'result_occurrence'      => $sub->result_occurrence ?? null,
+                                    'result_detection'       => $sub->result_detection ?? null,
+                                    'result_rpn'             => $sub->result_rpn ?? null,
+                                ];
+                            });
+                        }
+
+                        // Fallback jika process_function belum punya detail baris di process_function_details
+                        return [[
+                            'id'                     => $detail->id,
+                            'order'                  => $detail->order,
+                            'process_id'             => $detail->process_id,
+                            'process_step'           => $processFunction?->name ?? '-',
+                            'revision'               => $processFunction?->revision ?? 0,
+                            'remark'                 => $processFunction?->remark ?? '',
+                            'kakotora_yc'            => '-',
+                            'requirements'           => '-',
+                            'potential_failure_mode' => '-',
+                            'potential_effects'      => '-',
+                            'severity'               => null,
+                            'classification'         => '-',
+                            'potential_causes'       => '-',
+                            'occurrence'             => null,
+                            'controls_prevention'    => '-',
+                            'control_detection'      => '-',
+                            'detection'              => null,
+                            'rpn'                    => null,
+                            'recommended_actions'    => '-',
+                            'responsibility'         => '-',
+                            'target_completion_date' => '-',
+                            'action_taken_date'      => '-',
+                            'result_severity'        => null,
+                            'result_occurrence'      => null,
+                            'result_detection'       => null,
+                            'result_rpn'             => null,
+                        ]];
+                    })->values()->toArray(),
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error("PfmeaService Error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'code'    => 500,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage(),
+                'data'    => null
+            ];
         }
     }
 }

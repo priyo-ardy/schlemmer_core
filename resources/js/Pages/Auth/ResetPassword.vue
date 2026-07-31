@@ -29,16 +29,16 @@ const handleSubmit = () => {
         class="min-h-screen w-screen flex items-center justify-center bg-slate-50 font-sans antialiased text-slate-800 relative overflow-hidden"
     >
         <div
-            class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"
+            class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/10 blur-3xl pointer-events-none"
         ></div>
         <div
-            class="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"
+            class="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-500/5 blur-3xl pointer-events-none"
         ></div>
 
         <div class="w-full max-w-md p-4 sm:p-6 z-10">
             <div class="flex flex-col items-center mb-8">
                 <div
-                    class="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/20 mb-4"
+                    class="h-12 w-12 bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-600/20 mb-4"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +69,7 @@ const handleSubmit = () => {
             </div>
 
             <div
-                class="bg-white rounded-3xl border border-slate-200/70 shadow-xl shadow-slate-100/50 p-6 sm:p-8"
+                class="bg-white border border-slate-200/70 shadow-xl shadow-slate-100/50 p-6 sm:p-8"
             >
                 <div class="mb-6">
                     <h2 class="text-lg font-bold text-slate-900">
@@ -110,7 +110,7 @@ const handleSubmit = () => {
                                 type="email"
                                 v-model="form.email"
                                 readonly
-                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-500 rounded-xl text-sm font-medium focus:outline-none cursor-not-allowed"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-500 text-sm font-medium focus:outline-none cursor-not-allowed"
                             />
                         </div>
                         <p
@@ -153,7 +153,7 @@ const handleSubmit = () => {
                                 v-model="form.password"
                                 placeholder="••••••••"
                                 required
-                                class="w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                                class="w-full pl-10 pr-4 py-3 bg-white border text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
                                 :class="
                                     form.errors.password
                                         ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-600/10'
@@ -201,7 +201,7 @@ const handleSubmit = () => {
                                 v-model="form.password_confirmation"
                                 placeholder="••••••••"
                                 required
-                                class="w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                                class="w-full pl-10 pr-4 py-3 bg-white border text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
                                 :class="
                                     form.errors.password_confirmation
                                         ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-600/10'
@@ -212,7 +212,7 @@ const handleSubmit = () => {
                     </div>
 
                     <div
-                        class="bg-slate-50 rounded-xl p-3.5 border border-slate-100 flex items-start gap-2.5"
+                        class="bg-slate-50 p-3.5 border border-slate-100 flex items-start gap-2.5"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -243,7 +243,7 @@ const handleSubmit = () => {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm rounded-xl transition duration-150 shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+                        class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold text-sm transition duration-150 shadow-lg shadow-blue-500/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
                     >
                         <svg
                             v-if="form.processing"

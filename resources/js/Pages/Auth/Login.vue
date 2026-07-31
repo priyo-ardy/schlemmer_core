@@ -44,7 +44,7 @@ const submit = () => {
     >
         <div class="flex-1 flex flex-col justify-center items-center">
             <div
-                class="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-100 p-8 sm:p-10"
+                class="w-full max-w-md bg-white shadow-sm border border-slate-100 p-8 sm:p-10"
             >
                 <div class="text-center mb-8">
                     <img
@@ -64,7 +64,7 @@ const submit = () => {
 
                 <div
                     v-if="status"
-                    class="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-100"
+                    class="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 border border-green-100"
                 >
                     {{ status }}
                 </div>
@@ -81,7 +81,7 @@ const submit = () => {
                             type="email"
                             v-model="form.email"
                             autofocus
-                            class="w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm"
+                            class="w-full px-4 py-2.5 bg-slate-50 border text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm"
                             :class="{
                                 'border-rose-500 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500':
                                     form.errors.email,
@@ -129,7 +129,7 @@ const submit = () => {
                             id="password"
                             type="password"
                             v-model="form.password"
-                            class="w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm"
+                            class="w-full px-4 py-2.5 bg-slate-50 border text-slate-900 placeholder-slate-400 focus:outline-none transition duration-200 text-sm"
                             :class="{
                                 'border-rose-500 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500':
                                     form.errors.password,
@@ -163,7 +163,7 @@ const submit = () => {
                             id="remember"
                             type="checkbox"
                             v-model="form.remember"
-                            class="h-4 w-4 text-blue-600 focus:ring-blue-500/20 border-slate-300 rounded"
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500/20 border-slate-300"
                         />
                         <label
                             for="remember"
@@ -176,7 +176,7 @@ const submit = () => {
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
                     >
                         <span
                             v-if="form.processing"

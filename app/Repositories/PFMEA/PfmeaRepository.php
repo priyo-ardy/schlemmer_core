@@ -179,4 +179,24 @@ class PfmeaRepository
             ->orderBy('created_at', 'DESC')
             ->get();
     }
+
+    public function getDataList($project_id, $material_id)
+    {
+
+        $projectId = (int) trim($project_id);
+        $materialId = (int) trim($material_id);
+
+        return PfmeaHeader::with([
+            'details.processFunction.details',
+            'coreTeam.team',
+            'department',
+            'project',
+            'material',
+            'creator',
+            'updater'
+        ])
+            ->where('project_id', $projectId)
+            ->where('material_id', $materialId)
+            ->first();
+    }
 }

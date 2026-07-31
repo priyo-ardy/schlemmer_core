@@ -21,7 +21,7 @@ const handleSubmit = () => {
         class="min-h-screen flex items-center justify-center bg-slate-50 font-sans text-slate-800"
     >
         <div
-            class="w-full max-w-md p-8 bg-white rounded-2xl border border-slate-200 shadow-sm"
+            class="w-full max-w-md p-8 bg-white border border-slate-200 shadow-sm"
         >
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-slate-900">
@@ -35,7 +35,7 @@ const handleSubmit = () => {
 
             <div
                 v-if="status"
-                class="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold"
+                class="mb-4 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold"
             >
                 {{ status }}
             </div>
@@ -52,7 +52,7 @@ const handleSubmit = () => {
                         placeholder="name@company.com"
                         required
                         :disabled="form.processing"
-                        class="w-full px-4 py-3 bg-white border rounded-xl text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+                        class="w-full px-4 py-3 bg-white border text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-blue-600/20"
                         :class="
                             form.errors.email
                                 ? 'border-rose-300 focus:border-rose-500'
@@ -71,7 +71,7 @@ const handleSubmit = () => {
                     type="button"
                     @click="handleSubmit"
                     :disabled="form.processing"
-                    class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition duration-150 disabled:opacity-50 focus:outline-none"
+                    class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition duration-150 disabled:opacity-50 focus:outline-none"
                 >
                     {{ form.processing ? "Sending..." : "Send Reset Link" }}
                 </button>

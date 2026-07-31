@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLog\ActivityLogController;
 use App\Http\Controllers\api\v1\Customer\CustomerApiController;
 use App\Http\Controllers\api\v1\Material\MaterialApiController;
+use App\Http\Controllers\api\v1\PfmeaApiController;
 use App\Http\Controllers\api\v1\ProcessTemplate\ProcessTemplateApiController;
 use App\Http\Controllers\api\v1\Project\ProjectApiController;
 use App\Http\Controllers\api\v1\UnitCategory\UnitCategoryApiController;
@@ -148,6 +149,7 @@ Route::middleware(['auth'])->group(function () {
 
 // Route buat API
 Route::prefix('api/v1')->middleware('auth')->group(function () {
+    Route::get('/pfmea/', [PfmeaApiController::class, 'dataList']);
 
     // API Buat dropdown
     Route::get('/units_category', [UnitCategoryApiController::class, 'list']);
