@@ -207,7 +207,6 @@ class ProjectService
                         'updated_at'  => now()
                     ];
                 })->toArray();
-
                 if (!empty($detailsToSave)) {
                     $this->projectRepo->upsertDetails($detailsToSave);
                 }
