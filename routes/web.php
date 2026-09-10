@@ -70,12 +70,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/process/{logId}/logs', [ProcessController::class, 'getLog'])->name('process.getlog');
 
     // Customer management
-    Route::get('/customer', [CustomerController::class, 'index'])->name('customer');
-    Route::post('/customer', [CustomerController::class, 'store'])->name('customer.store');
-    Route::get('/customer/{customer}', [CustomerController::class, 'view'])->name('customer.view');
-    Route::put('/customer/{customer}', [CustomerController::class, 'update'])->name('customer.update');
-    Route::post('/customer/delete', [CustomerController::class, 'delete'])->name('customer.delete');
-    Route::post('/customer/mass-delete', [CustomerController::class, 'massDelete'])->name('customer.mass-delete');
+    Route::get('/customer', [CustomerController::class, 'index'])->name('customer')->middleware('permission:view customers');
+    Route::post('/customer', [CustomerController::class, 'store'])->name('customer.store')->middleware('permission:create customers');
+    Route::get('/customer/{customer}', [CustomerController::class, 'view'])->name('customer.view')->middleware('permission:view customers');
+    Route::put('/customer/{customer}', [CustomerController::class, 'update'])->name('customer.update')->middleware('permission:edit customers');
+    Route::post('/customer/delete', [CustomerController::class, 'delete'])->name('customer.delete')->middleware('permission:delete customers');
+    Route::post('/customer/mass-delete', [CustomerController::class, 'massDelete'])->name('customer.mass-delete')->middleware('permission:mass_delete customers');
     Route::get('/customer/{logId}/logs', [CustomerController::class, 'getLog'])->name('customer.getlog');
 
     // Project management

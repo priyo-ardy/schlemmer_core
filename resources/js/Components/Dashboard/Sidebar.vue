@@ -125,7 +125,7 @@ const toggleCustomer = () => { if (!isCollapsed.value) isCustomerOpen.value = !i
                 </div>
 
                 <!-- MODUL CUSTOMER -->
-                <div v-if="$can('view customer')">
+                <div v-if="$can('view customers')">
                     <button @click="toggleCustomer" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/20 transition duration-150 whitespace-nowrap">
                         <div class="flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
