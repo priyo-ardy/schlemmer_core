@@ -719,7 +719,7 @@ const ucwords = (str) => {
                                     <td class="px-4 py-3 text-slate-600 truncate max-w-xs" :title="material.customer_part_name">{{ material.customer_part_name ?? '-' }}</td>
                                     <td class="px-4 py-3">
                                         <span class="font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 border border-slate-200">
-                                            {{ material.unit_id }}
+                                            {{ material.unit_id ? material.units.symbol }}
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 text-slate-600">{{ material.grade ?? '-' }}</td>
