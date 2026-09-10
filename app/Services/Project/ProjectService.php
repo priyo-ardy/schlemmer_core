@@ -89,10 +89,12 @@ class ProjectService
                         'created_by' => Auth::id(),
                     ];
                 }
+
                 $this->projectRepo->saveDetails($insert, $data_material);
 
                 // 3. FIX BUG SEQUENCE: Eager load dipanggil SETELAH detail sukses tersimpan di DB
-                $insert->load('customer, details.material');
+                // $insert->load('customer, details.material');
+                $insert->load(['customer', 'details.material']);
 
                 // 4. Bersihkan data array header dari nested detail bawaan model laravel
                 $headerData = $insert->toArray();
