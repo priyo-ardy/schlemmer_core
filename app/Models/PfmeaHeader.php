@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -30,6 +31,9 @@ class PfmeaHeader extends Model
         'prepared_by',
         'reviewed_by',
         'approved_by',
+        'doc_status',
+        'reviewed_date',
+        'approved_date',
         'created_by',
         'updated_by',
     ];
@@ -38,6 +42,11 @@ class PfmeaHeader extends Model
         'date' => 'date',
         'version' => 'integer'
     ];
+
+    public function approval(): MorphMany
+    {
+        return $this->morphMany(ApprovalTransaction::class, 'transaction');
+    }
 
     public function details(): HasMany
     {

@@ -42,12 +42,23 @@ class ApprovalSetupService
                 $approverList = collect($data['approver'])
                     ->map(function ($item, $index) {
                         return [
+                            'uuid' => \Illuminate\Support\Str::uuid7(),
                             'order' => $index + 1,
                             'approver_id' => is_array($item) ? $item['approver_id'] : $item,
                         ];
                     })->toArray();
 
                 $saveDetails = $this->approvalRepo->storeDetail($saveHeader, $approverList);
+
+                activity()
+                    ->performedOn($saveHeader)
+                    ->causedBy($user_id)
+                    ->withProperties([
+                        'header' => $saveHeader->toArray(),
+                        'details' => $saveDetails->toArray(),
+                        'ip_address' => $ip_address
+                    ])
+                    ->log('save_approal_setup');
 
                 return [
                     'model' => $saveHeader,

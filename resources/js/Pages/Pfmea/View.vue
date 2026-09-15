@@ -730,27 +730,50 @@ const updateProcessDropdownPosition = (index) => {
     }
 };
 
+// const toggleProcessDropdown = async(index) => {
+//     if (!isEditing.value) return;
+//     if (openedRowIndex.value === index) {
+//         openedRowIndex.value = null;
+//     } else {
+//         openedRowIndex.value = index;
+//         highlightedProcessIndex.value = 0;
+//         processSearch.value = "";
+
+//         await nextTick();
+//         updateProcessDropdownPosition(index);
+
+//         if (processDropdown.value.length === 0) {
+//             await fetchProcess(true);
+//         }
+
+//         await nextTick();
+
+//         if (searchProcessInput.value && searchProcessInput.value[index]) {
+//             searchProcessInput.value[index].focus();
+//         } else if (searchProcessInput.value && typeof searchProcessInput.value.focus === 'function') {
+//             searchProcessInput.value.focus();
+//         }
+//     }
+// };
+
 const toggleProcessDropdown = async(index) => {
-    if (!isEditing.value) return;
-    if (openedRowIndex.value === index) {
+    if(openedRowIndex.value === index){
         openedRowIndex.value = null;
-    } else {
+    }else{
         openedRowIndex.value = index;
         highlightedProcessIndex.value = 0;
-        processSearch.value = "";
+        processSearch.value = ""; // Reset input text
 
         await nextTick();
         updateProcessDropdownPosition(index);
 
-        if (processDropdown.value.length === 0) {
-            await fetchProcess(true);
-        }
+        // SELALU panggil API agar list selalu fresh dan tidak membawa hasil filter dari row sebelumnya
+        await fetchProcess(true);
 
         await nextTick();
-
-        if (searchProcessInput.value && searchProcessInput.value[index]) {
+        if(searchProcessInput.value && searchProcessInput.value[index]){
             searchProcessInput.value[index].focus();
-        } else if (searchProcessInput.value && typeof searchProcessInput.value.focus === 'function') {
+        }else if(searchProcessInput.value && typeof searchProcessInput.value.focus === 'function'){
             searchProcessInput.value.focus();
         }
     }

@@ -44,7 +44,7 @@ class ApprovalSetupController extends Controller
     public function store(StoreApprovalSetupRequest $request)
     {
         try {
-            $save = $this->approvalService->store($request->validate());
+            $save = $this->approvalService->store($request->validated());
 
             return to_route('approval-setup.view', [
                 'id' => $save->id

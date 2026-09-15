@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'RnD System Information'),
+    'company' => env('APP_COMPANY', 'PT. Schlemmer Automotive Indonesia'),
 
     /*
     |--------------------------------------------------------------------------

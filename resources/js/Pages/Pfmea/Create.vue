@@ -613,6 +613,7 @@ const isProcessLoading = ref(false);
 const searchProcessInput = ref(null);
 const optionsProcessList = ref(null);
 const hasProcessMore = ref(true);
+let processAbortController = null; // Tambahan untuk membatalkan request
 
 const dropdownStyle = ref({
     position: 'fixed',
@@ -628,9 +629,16 @@ const selectedProcessName = (item) => {
 };
 
 const fetchProcess = async(isNewSearch = false) => {
-    if (isProcessLoading.value) return;
+    // Abaikan jika sedang loading dan BUKAN dari pencarian baru
+    if (isProcessLoading.value && !isNewSearch) return;
 
     if(isNewSearch){
+        // Batalkan request sebelumnya yang masih pending
+        if (processAbortController) {
+            processAbortController.abort();
+        }
+        processAbortController = new AbortController();
+
         processPage.value = 1;
         processDropdown.value = [];
         hasProcessMore.value = true;
@@ -645,7 +653,8 @@ const fetchProcess = async(isNewSearch = false) => {
             params: {
                 search: processSearch.value,
                 page: processPage.value
-            }
+            },
+            signal: isNewSearch ? processAbortController.signal : undefined
         });
 
         processDropdown.value = [ ...processDropdown.value, ...response.data.data];
@@ -655,7 +664,11 @@ const fetchProcess = async(isNewSearch = false) => {
             processPage.value++;
         }
     }catch(error){
-        console.error("Failed to load process template data: ", error);
+        if (axios.isCancel(error)) {
+            console.log('Previous process search canceled.');
+        } else {
+            console.error("Failed to load process template data: ", error);
+        }
     }finally{
         isProcessLoading.value = false;
     }
@@ -709,9 +722,8 @@ const toggleProcessDropdown = async(index) => {
         await nextTick();
         updateProcessDropdownPosition(index);
 
-        if(processDropdown.value.length === 0){
-            await fetchProcess(true);
-        }
+        // Selalu panggil API agar list kembali utuh saat pertama kali diklik
+        await fetchProcess(true);
 
         await nextTick();
 

@@ -2,8 +2,12 @@
 
 namespace App\Services\PFMEA;
 
+use App\Models\User;
+use App\Notifications\SendApprovalNotification;
+use App\Repositories\ApprovalSetup\ApprovalSetupRepository;
 use App\Repositories\Department\DepartmentRepository;
 use App\Repositories\PFMEA\PfmeaRepository;
+use App\Services\ApprovalTransaction\ApprovalTransactionService;
 use App\Services\ChangeLogs\ChangeLogsService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +21,9 @@ class PfmeaService
     public function __construct(
         protected PfmeaRepository $pfmeaRepo,
         protected DepartmentRepository $deptRepo,
-        protected ChangeLogsService $logService
+        protected ChangeLogsService $logService,
+        protected ApprovalSetupRepository $approvalRepo,
+        protected ApprovalTransactionService $approverService
     ) {}
 
     public function getPfmeaList($filter, $per_page, $search = null)
@@ -49,117 +55,158 @@ class PfmeaService
     public function store(array $data)
     {
         try {
-            $user_id = Auth::id();
-            $ip = Request::ip();
-            $errors = [];
-            $coreTeamCounts = collect($data['core_teams'])
-                ->pluck('id')
-                ->countBy();
+            return DB::transaction(function () use ($data) {
+                $user_id = Auth::id();
+                $ip = Request::ip();
+                $errors = [];
+                $coreTeamCounts = collect($data['core_teams'])
+                    ->pluck('id')
+                    ->countBy();
 
-            foreach ($data['core_teams'] as $index => $item) {
+                foreach ($data['core_teams'] as $index => $item) {
 
-                if (($coreTeamCounts[$item['id']] ?? 0) > 1) {
+                    if (($coreTeamCounts[$item['id']] ?? 0) > 1) {
 
-                    $errors["core_teams.$index.id"] =
-                        'Core team cannot be selected more than once.';
+                        $errors["core_teams.$index.id"] =
+                            'Core team cannot be selected more than once.';
+                    }
                 }
-            }
 
-            $processCounts = collect($data['details'])
-                ->pluck('process_id')
-                ->countBy();
+                $processCounts = collect($data['details'])
+                    ->pluck('process_id')
+                    ->countBy();
 
-            foreach ($data['details'] as $index => $item) {
+                foreach ($data['details'] as $index => $item) {
 
-                if (($processCounts[$item['process_id']] ?? 0) > 1) {
+                    if (($processCounts[$item['process_id']] ?? 0) > 1) {
 
-                    $errors["details.$index.process_id"] =
-                        'Process already exists.';
+                        $errors["details.$index.process_id"] =
+                            'Process already exists.';
+                    }
                 }
-            }
 
-            if (!empty($errors)) {
-                throw ValidationException::withMessages($errors);
-            }
+                if (!empty($errors)) {
+                    throw ValidationException::withMessages($errors);
+                }
 
-            // Get Department ID
-            $department = $this->deptRepo->getDataByUUID($data['department_id']);
-            if (!$department) {
-                throw new \Exception('Provided department no available on system, please check and try again');
-            }
+                // Get Department ID
+                $department = $this->deptRepo->getDataByUUID($data['department_id']);
+                if (!$department) {
+                    throw new \Exception('Provided department no available on system, please check and try again');
+                }
 
-            $dept_id = $department->id;
+                $dept_id = $department->id;
 
-            $save = DB::transaction(function () use ($data, $user_id, $dept_id, $ip) {
-                // Initialize pfmea data
-                $data_pfmea = [
-                    'code' => $data['code'],
-                    'date' => trim($data['date']),
-                    'department_id' => $dept_id,
-                    'version' => 0,
-                    'scope' => $data['scope'],
-                    'project_id' =>  $data['project_id'],
-                    'material_id' => $data['material_id'],
-                    'process_responsibility' => $data['process_responsibility'],
-                    'prepared_by' => $user_id,
-                    'created_by' => $user_id
-                ];
-
-                // save pfmea header
-                $save_header = $this->pfmeaRepo->store($data_pfmea);
-
-                $data_core_team = collect($data['core_teams'])->map(function ($item, $index) use ($user_id) {
-                    return [
-                        'order' => $index + 1,
-                        'user_id' => $item['id'],
-                        'created_by' => $user_id,
-                    ];
-                })->toArray();
-
-                $save_core_team = $this->pfmeaRepo->storeCoreTeam($save_header, $data_core_team);
-
-                $data_details = collect($data['details'])->map(function ($item, $index) use ($user_id) {
-                    return [
-                        'order' => $index + 1,
-                        'process_id' => $item['process_id'],
+                $save = DB::transaction(function () use ($data, $user_id, $dept_id, $ip) {
+                    // Initialize pfmea data
+                    $data_pfmea = [
+                        'code' => $data['code'],
+                        'date' => trim($data['date']),
+                        'department_id' => $dept_id,
+                        'version' => 0,
+                        'scope' => $data['scope'],
+                        'project_id' =>  $data['project_id'],
+                        'material_id' => $data['material_id'],
+                        'process_responsibility' => $data['process_responsibility'],
+                        'prepared_by' => $user_id,
+                        'doc_status' => 'under_review',
                         'created_by' => $user_id
                     ];
-                })->toArray();
 
-                $save_details = $this->pfmeaRepo->storeDetails($save_header, $data_details);
+                    // save pfmea header
+                    $save_header = $this->pfmeaRepo->store($data_pfmea);
 
-                $freshHeader = $this->pfmeaRepo->getDataById($save_header->id);
-                $freshCoreTeams = $this->pfmeaRepo->getCoreTeamByPfmeaId($save_header->id);
-                $freshDetails = $this->pfmeaRepo->getDetails($save_header->id);
+                    $data_core_team = collect($data['core_teams'])->map(function ($item, $index) use ($user_id) {
+                        return [
+                            'order' => $index + 1,
+                            'user_id' => $item['id'],
+                            'created_by' => $user_id,
+                        ];
+                    })->toArray();
 
-                return [
-                    'model' => $freshHeader,
-                    'header' => $freshHeader ? $freshHeader->toArray() : [],
-                    'core_teams' => $freshCoreTeams ? $freshCoreTeams->toArray() : [],
-                    'details' => $freshDetails ? $freshDetails->toArray() : [],
-                ];
-            });
+                    $save_core_team = $this->pfmeaRepo->storeCoreTeam($save_header, $data_core_team);
 
-            $dataLogs = [
-                'header' => $save['header'],
-                'core_teams' => $save['core_teams'],
-                'details' => $save['details']
-            ];
+                    $data_details = collect($data['details'])->map(function ($item, $index) use ($user_id) {
+                        return [
+                            'order' => $index + 1,
+                            'process_id' => $item['process_id'],
+                            'created_by' => $user_id
+                        ];
+                    })->toArray();
 
+                    $save_details = $this->pfmeaRepo->storeDetails($save_header, $data_details);
 
-            $this->logService->store($save['model'], 'create', 'Initialize new pfmea data', null, $dataLogs);
-            activity('save_pfmea')
-                ->causedBy($user_id)
-                ->performedOn($save['model'])
-                ->withProperties([
+                    $freshHeader = $this->pfmeaRepo->getDataById($save_header->id);
+                    $freshCoreTeams = $this->pfmeaRepo->getCoreTeamByPfmeaId($save_header->id);
+                    $freshDetails = $this->pfmeaRepo->getDetails($save_header->id);
+
+                    // Generate approval
+                    $getApproverList = $this->approvalRepo->getApproverListByModule('pfmea');
+
+                    if (!$getApproverList) {
+                        throw new \Exception('Approver list not found');
+                    }
+
+                    $firstApproverInstance = null;
+                    // Create approval transaction
+                    foreach ($getApproverList->details as $approver) {
+                        $dataApprover = [
+                            'uuid' => \Illuminate\Support\Str::uuid7(),
+                            'event' => 'create',
+                            'transaction_type' => get_class($freshHeader),
+                            'transaction_id'   => $freshHeader->id,
+                            'approver_id' => $approver->approver_id,
+                            'approval_status' => null,
+                            'remark' => null,
+                            'approved_date' => null,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+
+                        $saveApprover = $this->approverService->store($dataApprover);
+
+                        if ($approver->order === 1) {
+                            $firstApproverInstance = $saveApprover;
+                        }
+                    }
+
+                    if ($firstApproverInstance) {
+                        $userApprover = User::find($firstApproverInstance->approver_id);
+
+                        if ($userApprover) {
+                            $userApprover->notify(new SendApprovalNotification($firstApproverInstance, 'PFMEA'));
+                        }
+                    }
+
+                    return [
+                        'model' => $freshHeader,
+                        'header' => $freshHeader ? $freshHeader->toArray() : [],
+                        'core_teams' => $freshCoreTeams ? $freshCoreTeams->toArray() : [],
+                        'details' => $freshDetails ? $freshDetails->toArray() : [],
+                    ];
+                });
+
+                $dataLogs = [
                     'header' => $save['header'],
                     'core_teams' => $save['core_teams'],
-                    'details' => $save['details'],
-                    'ip' => $ip
-                ])
-                ->Log('Save success: Successfully saved new PFMEA data');
+                    'details' => $save['details']
+                ];
 
-            return $save['model'];
+
+                $this->logService->store($save['model'], 'create', 'Initialize new pfmea data', null, $dataLogs);
+                activity('save_pfmea')
+                    ->causedBy($user_id)
+                    ->performedOn($save['model'])
+                    ->withProperties([
+                        'header' => $save['header'],
+                        'core_teams' => $save['core_teams'],
+                        'details' => $save['details'],
+                        'ip' => $ip
+                    ])
+                    ->Log('Save success: Successfully saved new PFMEA data');
+
+                return $save['model'];
+            });
         } catch (ValidationException $e) {
             throw $e;
         } catch (QueryException $e) {
@@ -189,7 +236,7 @@ class PfmeaService
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                    'trance' => $e->getTraceAsString(),
+                    'trace' => $e->getTraceAsString(),
                     'ip' => $ip,
                 ])
                 ->log('Save failed: failed save new pfmea data');
@@ -281,6 +328,43 @@ class PfmeaService
                 $freshCoreTeams = $this->pfmeaRepo->getCoreTeamByPfmeaId($id);
                 $freshDetails = $this->pfmeaRepo->getDetails($id);
 
+                $getApproverList = $this->approvalRepo->getApproverListByModule('pfmea');
+
+                if (!$getApproverList) {
+                    throw new \Exception('Approver list not found');
+                }
+
+                $firstApproverInstance = null;
+                // Create approval transaction
+                foreach ($getApproverList->details as $approver) {
+                    $dataApprover = [
+                        'uuid' => \Illuminate\Support\Str::uuid7(),
+                        'event' => 'update',
+                        'transaction_type' => get_class($freshHeader),
+                        'transaction_id'   => $freshHeader->id,
+                        'approver_id' => $approver->approver_id,
+                        'approval_status' => null,
+                        'remark' => null,
+                        'approved_date' => null,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+
+                    $saveApprover = $this->approverService->store($dataApprover);
+
+                    if ($approver->order === 1) {
+                        $firstApproverInstance = $saveApprover;
+                    }
+                }
+
+                if ($firstApproverInstance) {
+                    $userApprover = User::find($firstApproverInstance->approver_id);
+
+                    if ($userApprover) {
+                        $userApprover->notify(new SendApprovalNotification($firstApproverInstance, 'PFMEA'));
+                    }
+                }
+
                 return [
                     'model' => $freshHeader,
                     'old_data' => [
@@ -308,6 +392,7 @@ class PfmeaService
 
             $reason = $data['reason'] ?? 'Update PFMEA document';
             $this->logService->store($update['model'], 'update', trim($reason), $update['old_data'], $update['new_data']);
+
 
             return $update['model'];
         } catch (ValidationException $e) {
@@ -499,6 +584,32 @@ class PfmeaService
                 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage(),
                 'data'    => null
             ];
+        }
+    }
+
+    public function getPfmeaExportedData(array $data)
+    {
+        try {
+            $projectId = $data['project_id'];
+            $materialId = $data['material_id'];
+
+            return $this->getPfmeaData($projectId, $materialId);
+        } catch (\Exception $e) {
+            Log::error('Export failed: ' . $e->getMessage());
+
+            activity('export_pfmea')
+                ->causedBy(Auth::id())
+                ->withProperties([
+                    'input_data' => $data,
+                    'ip_address' => request()->ip(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ])
+                ->log('Export failed');
+
+            throw $e;
         }
     }
 }

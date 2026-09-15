@@ -403,7 +403,19 @@ const groupedPfmeaItems = computed(() => {
     rowspanControl: controlSpanCounts[index]
   }))
 }) 
+
+const handlePdf = () => {
+  if (!form.project_id || !form.material_id) {
+    showToast('warning', 'Pilih Project dan Material terlebih dahulu!')
+    return
+  }
+
+  const url = `/dashboard/export?project_id=${form.project_id}&material_id=${form.material_id}`
+  window.open(url, '_blank')
+}
 </script>
+
+
 
 <template>
   <Head title="PFMEA Document Viewer" />
@@ -713,12 +725,13 @@ const groupedPfmeaItems = computed(() => {
           </div>
 
           <!-- 3. TOMBOL SEARCH -->
-          <div class="md:col-span-2">
+          <div class="md:col-span-2 flex space-x-2 no-print">
+            <!-- Tombol Search (Biru) -->
             <button 
               @click="fetchPfmeaData" 
               :disabled="!form.project_id || !form.material_id || loadingPfmea"
               type="button"
-              class="w-full inline-flex justify-center items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition duration-150 disabled:bg-slate-300 disabled:cursor-not-allowed"
+              class="flex-1 inline-flex justify-center items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition duration-150 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               <svg v-if="!loadingPfmea" class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -728,6 +741,19 @@ const groupedPfmeaItems = computed(() => {
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               <span>{{ loadingPfmea ? 'Searching...' : 'Search' }}</span>
+            </button>
+
+            <!-- Tombol Print PDF (Hijau Emerald + Icon Printer) -->
+            <button 
+              @click="handlePdf" 
+              :disabled="!pfmea.items.length"
+              type="button"
+              class="flex-1 inline-flex justify-center items-center px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition duration-150 disabled:bg-slate-300 disabled:cursor-not-allowed"
+            >
+              <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              <span>Print PDF</span>
             </button>
           </div>
         </div>

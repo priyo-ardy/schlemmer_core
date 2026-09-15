@@ -122,4 +122,13 @@ class ApprovalSetupRepository
 
         return (bool) $header->delete();
     }
+
+    public function getApproverListByModule(string $module): ApprovalSetup
+    {
+        return ApprovalSetup::with(['details' => function ($query) {
+            $query->orderBy('order', 'asc');
+        }])
+            ->where('module', $module)
+            ->first();
+    }
 }

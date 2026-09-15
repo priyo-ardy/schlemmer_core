@@ -13,6 +13,7 @@ use App\Http\Controllers\AppRole\RoleController;
 use App\Http\Controllers\ApprovalSetup\ApprovalSetupController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Customer\CustomerController;
+use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Material\MaterialController;
 use App\Http\Controllers\Pfmea\PfmeaController;
 use App\Http\Controllers\Process\ProcessController;
@@ -47,6 +48,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard/Dashboard');
     })->name('dashboard');
+
+    Route::get('/dashboard/export', [DashboardController::class, 'export']);
 
     // Transaction
     Route::get('/pfmea', [PfmeaController::class, 'index'])->name('pfmea');
