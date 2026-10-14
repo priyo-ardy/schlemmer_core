@@ -23,7 +23,49 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        
+        // Cek apakah request berupa update (PUT / PATCH)
+        $isUpdate = $this->isMethod('put') || $this->isMethod('patch');
+
+        // Mendapatkan ID user dari route (bisa berupa instance model atau ID langsung)
+        $userId = $this->route('user')?->id ?? $this->route('user');
+
+        return [
+            'name' => ['required', 'string', 'max:255', 'min:1'],
+
+            // Email wajib, format email, maksimal 255, dan unik (mengabaikan user saat ini jika sedang edit)
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($userId),
+            ],
+
+            // Password wajib saat create, opsional (nullable) saat update
+            'password' => [
+                $isUpdate ? 'nullable' : 'required',
+                'string',
+                'min:8',
+                'max:255',
+            ],
+
+            'avatar' => ['nullable', 'string'],
+            'role' => ['nullable', 'string'],
+            'roles' => ['sometimes', 'array'],
+            'login_attempts' => ['nullable', 'integer'],
+            'is_locked' => ['boolean'],
+            'is_active' => ['boolean'],
+            'must_change_password' => ['boolean'],
+            'remark' => ['nullable', 'string', 'max:1000'],
+
+            // Reason menjadi mandatory (wajib) hanya jika proses update
+            'reason' => [
+                Rule::requiredIf($isUpdate),
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ];
     }
 
     public function messages(): array
@@ -53,6 +95,7 @@ class StoreUserRequest extends FormRequest
 
             'remark.string' => 'The remark notes must be a valid text string.',
             'remark.max' => 'The remark notes may not exceed 1000 characters.',
+
             'reason.required' => 'A reason / change log is required when updating user data.',
             'reason.string' => 'The reason must be a valid text string.',
             'reason.max' => 'The reason may not exceed 1000 characters.',

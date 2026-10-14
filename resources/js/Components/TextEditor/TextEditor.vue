@@ -10,42 +10,47 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
-
 const fileInput = ref(null)
 
-// Custom Image Extension untuk mendukung Alignment & Width
+// Kustomisasi ekstensi Image agar mendukung style & alignment langsung di HTML
 const CustomImage = Image.extend({
+  inline() {
+    return true
+  },
+  group() {
+    return 'inline'
+  },
   addAttributes() {
     return {
       ...this.parent?.(),
-      alignment: {
-        default: 'center',
-        parseHTML: element => element.getAttribute('data-alignment') || 'center',
-        renderHTML: attributes => {
-          return {
-            'data-alignment': attributes.alignment,
-            class: `image-align-${attributes.alignment}`,
-          }
-        },
-      },
       width: {
-        default: '100%',
-        parseHTML: element => element.style.width || element.getAttribute('width') || '100%',
-        renderHTML: attributes => {
-          return {
-            style: `width: ${attributes.width}; height: auto; display: block;`,
-          }
-        },
+        default: '200px',
+        parseHTML: element => element.style.width || element.getAttribute('width') || '200px',
+        renderHTML: attributes => ({
+          style: `width: ${attributes.width}; height: auto; display: inline-block; vertical-align: middle; margin: 0 4px;`,
+        }),
       },
+      style: {
+        default: 'display: inline-block; vertical-align: middle;',
+        parseHTML: element => element.getAttribute('style'),
+        renderHTML: attributes => ({
+          style: attributes.style,
+        })
+      }
     }
   },
 })
 
 const editor = useEditor({
   content: props.modelValue,
+  editable: !props.disabled,
   extensions: [
     StarterKit,
     CustomImage,
@@ -60,19 +65,21 @@ const editor = useEditor({
   },
 })
 
-// Sinkronisasi jika nilai prop berubah dari luar
 watch(() => props.modelValue, (newValue) => {
   if (editor.value && newValue !== editor.value.getHTML()) {
     editor.value.commands.setContent(newValue, false)
   }
 })
 
-// Membuka dialog file komputer saat tombol Insert Image diklik
+watch(() => props.disabled, (newVal) => {
+  editor.value?.setEditable(!newVal)
+})
+
 const triggerFileInput = () => {
+  if (props.disabled) return
   fileInput.value.click()
 }
 
-// Mengirim file gambar ke backend Laravel
 const uploadImageFile = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -90,10 +97,11 @@ const uploadImageFile = async (event) => {
     const imageUrl = response.data.url
 
     if (imageUrl && editor.value) {
+      // Masukkan gambar dengan ukuran default 200px agar langsung sebaris
       editor.value.chain().focus().setImage({ 
         src: imageUrl, 
-        alignment: 'center', 
-        width: '100%' 
+        width: '200px',
+        style: 'display: inline-block; vertical-align: middle; margin: 0 4px;'
       }).run()
     }
   } catch (error) {
@@ -104,21 +112,21 @@ const uploadImageFile = async (event) => {
   }
 }
 
-// Fungsi mengubah posisi gambar yang sedang dipilih
-const setImageAlignment = (align) => {
-  editor.value?.chain().focus().updateAttributes('image', { alignment: align }).run()
+// Fungsi ubah ukuran gambar aktif
+const setImageWidth = (w) => {
+  editor.value?.chain().focus().updateAttributes('image', { width: w }).run()
 }
 
-// Fungsi mengubah ukuran gambar yang sedang dipilih
-const setImageWidth = (width) => {
-  editor.value?.chain().focus().updateAttributes('image', { width: width }).run()
+// Fungsi ubah posisi (Sebaris / Sebelah Kiri / Sebelah Kanan)
+const setImageStyle = (customStyle) => {
+  editor.value?.chain().focus().updateAttributes('image', { style: customStyle }).run()
 }
 </script>
 
 <template>
   <div class="border border-slate-300 w-full bg-white">
     <!-- TOOLBAR -->
-    <div class="flex flex-wrap gap-1 p-1 bg-slate-100 border-b border-slate-300 text-xs items-center">
+    <div v-if="!disabled" class="flex flex-wrap gap-1 p-1 bg-slate-100 border-b border-slate-300 text-xs items-center">
       <button 
         type="button"
         @click="editor?.chain().focus().toggleBold().run()"
@@ -139,24 +147,6 @@ const setImageWidth = (width) => {
 
       <button 
         type="button"
-        @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()"
-        :class="{ 'bg-slate-800 text-white font-bold': editor?.isActive('heading', { level: 1 }) }"
-        class="px-2 py-0.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition"
-      >
-        H1
-      </button>
-
-      <button 
-        type="button"
-        @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()"
-        :class="{ 'bg-slate-800 text-white font-bold': editor?.isActive('heading', { level: 2 }) }"
-        class="px-2 py-0.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition"
-      >
-        H2
-      </button>
-
-      <button 
-        type="button"
         @click="editor?.chain().focus().toggleBulletList().run()"
         :class="{ 'bg-slate-800 text-white font-bold': editor?.isActive('bulletList') }"
         class="px-2 py-0.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition"
@@ -164,7 +154,6 @@ const setImageWidth = (width) => {
         Bullet List
       </button>
 
-      <!-- Tombol Upload dari Komputer -->
       <button 
         type="button"
         @click="triggerFileInput"
@@ -173,22 +162,23 @@ const setImageWidth = (width) => {
         Insert Image
       </button>
 
-      <!-- KONTROL TAMBAHAN KHUSUS GAMBAR (Hanya aktif jika gambar diklik/dipilih) -->
+      <!-- KONTROL KHUSUS GAMBAR (Hanya muncul saat gambar diklik di editor) -->
       <template v-if="editor?.isActive('image')">
         <div class="w-px h-4 bg-slate-300 mx-1"></div>
-        <span class="text-[10px] text-slate-400 font-semibold">Align:</span>
-        <button type="button" @click="setImageAlignment('left')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">Left</button>
-        <button type="button" @click="setImageAlignment('center')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">Center</button>
-        <button type="button" @click="setImageAlignment('right')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">Right</button>
+        <span class="text-[10px] text-slate-400 font-semibold">Size:</span>
+        <button type="button" @click="setImageWidth('25px')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">25px</button>
+        <button type="button" @click="setImageWidth('50px')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">50px</button>
+        <button type="button" @click="setImageWidth('100px')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">100px</button>
+        <button type="button" @click="setImageWidth('200px')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">200px</button>
+        <button type="button" @click="setImageWidth('400px')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">400px</button>
 
         <div class="w-px h-4 bg-slate-300 mx-1"></div>
-        <span class="text-[10px] text-slate-400 font-semibold">Size:</span>
-        <button type="button" @click="setImageWidth('25%')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">25%</button>
-        <button type="button" @click="setImageWidth('50%')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">50%</button>
-        <button type="button" @click="setImageWidth('100%')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50">100%</button>
+        <span class="text-[10px] text-slate-400 font-semibold">Layout:</span>
+        <button type="button" @click="setImageStyle('display: inline-block; vertical-align: middle; margin: 0 4px;')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50" title="Sejajar sebaris dengan teks">Inline</button>
+        <button type="button" @click="setImageStyle('float: left; margin: 4px 8px 4px 0;')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50" title="Teks mengalir di sebelah kanan gambar">Float Left</button>
+        <button type="button" @click="setImageStyle('float: right; margin: 4px 0 4px 8px;')" class="px-1.5 py-0.5 border bg-white hover:bg-slate-50" title="Teks mengalir di sebelah kiri gambar">Float Right</button>
       </template>
 
-      <!-- Input file tersembunyi -->
       <input 
         ref="fileInput" 
         type="file" 
@@ -204,30 +194,12 @@ const setImageWidth = (width) => {
 </template>
 
 <style>
-.ProseMirror ul {
-  list-style-type: disc;
-  padding-left: 1.5rem;
-}
-.ProseMirror ol {
-  list-style-type: decimal;
-  padding-left: 1.5rem;
+.ProseMirror p {
+  margin-bottom: 0.5em;
+  line-height: 1.5;
 }
 .ProseMirror img {
-  height: auto;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-/* Styling posisi gambar berdasarkan atribut alignment */
-.ProseMirror img.image-align-left {
-  margin-right: auto;
-  margin-left: 0;
-}
-.ProseMirror img.image-align-center {
-  margin-right: auto;
-  margin-left: auto;
-}
-.ProseMirror img.image-align-right {
-  margin-right: 0;
-  margin-left: auto;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
 }
 </style>

@@ -34,7 +34,41 @@ class DashboardController extends Controller
                 $pfmea['revision_history'] = array_slice($pfmea['revision_history'], -3);
             }
 
-            // Cukup kirim array $items murni (flat)
+            // --- FUNGSI HELPER UNTUK MENGUBAH URL GAMBAR KE PATH LOKAL ---
+            $fixImagePath = function ($htmlContent) {
+                if (empty($htmlContent) || !is_string($htmlContent)) return $htmlContent;
+
+                // Mencari tag src yang mengarah ke folder storage dan menggantinya dengan public_path()
+                return preg_replace_callback('/src="([^"]*\/storage\/([^"]+))"/', function ($matches) {
+                    $localPath = public_path('storage/' . $matches[2]);
+                    return 'src="' . $localPath . '"';
+                }, $htmlContent);
+            };
+
+            // Terapkan replacer ke seluruh field string di dalam items worksheet
+            if (!empty($pfmea['items'])) {
+                foreach ($pfmea['items'] as &$item) {
+                    foreach ($item as $key => $value) {
+                        if (is_string($value)) {
+                            $item[$key] = $fixImagePath($value);
+                        }
+                    }
+                }
+                unset($item);
+            }
+
+            // Terapkan replacer ke revision history
+            if (!empty($pfmea['revision_history'])) {
+                foreach ($pfmea['revision_history'] as &$rev) {
+                    if (isset($rev['content'])) {
+                        $rev['content'] = $fixImagePath($rev['content']);
+                    }
+                }
+                unset($rev);
+            }
+            // -------------------------------------------------------------
+
+            // Kirim data ke view PDF
             $pdf = Pdf::loadView('pfmea.pfmea-export', [
                 'pfmea' => $pfmea,
                 'items' => $pfmea['items'] ?? [],

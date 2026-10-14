@@ -518,6 +518,8 @@ class PfmeaService
                                     'process_step'           => $processFunction?->name ?? '-',
                                     'revision'               => $processFunction?->revision ?? 0,
                                     'remark'                 => $processFunction?->remark ?? '',
+                                    'process_parent'         => $processFunction?->process_parent,
+                                    'process_child'          => $processFunction?->process_child,
                                     // Ambil kolom dari process_function_details (sesuaikan nama kolomnya kalau ada beda)
                                     'kakotora_yc'            => $sub->previous_problem ?? '-',
                                     'requirements'           => $sub->requirements ?? '-',

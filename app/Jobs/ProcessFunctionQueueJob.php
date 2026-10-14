@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
@@ -22,14 +23,16 @@ class ProcessFunctionQueueJob implements ShouldQueue
     public $tries = 3;
     protected string $action;
     protected array $payload;
+    protected ?int $userId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $action, array $payload)
+    public function __construct(string $action, array $payload, ?int $userId = null)
     {
         $this->action = $action;
         $this->payload = $payload;
+        $this->userId = $userId;
     }
 
     /**
@@ -37,6 +40,10 @@ class ProcessFunctionQueueJob implements ShouldQueue
      */
     public function handle(ChangeLogsService $logService): void
     {
+        if ($this->userId) {
+            Auth::loginUsingId($this->userId    );
+        }
+
         match ($this->action) {
             'create' => $this->handleCreate($logService),
             'update' => $this->handleUpdate($logService),
@@ -84,7 +91,7 @@ class ProcessFunctionQueueJob implements ShouldQueue
                 'details' => $oldDetails,
             ];
 
-            $pfmea->increment('revision', 1, [
+            $pfmea->increment('version', 1, [
                 'updated_at' => now(),
             ]);
 

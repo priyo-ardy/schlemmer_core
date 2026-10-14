@@ -764,7 +764,7 @@ const handlePdf = () => {
             
             <!-- 1. TOP HEADER ROW -->
             <div class="grid grid-cols-12 border-b-2 border-black">
-              <div class="col-span-2 p-2 flex items-center justify-center border-r border-black">
+              <div class="col-span-2 p-2 flex items-center justify-center border-r border-black bg-white">
                 <img 
                   src="/storage/logo.webp" 
                   alt="Schlemmer Logo" 
@@ -772,70 +772,70 @@ const handlePdf = () => {
                 />
               </div>
 
-              <div class="col-span-6 p-2 text-center border-r border-black flex flex-col justify-center">
+              <div class="col-span-6 p-2 text-center border-r border-black flex flex-col justify-center bg-white">
                 <div class="font-bold text-4xl tracking-widest">Schlemmer Automotive Indonesia</div>
                 <div class="font-bold text-3xl tracking-widest mt-1">PFMEA</div>
               </div>
 
-              <div class="col-span-4 grid grid-cols-3 text-[11px]">
+              <div class="col-span-4 grid grid-cols-3 text-[11px] bg-white">
                 <div class="border-b border-r border-black p-1 font-semibold">Issue Date</div>
-                <div class="col-span-2 border-b border-black p-1 bg-yellow-200 font-bold">{{ pfmea.issue_date }}</div>
+                <div class="col-span-2 border-b border-black p-1 font-bold">{{ pfmea.issue_date }}</div>
                 <div class="border-b border-r border-black p-1 font-semibold">Issuing Dept.:</div>
-                <div class="border-b border-r border-black p-1 bg-yellow-200">{{ pfmea.issuing_dept }}</div>
+                <div class="border-b border-r border-black p-1">{{ pfmea.issuing_dept }}</div>
                 <div class="border-b border-black p-1 flex">
                   <span class="font-semibold mr-1">Page:</span> {{ pfmea.page }}
                 </div>
-                <div class="border-b border-r border-black p-1 text-center font-semibold bg-yellow-300">Approved</div>
-                <div class="border-b border-r border-black p-1 text-center font-semibold bg-yellow-300">Reviewed</div>
-                <div class="border-b border-black p-1 text-center font-semibold bg-yellow-300">Prepared</div>
-                <div class="border-b border-r border-black p-2 text-center bg-yellow-100 font-medium">{{ pfmea.approved_by }}</div>
-                <div class="border-b border-r border-black p-2 text-center bg-yellow-100 font-medium">{{ pfmea.reviewed_by }}</div>
-                <div class="border-b border-black p-2 text-center bg-yellow-100 font-medium">{{ pfmea.prepared_by }}</div>
-                <div class="col-span-3 p-1 font-bold text-right bg-yellow-300 border-t border-black">
+                <div class="border-b border-r border-black p-1 text-center font-semibold">Approved</div>
+                <div class="border-b border-r border-black p-1 text-center font-semibold">Reviewed</div>
+                <div class="border-b border-black p-1 text-center font-semibold">Prepared</div>
+                <div class="border-b border-r border-black p-2 text-center font-medium">{{ pfmea.approved_by }}</div>
+                <div class="border-b border-r border-black p-2 text-center font-medium">{{ pfmea.reviewed_by }}</div>
+                <div class="border-b border-black p-2 text-center font-medium">{{ pfmea.prepared_by }}</div>
+                <div class="col-span-3 p-1 font-bold text-right border-t border-black">
                   No.: {{ pfmea.doc_no }}
                 </div>
               </div>
             </div>
 
             <!-- 2. MAIN BODY FORM GRID -->
-            <div class="grid grid-cols-12 border-b border-black">
+            <div class="grid grid-cols-12 border-b border-black bg-white">
               <div class="col-span-2 border-r border-black grid grid-cols-3">
                 <div class="col-span-1 border-r border-black p-2 font-bold flex items-center justify-center [writing-mode:vertical-lr] rotate-180">
                   Scope
                 </div>
                 <div class="col-span-2 flex flex-col justify-between">
-                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'bg-yellow-300 font-semibold': pfmea.scope_selected === 'prototype'}">
+                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'font-semibold bg-gray-100': pfmea.scope_selected === 'prototype'}">
                     <span>Prototype</span>
                     <span v-if="pfmea.scope_selected === 'prototype'">✓</span>
                   </div>
-                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'bg-yellow-300 font-semibold': pfmea.scope_selected === 'pre_launch'}">
+                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'font-semibold bg-gray-100': pfmea.scope_selected === 'pre_launch'}">
                     <span>Pre-Launch</span>
                     <span v-if="pfmea.scope_selected === 'pre_launch'">✓</span>
                   </div>
-                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'bg-yellow-300 font-semibold': pfmea.scope_selected === 'Containment EPC'}">
+                  <div class="border-b border-black p-1 flex justify-between items-center" :class="{'font-semibold bg-gray-100': pfmea.scope_selected === 'Containment EPC'}">
                     <span>Containment EPC</span>
                     <span v-if="pfmea.scope_selected === 'Containment EPC'">✓</span>
                   </div>
-                  <div class="p-1 flex justify-between items-center" :class="{'bg-yellow-300 font-semibold': pfmea.scope_selected === 'mass_production'}">
+                  <div class="p-1 flex justify-between items-center" :class="{'font-semibold bg-gray-100': pfmea.scope_selected === 'mass_production'}">
                     <span>Mass Production</span>
                     <span v-if="pfmea.scope_selected === 'mass_production'">✓</span>
                   </div>
                 </div>
               </div>
               <div class="col-span-5 border-r border-black">
-                <div class="border-b border-black grid grid-cols-3 bg-yellow-300">
+                <div class="border-b border-black grid grid-cols-3">
                   <span class="p-1 font-bold border-r border-black">Project Name:</span>
                   <span class="col-span-2 p-1 font-bold">{{ selectedProjectName }}</span>
                 </div>
-                <div class="border-b border-black grid grid-cols-3 bg-yellow-200">
+                <div class="border-b border-black grid grid-cols-3">
                   <span class="p-1 font-semibold border-r border-black">Key Date:</span>
                   <span class="col-span-2 p-1 font-bold">{{ pfmea.key_date }}</span>
                 </div>
-                <div class="border-b border-black grid grid-cols-3 bg-yellow-300">
+                <div class="border-b border-black grid grid-cols-3">
                   <span class="p-1 font-bold border-r border-black">Part Name:</span>
                   <span class="col-span-2 p-1 font-bold">{{ pfmea.part_name }}</span>
                 </div>
-                <div class="border-b border-black grid grid-cols-3 bg-yellow-200">
+                <div class="border-b border-black grid grid-cols-3">
                   <span class="p-1 font-semibold border-r border-black">Part No./Level:</span>
                   <span class="col-span-2 p-1 font-bold">{{ pfmea.part_no }} / {{ pfmea.dwg_no }}</span>
                 </div>
@@ -844,13 +844,13 @@ const handlePdf = () => {
                 </div>
               </div>
 
-              <!-- REVISION HISTORY (Maksimal 3 Baris + Scroll) -->
+              <!-- REVISION HISTORY -->
               <div class="col-span-5 flex flex-col">
                 <div class="text-center font-bold border-b border-black bg-gray-100 p-1">Revision History</div>
                 <div class="max-h-[115px] overflow-y-auto w-full">
                   <table class="w-full text-center border-collapse">
                     <thead class="sticky top-0 z-10">
-                      <tr class="border-b border-black bg-yellow-300 font-semibold">
+                      <tr class="border-b border-black bg-white font-semibold">
                         <th class="border-r border-black p-1 w-12">Ver.</th>
                         <th class="border-r border-black p-1 w-28">Date</th>
                         <th class="border-r border-black p-1">Content</th>
@@ -863,16 +863,18 @@ const handlePdf = () => {
                       <tr 
                         v-for="(rev, idx) in pfmea.revisions" 
                         :key="idx" 
-                        class="border-b border-black bg-yellow-100 last:border-b-0"
+                        class="border-b border-black bg-white last:border-b-0"
                       >
                         <td class="border-r border-black p-1 font-bold">{{ rev.ver }}</td>
                         <td class="border-r border-black p-1">{{ formatDate(rev.date) }}</td>
-                        <td class="border-r border-black p-1 text-left px-2">{{ rev.content || '-' }}</td>
+                        <td class="border-r border-black p-1 text-left px-2">
+                          <span v-html="rev.content || '-'"></span>
+                        </td>
                         <td class="border-r border-black p-1">{{ pfmea.approved_by || '-' }}</td>
                         <td class="border-r border-black p-1">{{ pfmea.reviewed_by || '-' }}</td>
                         <td class="p-1">{{ pfmea.prepared_by || '-' }}</td>
                       </tr>
-                      <tr v-if="!pfmea.revisions.length" class="bg-yellow-100">
+                      <tr v-if="!pfmea.revisions.length" class="bg-white">
                         <td colspan="6" class="p-2 text-center text-gray-500 italic">No revision records</td>
                       </tr>
                     </tbody>
@@ -882,7 +884,7 @@ const handlePdf = () => {
             </div>
             
             <!-- 3. CORE TEAM ROW -->
-            <div class="p-1 bg-yellow-300 font-medium border-b-2 border-black">
+            <div class="p-1 font-medium border-b-2 border-black bg-white">
               <span class="font-bold">Core Team:</span>
               <span class="ml-2">{{ pfmea.core_team }}</span>
             </div>
@@ -917,7 +919,7 @@ const handlePdf = () => {
                   <th rowspan="2" class="border-r border-black p-1 min-w-[130px] align-middle">Recommended Action(s)</th>
                   <th rowspan="2" class="border-r border-black p-1 min-w-[100px] align-middle">Responsibility</th>
                   <th rowspan="2" class="border-r border-black p-1 min-w-[90px] align-middle">Target Completion Date</th>
-                  <th colspan="5" class="border-b border-black p-1 bg-gray-50">Result</th>
+                  <th colspan="5" class="border-b border-black p-1 bg-white">Result</th>
                 </tr>
 
                 <tr class="text-center font-bold border-b border-black bg-white">
@@ -940,7 +942,7 @@ const handlePdf = () => {
                 <tr 
                   v-for="(item, index) in groupedPfmeaItems" 
                   :key="index" 
-                  class="border-b border-black hover:bg-gray-50"
+                  class="border-b border-black hover:bg-gray-50 bg-white"
                 >
                   <!-- 1. Process Step dengan Rowspan -->
                   <td 
@@ -948,18 +950,33 @@ const handlePdf = () => {
                     :rowspan="item.rowspanStep" 
                     class="border-r border-black p-1.5 font-medium align-middle bg-white"
                   >
-                    {{ item.process_step || '-' }}
+                    <div v-if="item.process_parent" class="font-bold mb-0.5">
+                      {{ item.process_child !== null && item.process_child !== undefined && item.process_child !== '' ? `${item.process_parent}.${item.process_child}` : item.process_parent }}
+                    </div>
+                    <span v-html="item.process_step || '-'"></span>
                   </td>
 
-                  <td class="border-r border-black p-1.5">{{ item.kakotora_yc || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.requirements || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.potential_failure_mode || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.potential_effects || '-' }}</td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.kakotora_yc || '-'"></span>
+                  </td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.requirements || '-'"></span>
+                  </td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.potential_failure_mode || '-'"></span>
+                  </td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.potential_effects || '-'"></span>
+                  </td>
                   <td class="border-r border-black p-1 text-center font-semibold">{{ item.severity || '-' }}</td>
                   <td class="border-r border-black p-1 text-center">{{ item.classification || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.potential_causes || '-' }}</td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.potential_causes || '-'"></span>
+                  </td>
                   <td class="border-r border-black p-1 text-center font-semibold">{{ item.occurrence || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.controls_prevention || '-' }}</td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.controls_prevention || '-'"></span>
+                  </td>
                   
                   <!-- 2. Control Detection dengan Rowspan -->
                   <td 
@@ -967,27 +984,31 @@ const handlePdf = () => {
                     :rowspan="item.rowspanControl" 
                     class="border-r border-black p-1.5 align-middle bg-white"
                   >
-                    {{ item.control_detection || '-' }}
+                    <span v-html="item.control_detection || '-'"></span>
                   </td>
 
                   <td class="border-r border-black p-1 text-center font-semibold">{{ item.detection || '-' }}</td>
-                  <td class="border-r border-black p-1 text-center bg-yellow-100 font-bold text-red-600">
+                  <td class="border-r border-black p-1 text-center font-bold text-red-600 bg-white">
                     {{ item.rpn || (item.severity && item.occurrence && item.detection ? item.severity * item.occurrence * item.detection : '-') }}
                   </td>
-                  <td class="border-r border-black p-1.5">{{ item.recommended_actions || '-' }}</td>
-                  <td class="border-r border-black p-1.5">{{ item.responsibility || '-' }}</td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.recommended_actions || '-'"></span>
+                  </td>
+                  <td class="border-r border-black p-1.5">
+                    <span v-html="item.responsibility || '-'"></span>
+                  </td>
                   <td class="border-r border-black p-1 text-center">{{ item.target_completion_date || '-' }}</td>
                   <td class="border-r border-black p-1 text-center">{{ item.action_taken_date || '-' }}</td>
                   <td class="border-r border-black p-1 text-center">{{ item.result_severity || '-' }}</td>
                   <td class="border-r border-black p-1 text-center">{{ item.result_occurrence || '-' }}</td>
                   <td class="border-r border-black p-1 text-center">{{ item.result_detection || '-' }}</td>
-                  <td class="p-1 text-center bg-yellow-100 font-bold text-red-600">
+                  <td class="p-1 text-center font-bold text-red-600 bg-white">
                     {{ item.result_rpn || (item.result_severity && item.result_occurrence && item.result_detection ? item.result_severity * item.result_occurrence * item.result_detection : '-') }}
                   </td>
                 </tr>
 
                 <tr v-if="!pfmea.items.length">
-                  <td colspan="21" class="p-4 text-center text-gray-500 italic bg-gray-50">
+                  <td colspan="21" class="p-4 text-center text-gray-500 italic bg-white">
                     {{ form.material_id ? 'Click "Search" button above to display PFMEA data.' : 'Please select Project & Material above, then click Search.' }}
                   </td>
                 </tr>

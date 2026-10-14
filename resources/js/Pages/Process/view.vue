@@ -7,6 +7,7 @@ import HistoryDetailModal from '@/Components/History/HistoryDetailModal.vue';
 import { useRevisionHistory } from '@/Composables/useRevisionHistory';
 import { toast } from 'vue3-toastify';
 import axios from 'axios';
+import TextEditor from "@/Components/TextEditor/TextEditor.vue";
 
 defineOptions({layout:AuthenticatedLayout});
 const props = defineProps({
@@ -149,7 +150,6 @@ const addRow = () => {
     });
 };
 
-
 const removerRow = (index) => {
     if (form.processItems.length > 1) {
         form.processItems.splice(index, 1);
@@ -180,7 +180,6 @@ const validateAndSave = () => {
     }
 
     form.processItems.forEach((item, index) => {
-        // Contoh pengecekan untuk setiap kolom yang wajib diisi
         if (!item.requirements || item.requirements.trim() === '') {
             form.setError(`processItems.${index}.requirements`, 'Required');
             isValid = false;
@@ -302,29 +301,28 @@ const calculateResultRpn = (item) => {
     item.result_rpn = (s && o && d) ? s * o * d : 0;
 }
 
-// table action
 const createBlankItem = () => ({
     row_key: Math.random().toString(36).substring(2, 9),
     previous_problem: '',
-        requirements: '',
-        potential_failure_mode: '',
-        potential_effect_of_failure: '',
-        severity: 0,
-        classification: '',
-        potential_cause_of_failure: '',
-        occurrence: 0,
-        controls_prevention: '',
-        detection: 0,
-        rpn: 0,
-        recommended_action: 'None',
-        controls_detection: '',
-        responsibility: '', 
-        target_completion_date: '', 
-        action_taken_completion_date: '', 
-        result_severity: 0, 
-        result_occurrence: 0, 
-        result_detection: 0, 
-        result_rpn: 0
+    requirements: '',
+    potential_failure_mode: '',
+    potential_effect_of_failure: '',
+    severity: 0,
+    classification: '',
+    potential_cause_of_failure: '',
+    occurrence: 0,
+    controls_prevention: '',
+    detection: 0,
+    rpn: 0,
+    recommended_action: 'None',
+    controls_detection: '',
+    responsibility: '', 
+    target_completion_date: '', 
+    action_taken_completion_date: '', 
+    result_severity: 0, 
+    result_occurrence: 0, 
+    result_detection: 0, 
+    result_rpn: 0
 });
 
 const onNew = () => {
@@ -344,7 +342,6 @@ const onDelete = () => {
     if (selectedRowIndex.value !== null) {
         if (form.processItems.length > 1) {
             form.processItems.splice(selectedRowIndex.value, 1);
-            // Sesuaikan index focus setelah penghapusan
             if (selectedRowIndex.value >= form.processItems.length) {
                 selectedRowIndex.value = form.processItems.length - 1;
             }
@@ -361,8 +358,6 @@ const onDeleteAll = () => {
     selectedRowIndex.value = 0;
 }
 
-// Select2 responsibility
-// Dropdown responsibility
 const openDropdownIndex = ref(null);
 const dropdownStyle = ref({});
 const userSearch = ref("");
@@ -386,9 +381,7 @@ const selectUser = (id, item) => {
     openDropdownIndex.value = null;
     userSearch.value = "";
 }
-
 </script>
-
 
 <template>
     <Head :title="pageTitle" />
@@ -401,9 +394,7 @@ const selectUser = (id, item) => {
                     <p class="text-xs text-slate-500 mt-1">{{ isEditing ? 'Edit' : 'View' }} PMFEA template process function {{ props.header?.name }}.</p>
                 </div>
                 <div class="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-3 py-2 shadow-sm">
-                <!-- <div class="flex items-center justify-between bg-white p-3 shadow-sm"> -->
                     <div class="flex items-center justify-between w-full">
-                        <!-- Toolbar -->
                         <div class="flex items-center gap-3"> 
                             <div class="flex items-center gap-1.5">
                                 <Link href="/process" class="group flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50/50  transition-colors">
@@ -442,7 +433,6 @@ const selectUser = (id, item) => {
                             <div class="w-px h-6 bg-slate-300 mx-1"></div>
 
                             <div class="flex items-center gap-1.5">
-                                
                                 <button v-if="isEditing" type="button" @click="validateAndSave" :disabled="form.processing"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs  shadow-sm transition active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed">
                                     <svg v-if="form.processing" class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -454,7 +444,7 @@ const selectUser = (id, item) => {
                                     </svg>
                                     <span>{{ form.processing ? 'Saving...' : 'Save' }}</span>
                                 </button>
-                               <button 
+                                <button 
                                     v-if="!isEditing"
                                     type="button" 
                                     @click="newForm"
@@ -463,7 +453,6 @@ const selectUser = (id, item) => {
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
-                                    
                                     <span>New</span>
                                 </button>
                                 <button type="button" 
@@ -508,7 +497,6 @@ const selectUser = (id, item) => {
                                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                 </svg>
-
                                                 {{ isLoadingHistory ? 'Loading...' : 'View Change Logs' }}
                                             </button>
                                             <button type="button" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors">
@@ -517,7 +505,7 @@ const selectUser = (id, item) => {
                                                 </svg>
                                                 Print Data
                                             </button>
-                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -528,16 +516,14 @@ const selectUser = (id, item) => {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                 </button>
-
                             </div>
                         </div>
-                        <!-- End of toolbar -->
                     </div>
                 </div>
             </div>
 
             <!-- Buat header -->
-            <div class="bg-white  border border-slate-200/80 shadow-sm p-6 mb-6">
+            <div class="bg-white border border-slate-200/80 shadow-sm p-6 mb-6">
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 items-start">
                     <div class="lg:col-span-2">
                         <div class="flex gap-1.5 mb-2">
@@ -546,7 +532,7 @@ const selectUser = (id, item) => {
                             </label>
                         </div>
                         <div class="relative">
-                            <input type="number" v-model="form.process_id" placeholder="Process ID"
+                            <input type="number" v-model="form.process_id" placeholder="Process ID" :disabled="!isEditing"
                                 :class="[
                                     'w-full pl-4 pr-4 py-2.5 bg-slate-50 border focus:bg-white focus:ring-2  text-xs font-medium transition-all outline-none',
                                     form.errors.process_id 
@@ -563,9 +549,6 @@ const selectUser = (id, item) => {
                             <label class="block text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">
                                 Function Name <span class="text-rose-500">*</span>
                             </label>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-slate-400 cursor-help" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                            </svg>
                         </div>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -598,7 +581,6 @@ const selectUser = (id, item) => {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                                 </svg>
                                 <span class="text-xs font-black tracking-widest">Rev.<span class="text-sm">{{ props.header?.revision }}</span></span>
-                                <input type="hidden" name="revision" value="0">
                             </div>
                         </div>
                         <p class="mt-1.5 text-[10px] font-medium text-slate-400 text-center">Initial</p>
@@ -610,7 +592,7 @@ const selectUser = (id, item) => {
                                 Remarks (Change reason)
                             </label>
                         </div>
-                        <textarea v-model="form.remark" rows="2" placeholder="Provide detailed context, e.g., on equipment conditions, key dependencies, environmental factors..." 
+                        <textarea v-model="form.remark" rows="2" placeholder="Provide detailed context..." 
                             :disabled="!isEditing"
                             class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs font-medium text-slate-700 transition-all outline-none resize-none leading-relaxed"></textarea>
                     </div>
@@ -632,10 +614,7 @@ const selectUser = (id, item) => {
                                     : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100 text-slate-700'
                             ]"
                         />
-                        <p
-                            v-if="form.errors.reason"
-                            class="mt-1.5 text-[10px] font-bold text-rose-500"
-                        >
+                        <p v-if="form.errors.reason" class="mt-1.5 text-[10px] font-bold text-rose-500">
                             {{ form.errors.reason }}
                         </p>
                     </div>
@@ -643,44 +622,15 @@ const selectUser = (id, item) => {
             </div>
 
             <!-- Buat details --> 
-            <div class="w-full bg-white  border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
-                <!-- table action bar -->
+            <div class="w-full bg-white border border-slate-200/80 shadow-sm overflow-hidden mb-6 flex flex-col">
                 <div class="overflow-auto border-t border-slate-100 p-4 flex items-center gap-5">
-                    <button 
-                        @click="onNew"
-                        :disabled="!isEditing"
-                        class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                        New
-                    </button>
-
-                    <button 
-                        @click="onInsert" 
-                        :disabled="!isEditing"
-                        class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                    Insert
-                    </button>
-
-                    <button 
-                        @click="onDelete" 
-                        :disabled="!isEditing"
-                        class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                    Delete
-                    </button>
-
-                    <button 
-                        :disabled="!isEditing"
-                        @click="onDeleteAll" 
-                        class="text-sm text-[12px] text-slate-600 hover:text-red-700 hover:underline hover:cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none"
-                    >
-                    Delete All
-                    </button>
+                    <button @click="onNew" :disabled="!isEditing" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none">New</button>
+                    <button @click="onInsert" :disabled="!isEditing" class="text-sm text-[12px] text-slate-600 hover:text-blue-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none">Insert</button>
+                    <button @click="onDelete" :disabled="!isEditing" class="text-sm text-[12px] text-slate-600 hover:text-red-600 hover:underline cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none">Delete</button>
+                    <button :disabled="!isEditing" @click="onDeleteAll" class="text-sm text-[12px] text-slate-600 hover:text-red-700 hover:underline cursor-pointer underline-offset-4 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none">Delete All</button>
                 </div>
                 <div class="overflow-auto max-h-[80vh]">
                     <table class="w-full min-w-max divide-y divide-slate-200 text-left whitespace-nowrap">
-                        
                         <thead class="bg-blue-100 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider sticky top-0 z-20 shadow-sm">
                             <tr>
                                 <th class="px-4 py-3 text-center w-16">No.</th>
@@ -712,7 +662,6 @@ const selectUser = (id, item) => {
                                 v-for="(item, index) in form.processItems" 
                                 :key="item.row_key" @click="selectedRowIndex = index"
                                 @focusin="selectedRowIndex = index"
-                                :disabled="!isEditing"
                                 :class="[
                                     'transition-colors duration-150 cursor-pointer',
                                     selectedRowIndex === index 
@@ -720,49 +669,38 @@ const selectUser = (id, item) => {
                                         : 'hover:bg-slate-50/50'
                                 ]"
                             >
-                                <td class="px-4 py-3 text-center text-xs font-semibold text-slate-600">
+                                <td class="px-4 py-3 text-center text-xs font-semibold text-slate-600 align-top">
                                     <div class="py-2">{{ index + 1 }}.</div>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 align-top">
                                     <input :disabled="!isEditing" type="text" v-model="item.previous_problem" placeholder="Enter previous ..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-xs transition-all outline-none">
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.requirements" placeholder="Enter requirements..." required 
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.requirements`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+                                
+                                <!-- Requirements (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.requirements" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.requirements`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.requirements`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.potential_failure_mode" placeholder="Failure mode..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.potential_failure_mode`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Potential Failure Mode (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.potential_failure_mode" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.potential_failure_mode`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_failure_mode`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.potential_effect_of_failure" placeholder="Effects..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.potential_effect_of_failure`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Potential Effect(s) (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.potential_effect_of_failure" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.potential_effect_of_failure`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_effect_of_failure`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+
+                                <td class="px-4 py-3 align-top">
                                     <input :disabled="!isEditing" type="number" v-model="item.severity" placeholder="Severity..." required
                                         @input="calculateRpn(item)"
                                         :class="[
@@ -775,8 +713,8 @@ const selectUser = (id, item) => {
                                         {{ form.errors[`processItems.${index}.severity`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.classification" placeholder="Classsification..." required
+                                <td class="px-4 py-3 align-top">
+                                    <input :disabled="!isEditing" type="text" v-model="item.classification" placeholder="Classification..." required
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
                                             form.errors[`processItems.${index}.classification`] 
@@ -787,20 +725,17 @@ const selectUser = (id, item) => {
                                         {{ form.errors[`processItems.${index}.classification`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.potential_cause_of_failure" placeholder="Causes..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.potential_cause_of_failure`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Potential Cause(s) (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.potential_cause_of_failure" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.potential_cause_of_failure`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.potential_cause_of_failure`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="number" v-model="item.occurrence" placeholder="Occurance..." required
+
+                                <td class="px-4 py-3 align-top">
+                                    <input :disabled="!isEditing" type="number" v-model="item.occurrence" placeholder="Occurrence..." required
                                         @input="calculateRpn(item)"
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
@@ -812,31 +747,24 @@ const selectUser = (id, item) => {
                                         {{ form.errors[`processItems.${index}.occurrence`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.controls_prevention" placeholder="Prevention..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.controls_prevention`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Controls Prevention (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.controls_prevention" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.controls_prevention`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.controls_prevention`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.controls_detection" placeholder="Control Detection..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.controls_detection`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Control Detection (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.controls_detection" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.controls_detection`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.controls_detection`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+
+                                <td class="px-4 py-3 align-top">
                                     <input :disabled="!isEditing" type="number" v-model="item.detection" placeholder="Detection..." required
                                         @input="calculateRpn(item)"
                                         :class="[
@@ -849,7 +777,7 @@ const selectUser = (id, item) => {
                                         {{ form.errors[`processItems.${index}.detection`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 align-top">
                                     <input :disabled="!isEditing" type="number" v-model="item.rpn" placeholder="RPN..." required readonly
                                         :class="[
                                             'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
@@ -861,25 +789,20 @@ const selectUser = (id, item) => {
                                         {{ form.errors[`processItems.${index}.rpn`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input :disabled="!isEditing" type="text" v-model="item.recommended_action" placeholder="Recommended Action..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.recommended_action`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+
+                                <!-- Recommended Action(s) (TextEditor dengan prop disabled) -->
+                                <td class="px-4 py-3 align-top">
+                                    <TextEditor v-model="item.recommended_action" :disabled="!isEditing" />
                                     <span v-if="form.errors[`processItems.${index}.recommended_action`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.recommended_action`] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+
+                                <td class="px-4 py-3 align-top">
                                     <div class="relative w-full">
-                                        <!-- Tombol Trigger Dropdown -->
                                         <div
                                             @click="(e) => {
                                                 if(!isEditing) return;
-                                                
                                                 if (openDropdownIndex === index) {
                                                     openDropdownIndex = null;
                                                 } else {
@@ -914,17 +837,11 @@ const selectUser = (id, item) => {
                                             </svg>
                                         </div>
 
-                                        <!-- Pesan Error Per Baris -->
-                                        <p
-                                            v-if="form.errors[`processItems.${index}.responsibility`]"
-                                            class="mt-1 text-[10px] font-bold text-rose-500"
-                                        >
+                                        <p v-if="form.errors[`processItems.${index}.responsibility`]" class="mt-1 text-[10px] font-bold text-rose-500">
                                             {{ form.errors[`processItems.${index}.responsibility`] }}
                                         </p>
 
-                                        <!-- Teleportasi Panel Dropdown ke elemen Body luar -->
                                         <Teleport to="body">
-                                            <!-- Backdrop/Overlay untuk menutup dropdown saat klik luar -->
                                             <div
                                                 v-if="openDropdownIndex === index"
                                                 @click="openDropdownIndex = null"
@@ -939,13 +856,11 @@ const selectUser = (id, item) => {
                                                 leave-from-class="transform scale-100 opacity-100"
                                                 leave-to-class="transform scale-95 opacity-0"
                                             >
-                                                <!-- Dropdown Panel -->
                                                 <div
                                                     v-if="openDropdownIndex === index"
                                                     :style="dropdownStyle"
                                                     class="fixed z-50 bg-white border border-slate-200 shadow-xl overflow-hidden mt-1 rounded-sm"
                                                 >
-                                                    <!-- Form Search -->
                                                     <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0">
                                                         <div class="relative">
                                                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -962,7 +877,6 @@ const selectUser = (id, item) => {
                                                         </div>
                                                     </div>
 
-                                                    <!-- List Data User -->
                                                     <div class="max-h-48 overflow-y-auto">
                                                         <div
                                                             v-for="user in filteredUsers"
@@ -975,7 +889,7 @@ const selectUser = (id, item) => {
                                                         </div>
                                                         
                                                         <div v-if="filteredUsers.length === 0" class="px-3 py-6 text-xs text-center text-slate-400 italic bg-slate-50">
-                                                            No customer found matching "{{ userSearch }}"
+                                                            No user found matching "{{ userSearch }}"
                                                         </div>
                                                     </div>
                                                 </div>
@@ -984,42 +898,42 @@ const selectUser = (id, item) => {
                                     </div>
                                 </td>
     
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 align-top">
                                     <input
                                         type="date"
                                         :disabled="!isEditing"
                                         v-model="form.target_completion_date"
-                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400"
                                     >
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 align-top">
                                     <input
                                         type="date"
                                         :disabled="!isEditing"
                                         v-model="form.action_taken_completion_date"
-                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800"
+                                        class="w-full pl-3 pr-3 py-2 bg-white border text-xs font-medium focus:outline-none transition-all border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400"
                                     >
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 align-top">
                                     <input type="number" v-model="item.result_severity" placeholder="Severity..."
                                         @input="calculateResultRpn(item)"
                                         :disabled="!isEditing"
-                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400">
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input type="number" v-model="item.result_occurrence" placeholder="Severity..."
+                                <td class="px-4 py-3 align-top">
+                                    <input type="number" v-model="item.result_occurrence" placeholder="Occurrence..."
                                         @input="calculateResultRpn(item)"
                                         :disabled="!isEditing"
-                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400">
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input type="number" v-model="item.result_detection" placeholder="Severity..."
+                                <td class="px-4 py-3 align-top">
+                                    <input type="number" v-model="item.result_detection" placeholder="Detection..."
                                         @input="calculateResultRpn(item)"
                                         :disabled="!isEditing"
-                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
+                                        class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400">
                                 </td>
-                                <td class="px-4 py-3">
-                                    <input type="number" v-model="item.result_rpn" placeholder="Severity..." readonly
+                                <td class="px-4 py-3 align-top">
+                                    <input type="number" v-model="item.result_rpn" placeholder="RPN..." readonly
                                         class="w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none border-slate-200 focus:border-blue-500 focus:ring-blue-100">
                                 </td>
                             </tr>
@@ -1041,35 +955,11 @@ const selectUser = (id, item) => {
         @view-detail="showLogsDetails"
     />
 
-        <!-- Modal Revision History Detail -->
-        <HistoryDetailModal
-            :show="showModalDetail"
-            :loading="isLoadingHistoryDetail"
-            :logs="historyLogsDetails"
-            @close="closeModalDetail"
-        />
-        <pre>
-            show: {{ showModalDetail }}
-            logs: {{ JSON.stringify(historyLogsDetails, null, 2) }}
-        </pre>
-    
-
-    <!-- Modal konfirmasi -->
-    <!-- <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 scale-95" enter-to-class="opacity-100 scale-100" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
-        <div v-if="showConfirmModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div class="bg-white  w-full max-w-sm shadow-2xl p-6 border border-slate-100">
-                <div class="flex flex-col items-center text-center">
-                    <div class="p-3 bg-rose-50 text-rose-500  mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </div>
-                    <h3 class="text-lg font-black text-slate-900">Confirm Deletion</h3>
-                    <p class="text-sm text-slate-500 mt-2 mb-6">Are you sure you want to delete these process function data (<span class="font-bold text-slate-900">{{ header?.name }}</span>)? This action cannot be undone.</p>
-                    <div class="flex gap-3 w-full">
-                        <button @click="showConfirmModal = false" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Cancel</button>
-                        <button @click="confirmAction(header?.id)" class="flex-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg transition">Yes, Delete</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </transition> -->
+    <!-- Modal Revision History Detail -->
+    <HistoryDetailModal
+        :show="showModalDetail"
+        :loading="isLoadingHistoryDetail"
+        :logs="historyLogsDetails"
+        @close="closeModalDetail"
+    />
 </template>

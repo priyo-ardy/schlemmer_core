@@ -194,7 +194,7 @@
                     <tr class="text-center">
                         <td class="text-bold" style="border-left: none; border-bottom: none;">{{ $rev['ver'] ?? '-' }}</td>
                         <td style="border-bottom: none;">{{ isset($rev['date']) ? date('d/m/Y', strtotime($rev['date'])) : '-' }}</td>
-                        <td style="text-align: left; border-bottom: none;">{{ $rev['content'] ?? '-' }}</td>
+                        <td style="text-align: left; border-bottom: none;">{!! $rev['content'] ?? '-' !!}</td>
                         <td style="border-bottom: none;">{{ $pfmea['approved_by'] ?? '-' }}</td>
                         <td style="border-bottom: none;">{{ $pfmea['reviewed_by'] ?? '-' }}</td>
                         <td style="border-right: none; border-bottom: none;">{{ $pfmea['prepared_by'] ?? '-' }}</td>
@@ -218,7 +218,7 @@
         </tr>
     </table>
 
-    <!-- 4. READ-ONLY WORKSHEET TABLE (FLAT TABLE DENGAN 21 KOLOM SYMMETRIC) -->
+    <!-- 4. READ-ONLY WORKSHEET TABLE -->
     <table style="border-top: none;">
         <thead>
             <tr class="text-center text-bold">
@@ -249,48 +249,61 @@
             </tr>
         </thead>
         <tbody>
-            @php
-            $prevStep = null;
-            $prevControl = null;
-            @endphp
-
             @forelse($items as $item)
             @php
             $currentStep = $item['process_step'] ?? '-';
             $currentControl = $item['control_detection'] ?? '-';
 
-            // Pengecekan duplikasi step & control dengan baris sebelumnya
-            $isSameStep = ($currentStep === $prevStep);
-            $isSameControl = ($isSameStep && $currentControl === $prevControl);
+            // Cek baris sebelumnya menggunakan helper $loop Laravel (aman dari undefined variable)
+            $prevItem = !$loop->first ? $items[$loop->index - 1] : null;
 
-            $prevStep = $currentStep;
-            $prevControl = $currentControl;
+            $isSameStep = $prevItem && ($prevItem['process_step'] ?? '-') === $currentStep;
+            $isSameControl = $isSameStep && $prevItem && ($prevItem['control_detection'] ?? '-') === $currentControl;
+
+            $parent = $item['process_parent'] ?? '';
+            $child = $item['process_child'] ?? null;
+            $processIdFormatted = ($child !== null && $child !== '') ? "{$parent}.{$child}" : $parent;
             @endphp
             <tr>
-                <!-- Kolom 1: Process Step (Selalu dirender <td> agar posisi 21 kolom simetris) -->
-                <td class="text-bold text-left">
-                    {{ !$isSameStep ? $currentStep : '' }}
+                <!-- Kolom 1: Process ID (Parent.Child) + Process Step/Function -->
+                <td class="text-bold text-left" style="padding: 0;">
+                    @if(!$isSameStep)
+                    <table style="border: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important;">
+                        @if($processIdFormatted)
+                        <tr>
+                            <td style="border: none !important; padding: 0 !important; font-weight: bold; background: transparent !important;">
+                                {{ $processIdFormatted }}
+                            </td>
+                        </tr>
+                        @endif
+                        <tr>
+                            <td style="border: none !important; padding: 0 !important; background: transparent !important;">
+                                {!! $currentStep !!}
+                            </td>
+                        </tr>
+                    </table>
+                    @endif
                 </td>
 
-                <td class="text-center">{{ $item['kakotora_yc'] ?? '-' }}</td>
-                <td>{{ $item['requirements'] ?? '-' }}</td>
-                <td>{{ $item['potential_failure_mode'] ?? '-' }}</td>
-                <td>{{ $item['potential_effects'] ?? '-' }}</td>
+                <td class="text-center">{!! $item['kakotora_yc'] ?? '-' !!}</td>
+                <td>{!! $item['requirements'] ?? '-' !!}</td>
+                <td>{!! $item['potential_failure_mode'] ?? '-' !!}</td>
+                <td>{!! $item['potential_effects'] ?? '-' !!}</td>
                 <td class="text-center text-bold">{{ $item['severity'] ?? '-' }}</td>
                 <td class="text-center">{{ $item['classification'] ?? '-' }}</td>
-                <td>{{ $item['potential_causes'] ?? '-' }}</td>
+                <td>{!! $item['potential_causes'] ?? '-' !!}</td>
                 <td class="text-center text-bold">{{ $item['occurrence'] ?? '-' }}</td>
-                <td>{{ $item['controls_prevention'] ?? '-' }}</td>
+                <td>{!! $item['controls_prevention'] ?? '-' !!}</td>
 
                 <!-- Kolom 11: Control Detection -->
                 <td>
-                    {{ !$isSameControl ? $currentControl : '' }}
+                    {!! !$isSameControl ? $currentControl : '' !!}
                 </td>
 
                 <td class="text-center text-bold">{{ $item['detection'] ?? '-' }}</td>
                 <td class="text-center text-bold">{{ $item['rpn'] ?? '-' }}</td>
-                <td>{{ $item['recommended_actions'] ?? '-' }}</td>
-                <td>{{ $item['responsibility'] ?? '-' }}</td>
+                <td>{!! $item['recommended_actions'] ?? '-' !!}</td>
+                <td>{!! $item['responsibility'] ?? '-' !!}</td>
                 <td class="text-center">{{ $item['target_completion_date'] ?? '-' }}</td>
                 <td class="text-center">{{ $item['action_taken_date'] ?? '-' }}</td>
                 <td class="text-center">{{ $item['result_severity'] ?? '-' }}</td>

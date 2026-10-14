@@ -268,8 +268,8 @@ class ProcessTemplateServices
                     'id' => $freshHeader->id,
                     'reason' => $data['reason'],
                     'old_details' => $oldDetailData->toArray(),
-                    'new_detail' => $freshDetail->toArray()
-                ])->afterCommit();
+                    'new_detail' => $freshDetail->toArray(),
+                ], Auth::id())->afterCommit();
 
                 return $freshHeader;
             });
