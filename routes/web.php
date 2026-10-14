@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLog\ActivityLogController;
 use App\Http\Controllers\api\v1\Customer\CustomerApiController;
+use App\Http\Controllers\api\v1\ImageUploader\ImageUploaderApiController;
 use App\Http\Controllers\api\v1\Material\MaterialApiController;
 use App\Http\Controllers\api\v1\PfmeaApiController;
 use App\Http\Controllers\api\v1\ProcessTemplate\ProcessTemplateApiController;
@@ -173,4 +174,6 @@ Route::prefix('api/v1')->middleware('auth')->group(function () {
     Route::get('/process-template', [ProcessTemplateApiController::class, 'dropdown']);
 
     Route::get('/users', [UserApiController::class, 'dropdown']);
+
+    Route::post('/upload-image', [ImageUploaderApiController::class, 'upload']);
 });
