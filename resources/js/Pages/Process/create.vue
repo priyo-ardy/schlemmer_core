@@ -494,13 +494,7 @@ const selectUser = (id) => {
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 align-top">
-                                    <input type="text" v-model="item.classification" placeholder="Classsification..." required
-                                        :class="[
-                                            'w-full px-3 py-2 bg-slate-50 border focus:bg-white focus:ring-2 text-xs transition-all outline-none',
-                                            form.errors[`processItems.${index}.classification`] 
-                                                ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-100 placeholder-rose-300' 
-                                                : 'border-slate-200 focus:border-blue-500 focus:ring-blue-100'
-                                        ]">
+                                    <TextEditor v-model="item.classification" />
                                     <span v-if="form.errors[`processItems.${index}.classification`]" class="block mt-1 text-[9px] font-bold text-rose-500">
                                         {{ form.errors[`processItems.${index}.classification`] }}
                                     </span>
